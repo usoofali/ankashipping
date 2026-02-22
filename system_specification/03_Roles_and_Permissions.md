@@ -1,356 +1,376 @@
+# 03_Roles_and_Permissions.md
 
 ---
 
 # 03_Roles_and_Permissions.md
 
----
+## 1. Overview
 
-# 3. Roles and Permissions
+This document defines the **Role-Based Access Control (RBAC)** model for the Anka Shipping & Logistics Management System (ASLMS).
 
----
+The system enforces strict separation of responsibilities to ensure:
 
-## 3.1 Purpose
+* Operational control
+* Financial integrity
+* Data security
+* Accountability
+* Audit traceability
 
-This document defines the role-based access control (RBAC) model for the Anka Shipping Operations & Documentation Management System (ASODMS).
+All permissions are enforced using:
 
-The objective is to:
-
-* Protect sensitive export documentation
-* Safeguard financial operations
-* Ensure operational accountability
-* Prevent unauthorized workflow manipulation
-* Maintain compliance traceability
-
-All system access shall be governed by explicit permissions assigned to defined roles.
-
----
-
-## 3.2 Access Control Model
-
-The system shall implement:
-
-* Role-Based Access Control (RBAC)
-* Permission-based authorization
-* Policy enforcement at controller and service level
-* Middleware protection for routes
-* Database-level audit logging
-
-No user shall perform any action without an assigned permission.
+* Laravel Policies
+* Middleware guards
+* Role-based UI rendering
+* Database-level constraints where necessary
 
 ---
 
-## 3.3 System Roles
+## 2. Role Hierarchy
 
-The system shall support the following primary roles:
+The system defines five primary roles:
 
-1. Super Administrator
-2. Operations Administrator
-3. Operations Staff
-4. Invoice Staff
-5. WhatsApp Agent
-6. Driver
-7. Shipper (Customer)
+1. Super Admin
+2. Staff
+3. Agent
+4. Driver
+5. Shipper (Customer)
 
----
+Hierarchy (by privilege level):
 
-## 3.4 Role Definitions
+Super Admin
+→ Staff
+→ Agent
+→ Driver
+→ Shipper
 
----
-
-### 3.4.1 Super Administrator
-
-**Description:**
-Highest-level system authority with full operational and financial control.
-
-**Responsibilities:**
-
-* Manage users and roles
-* Configure invoice item templates
-* Override workflow constraints (if necessary)
-* View all shipments and documents
-* View financial reports
-* Access activity logs
-
-**Risk Level:** Critical
+Privileges are not inherited automatically; they are explicitly assigned.
 
 ---
 
-### 3.4.2 Operations Administrator
+## 3. Super Admin
 
-**Description:**
-Senior operational staff managing shipment workflows and port coordination.
+### 3.1 Description
 
-**Responsibilities:**
+The Super Admin is the highest authority within the system and has unrestricted system access.
 
-* Create shipments
-* Assign drivers
-* Upload and verify titles
-* Generate dock receipts
+This role is typically limited to company executives or system owners.
+
+---
+
+### 3.2 Permissions
+
+#### User & Role Management
+
+* Create staff accounts
+* Create agent accounts
+* Create driver accounts
+* Assign roles
+* Activate / deactivate users
+* Reset passwords
+
+#### Shipment Management
+
+* View all shipments
+* Edit any shipment
+* Delete shipment (if policy allows)
+* Override shipment state
+* Assign or reassign drivers
+
+#### Invoice Management
+
+* Create invoice item templates
+* Define invoice item types
+* Define invoice descriptions
+* View all invoices
+* Edit invoices
+* Void invoices (with audit log)
+
+#### Document Management
+
+* Generate Dock Receipt
 * Upload Bill of Lading
-* Update shipment statuses
-* View documents
-* View activity logs
+* Upload Vehicle Receipt
+* Replace documents (with versioning)
 
-**Cannot:**
+#### WhatsApp System
 
-* Modify wallet balances directly
-* Delete financial transactions
+* View all conversations
+* Reassign conversations
+* Override escalations
 
----
+#### Notification & Activity
 
-### 3.4.3 Operations Staff
+* View full activity log
+* View system-wide notifications
 
-**Description:**
-Handles day-to-day shipment processing and coordination.
+#### System Configuration
 
-**Responsibilities:**
-
-* Create pre-alerts
-* Convert pre-alert to shipment
-* Assign drivers
-* Update shipment status
-* Upload supporting documents
-* View dock receipts
-* View shipment details
-
-**Cannot:**
-
-* Issue invoices (unless granted invoice permission)
-* Access financial reports
-* Modify wallet transactions
+* Manage system settings
+* Manage API credentials
+* Manage environment parameters (if exposed)
 
 ---
 
-### 3.4.4 Invoice Staff
+## 4. Staff
 
-**Description:**
-Responsible for financial processing and invoicing.
+### 4.1 Description
 
-**Responsibilities:**
+Staff members handle operational workflows such as shipment processing and invoice generation.
 
-* Create invoices
-* Select invoice item templates
-* Set dynamic pricing
-* Issue invoices
-* View wallet balances
-* Process invoice payments
-* View financial history
-
-**Cannot:**
-
-* Directly alter wallet balance outside system transactions
-* Modify issued invoices
-* Access system configuration
+They do not control system configuration or invoice item templates.
 
 ---
 
-### 3.4.5 WhatsApp Agent
+### 4.2 Permissions
 
-**Description:**
-Handles client communication via WhatsApp.
+#### Shipment Management
 
-**Responsibilities:**
+* Create shipment
+* Edit shipment (until locked state)
+* Assign driver
+* Update shipment status (within allowed transitions)
+* Link auction vehicle
+* View all shipments
 
-* Receive inbound WhatsApp messages
-* Respond within session window
-* View shipment summaries
-* Send document links
-* Escalate to Operations or Invoice staff
+#### Document Management
 
-**Cannot:**
+* Generate Dock Receipt
+* Upload Bill of Lading
+* Upload Vehicle Receipt
+* Download shipment documents
 
-* Modify shipment data
-* Create invoices
-* Adjust wallet balances
-* Generate dock receipts
+#### Invoice Management
+
+* Create invoice
+* Add invoice lines (select existing invoice item templates)
+* Set dynamic price per invoice line
+* Edit invoice before finalization
+* View all invoices
+
+Important Restriction:
+
+Staff CANNOT:
+
+* Create invoice item templates
+* Modify invoice item descriptions
+* Change invoice item types
+
+Only Admin defines invoice structure.
+
+#### WhatsApp Visibility
+
+* View escalated conversations
+* Respond if reassigned
+* View shipment linked to conversation
+
+#### Notifications
+
+* Receive shipment-related notifications
+* Receive escalation alerts
 
 ---
 
-### 3.4.6 Driver
+## 5. Agent (WhatsApp Customer Support)
 
-**Description:**
-Responsible for vehicle transport to port.
+### 5.1 Description
 
-**Responsibilities:**
+Agents manage customer communication through the WhatsApp integration interface.
 
-* View assigned shipments
-* Upload title document
-* View dock receipt
-* Confirm delivery at port
+They do not perform shipment processing or financial configuration.
 
-**Cannot:**
+---
+
+### 5.2 Permissions
+
+#### Communication
+
+* View assigned conversations
+* Respond to messages
+* Attach shipment reference to conversation
+* Add internal notes
+* Escalate conversation to Staff/Admin
+* Tag conversations
+
+#### Shipment Visibility
+
+* View shipment summary (read-only)
+* View invoice summary (read-only)
+* View shipment status
+
+Agents CANNOT:
+
+* Create shipment
+* Edit shipment
+* Generate documents
+* Create invoice
+* Modify pricing
+
+#### Notifications
+
+* Receive new message alerts
+* Receive conversation assignment alerts
+
+---
+
+## 6. Driver
+
+### 6.1 Description
+
+Drivers are responsible for transporting vehicles from auction locations to the port.
+
+They operate under restricted access.
+
+---
+
+### 6.2 Permissions
+
+* View assigned jobs
+* View pickup details
+* View Dock Receipt
+* Confirm pickup
+* Confirm delivery to port
+* Upload proof (if enabled)
+
+Drivers CANNOT:
 
 * View financial data
-* Access other shipments
-* Modify shipment details
+* View other shipments
+* Access invoices
+* Access communication system
 
 ---
 
-### 3.4.7 Shipper (Customer)
+## 7. Shipper (Customer)
 
-**Description:**
-External client user.
+### 7.1 Description
 
-**Responsibilities:**
+The Shipper is the client who owns the shipment.
 
-* Create pre-alert
+Access is strictly limited to their own data.
+
+---
+
+### 7.2 Permissions
+
+* View own shipments
 * View shipment status
-* View uploaded documents
-* View invoices
-* View wallet balance
-* Fund wallet (if implemented)
+* Download Dock Receipt (if allowed)
+* View Bill of Lading
+* View invoice
+* Download invoice
 
-**Cannot:**
+Shippers CANNOT:
 
-* Modify shipment workflow
-* Generate documents
-* Edit invoice pricing
-
----
-
-## 3.5 Permission Definitions
-
-Permissions shall be granular and explicitly defined.
+* Edit shipment
+* Modify invoices
+* View other customers' data
+* Access internal logs
 
 ---
 
-### 3.5.1 User Management Permissions
+## 8. Permission Matrix (Summary)
 
-* manage_users
-* assign_roles
-* deactivate_user
-
----
-
-### 3.5.2 Shipment Permissions
-
-* create_pre_alert
-* create_shipment
-* update_shipment
-* assign_driver
-* change_shipment_status
-* send_to_workshop
-* mark_delivered
-* view_all_shipments
-* view_own_shipments
+| Feature                      | Admin | Staff | Agent         | Driver            | Shipper |
+| ---------------------------- | ----- | ----- | ------------- | ----------------- | ------- |
+| Create Shipment              | ✔     | ✔     | ✖             | ✖                 | ✖       |
+| Edit Shipment                | ✔     | ✔     | ✖             | ✖                 | ✖       |
+| Assign Driver                | ✔     | ✔     | ✖             | ✖                 | ✖       |
+| Generate Dock Receipt        | ✔     | ✔     | ✖             | ✖                 | ✖       |
+| Upload Bill of Lading        | ✔     | ✔     | ✖             | ✖                 | ✖       |
+| Create Invoice Item Template | ✔     | ✖     | ✖             | ✖                 | ✖       |
+| Add Dynamic Price to Invoice | ✔     | ✔     | ✖             | ✖                 | ✖       |
+| View All Invoices            | ✔     | ✔     | ✖             | ✖                 | ✖       |
+| Respond to WhatsApp          | ✔     | ✖     | ✔             | ✖                 | ✖       |
+| Escalate Conversation        | ✔     | ✖     | ✔             | ✖                 | ✖       |
+| View Assigned Jobs           | ✔     | ✔     | ✖             | ✔                 | ✖       |
+| View Own Shipment            | ✔     | ✔     | ✔ (Read-only) | ✔ (Assigned only) | ✔       |
 
 ---
 
-### 3.5.3 Document Permissions
+## 9. Authorization Implementation Strategy
 
-* upload_auction_receipt
-* upload_title
-* generate_dock_receipt
-* upload_bill_of_lading
-* download_documents
-* delete_document
+### 9.1 Role Storage
 
----
+Roles stored in:
 
-### 3.5.4 Invoice Permissions
+roles table
+role_user pivot (if multi-role allowed)
 
-* create_invoice
-* edit_invoice_draft
-* issue_invoice
-* void_invoice
-* view_invoice
-* manage_invoice_items
-* set_dynamic_price
+Or single-role system if simplified.
 
 ---
 
-### 3.5.5 Wallet Permissions
+### 9.2 Enforcement Mechanisms
 
-* view_wallet
-* process_wallet_payment
-* credit_wallet
-* view_wallet_transactions
+1. Route Middleware
 
----
+   * role:admin
+   * role:staff
+   * role:agent
 
-### 3.5.6 Communication Permissions
+2. Laravel Policies
 
-* send_whatsapp_message
-* view_whatsapp_thread
-* send_email_notification
-* view_notification_center
+   * ShipmentPolicy
+   * InvoicePolicy
+   * ConversationPolicy
+   * DocumentPolicy
 
----
+3. Blade Directives
 
-### 3.5.7 Audit Permissions
+   * @can
+   * @role
 
-* view_activity_logs
-* export_reports
-
----
-
-## 3.6 Permission Matrix (Summary)
-
-| Permission Category   | Super Admin | Ops Admin | Ops Staff | Invoice Staff | Agent | Driver | Shipper |
-| --------------------- | ----------- | --------- | --------- | ------------- | ----- | ------ | ------- |
-| Manage Users          | ✔           | ✖         | ✖         | ✖             | ✖     | ✖      | ✖       |
-| Create Shipment       | ✔           | ✔         | ✔         | ✖             | ✖     | ✖      | ✖       |
-| Assign Driver         | ✔           | ✔         | ✔         | ✖             | ✖     | ✖      | ✖       |
-| Upload Title          | ✔           | ✔         | ✔         | ✖             | ✖     | ✔      | ✖       |
-| Generate Dock Receipt | ✔           | ✔         | ✖         | ✖             | ✖     | ✖      | ✖       |
-| Create Invoice        | ✔           | ✖         | ✖         | ✔             | ✖     | ✖      | ✖       |
-| Set Dynamic Pricing   | ✔           | ✖         | ✖         | ✔             | ✖     | ✖      | ✖       |
-| View Wallet           | ✔           | ✖         | ✖         | ✔             | ✖     | ✖      | ✔ (Own) |
-| Send WhatsApp         | ✔           | ✖         | ✖         | ✖             | ✔     | ✖      | ✖       |
-| View Activity Logs    | ✔           | ✔         | ✖         | ✖             | ✖     | ✖      | ✖       |
+4. Livewire Component Guards
 
 ---
 
-## 3.7 Role Assignment Rules
+## 10. Segregation of Duties
 
-1. A user may have multiple roles.
-2. Permissions are cumulative.
-3. Critical financial permissions shall require admin approval.
-4. Role assignment changes must be logged.
+The system enforces separation between:
 
----
+* Template creation (Admin)
+* Pricing application (Staff)
+* Communication (Agent)
+* Operational execution (Driver)
 
-## 3.8 Segregation of Duties
+This reduces:
 
-To prevent fraud or operational risk:
-
-* Invoice creation and wallet crediting should not be assigned to the same user without oversight.
-* Dock receipt generation requires title verification.
-* Invoice modification is prohibited after issuance.
-* Wallet balances cannot be manually edited.
+* Fraud risk
+* Financial manipulation
+* Unauthorized data modification
 
 ---
 
-## 3.9 Audit & Monitoring
+## 11. Audit Requirements
 
-All role-based actions shall be recorded in the activity_logs table including:
+All sensitive operations must:
 
-* user_id
-* action
-* entity_type
-* entity_id
-* timestamp
-* IP address
+* Log user ID
+* Log role
+* Log timestamp
+* Log entity ID
+* Log before/after values (if applicable)
 
-No log entries shall be deletable by non-super administrators.
+Sensitive operations include:
+
+* Invoice modification
+* Shipment status override
+* Driver reassignment
+* Document replacement
+* Invoice voiding
 
 ---
 
-## 3.10 Future Role Expansion
+## 12. Future Role Expansion (Phase 2)
 
-The system architecture allows future addition of:
+Possible additional roles:
 
+* Accountant
+* Port Manager
 * Compliance Officer
 * Regional Manager
-* Financial Auditor
-* API Integration User
+
+The RBAC design supports extension without architectural change.
 
 ---
-
-End of Document
-`03_Roles_and_Permissions.md`
-
----
-
-
 

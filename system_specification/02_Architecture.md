@@ -1,411 +1,428 @@
+# 02_Architecture.md
 
 ---
 
 # 02_Architecture.md
 
----
+## 1. Architectural Overview
 
-# 2. System Architecture
+The **Anka Shipping & Logistics Management System (ASLMS)** will adopt a **modular monolithic architecture** built on Laravel, optimized for:
 
----
+* Operational reliability
+* Role-based access control
+* Document-heavy workflows
+* External API integrations
+* Real-time communication handling
+* Scalable future expansion
 
-## 2.1 Architectural Overview
-
-The Anka Shipping Operations & Documentation Management System (ASODMS) shall follow a **layered modular architecture** based on the MVC (Model–View–Controller) pattern, enhanced with service-layer abstraction and event-driven processing.
-
-The architecture is designed to ensure:
-
-* Separation of concerns
-* Maintainability
-* Scalability
-* Compliance traceability
-* Secure document handling
-* Transaction-safe financial operations
+Given the current business size and expected concurrency (moderate internal users, limited external portal users), a modular monolith is strategically appropriate over microservices.
 
 ---
 
-## 2.2 Technology Stack
+## 2. Architectural Style
 
-| Layer             | Technology                            |
-| ----------------- | ------------------------------------- |
-| Backend Framework | Laravel                               |
-| Frontend          | Livewire + Tailwind CSS               |
-| Database          | MySQL                                 |
-| Queue System      | Redis                                 |
-| File Storage      | Private Storage (Local/S3-ready)      |
-| PDF Engine        | DomPDF (or equivalent)                |
-| Email             | SMTP                                  |
-| WhatsApp          | WhatsApp Business API                 |
-| Authentication    | Laravel Auth + Role/Permission System |
+### 2.1 Pattern
 
----
+The system will follow:
 
-## 2.3 Architectural Layers
+* **MVC (Model–View–Controller)**
+* Layered architecture separation
+* Service-oriented domain logic
+* Event-driven internal notifications
 
-The system shall be structured into the following logical layers:
+### 2.2 High-Level Layers
 
----
-
-### 2.3.1 Presentation Layer
-
-**Purpose:**
-Handle user interaction and UI rendering.
-
-**Components:**
-
-* Livewire components
-* Blade templates
-* Tailwind-based UI design
-* Notification dropdown UI
-* Dashboard panels
-* Forms (Shipment, Invoice, Dock Receipt preview)
-
-**Responsibilities:**
-
-* Accept validated input
-* Trigger application actions
-* Display real-time state updates
-* Display internal notifications
-* Display shipment timeline
+1. Presentation Layer (Livewire + Blade + Tailwind)
+2. Application Layer (Controllers, Form Requests, Policies)
+3. Domain Layer (Services, Actions, Business Logic)
+4. Data Layer (Eloquent Models, Repositories)
+5. Infrastructure Layer (External APIs, WhatsApp, File Storage)
 
 ---
 
-### 2.3.2 Application Layer
+## 3. System Components
 
-**Purpose:**
-Coordinate business processes.
+### 3.1 Presentation Layer
 
-**Components:**
+Built with:
 
-* Controllers
-* Livewire handlers
-* Form request validators
-* Middleware
-* Authorization gates
+* Laravel Blade
+* Livewire (Reactive components)
+* TailwindCSS
 
-**Responsibilities:**
+Responsibilities:
 
-* Validate user permissions
-* Route requests to services
-* Trigger events
-* Enforce workflow constraints
+* Dashboard UI
+* Role-based menu rendering
+* Shipment management interfaces
+* WhatsApp communication panel
+* Notification dropdown system
+* Invoice builder interface
+* Document preview and download views
+
+Livewire will handle:
+
+* Real-time updates
+* Notification refresh
+* Message polling
+* Dynamic invoice item addition
 
 ---
 
-### 2.3.3 Domain Layer (Core Business Logic)
+### 3.2 Application Layer
 
-**Purpose:**
-Encapsulate core logistics and financial rules.
+This layer coordinates:
 
-This layer shall contain Service Classes such as:
+* HTTP Controllers
+* Form validation
+* Authorization checks (Policies / Gates)
+* Request routing
+* Session handling
+
+Each core module has its own controller namespace:
+
+* ShipmentController
+* InvoiceController
+* AgentController
+* NotificationController
+* DocumentController
+* DriverController
+* AdminController
+
+This ensures separation of concerns.
+
+---
+
+### 3.3 Domain Layer (Business Logic)
+
+All business rules are isolated inside Services.
+
+Examples:
 
 * ShipmentService
 * InvoiceService
-* WalletService
-* DocumentService
-* NotificationService
-* DriverService
+* DockReceiptGenerator
 * WhatsAppService
-* ActivityLogService
+* NotificationService
+* AuctionImportService
+* DriverAssignmentService
 
-**Responsibilities:**
+Important principle:
 
-* Execute business rules
-* Manage workflow state transitions
-* Ensure transactional integrity
-* Coordinate document generation
-* Trigger events
+> Controllers must not contain business logic.
 
----
-
-### 2.3.4 Infrastructure Layer
-
-**Purpose:**
-Handle external systems and technical services.
-
-**Components:**
-
-* MySQL Database
-* Redis Queue Workers
-* File Storage System
-* SMTP Mail Server
-* WhatsApp Business API
-* PDF Generator
-* External APIs (e.g., RapidAPI if used)
-
-**Responsibilities:**
-
-* Data persistence
-* Background job processing
-* Secure document storage
-* Email delivery
-* WhatsApp message dispatch
+All state transitions (e.g., shipment lifecycle) are managed here.
 
 ---
 
-## 2.4 System Modules
+### 3.4 Data Layer
 
-The architecture is modular and divided into the following primary modules:
+Database: MySQL
+
+ORM: Eloquent
+
+Core Models:
+
+* User
+* Role
+* Shipment
+* Vehicle
+* Invoice
+* InvoiceItem (template)
+* InvoiceLine (dynamic price entry)
+* Document
+* Notification
+* Conversation
+* Message
+* Driver
+* ActivityLog
+
+Relationships will be strictly normalized.
 
 ---
 
-### 2.4.1 Shipment Management Module
+## 4. Modular Structure
+
+Although monolithic, the system will be logically modularized:
+
+### 4.1 Core Modules
+
+1. User & Role Management
+2. Shipment Management
+3. Vehicle & Auction Integration
+4. Document Management
+5. Invoice Management
+6. WhatsApp Communication
+7. Notification & Activity System
+8. Driver Management
+
+Each module:
+
+* Has its own models
+* Has its own service layer
+* Emits internal events
+* Has role-based policies
+
+---
+
+## 5. Shipment Lifecycle Architecture
+
+Shipments will operate using a **state machine model**.
+
+Example States:
+
+* Draft
+* Auction Linked
+* Driver Assigned
+* At Port
+* Dock Receipt Generated
+* Shipped
+* Bill of Lading Uploaded
+* Completed
+* Cancelled
+
+State transitions are controlled exclusively by ShipmentService.
+
+Invalid transitions will be blocked at domain level.
+
+---
+
+## 6. Invoice Architecture
+
+### 6.1 Invoice Item Template Model
+
+Created by Admin.
+
+Fields:
+
+* name
+* type
+* description
+
+### 6.2 Invoice Line Model
+
+Created by Staff.
+
+Fields:
+
+* invoice_id
+* invoice_item_id
+* dynamic_price
+* notes
+
+This ensures:
+
+* Template reuse
+* Dynamic pricing flexibility
+* Financial traceability
+
+---
+
+## 7. Document Generation Architecture
+
+Documents supported:
+
+* Dock Receipt (generated internally)
+* Bill of Lading (uploaded)
+* Vehicle Receipt (uploaded)
+
+### 7.1 Generation Flow
+
+1. Shipment validated
+2. DockReceiptGenerator service invoked
+3. PDF rendered using Blade template
+4. Stored in secure storage
+5. Linked to shipment record
+6. Notification emitted
+
+Documents are version-controlled and immutable once finalized.
+
+---
+
+## 8. WhatsApp Communication Architecture
+
+### 8.1 Integration
+
+WhatsApp Business API integration layer.
+
+Handled through:
+
+* Webhook endpoint
+* Message processor service
+* Conversation manager
+
+### 8.2 Core Entities
+
+* Conversation
+* Message
+* Agent
+* Customer (Shipper)
+
+### 8.3 Escalation Mechanism
+
+Agents can:
+
+* Tag conversation
+* Escalate to Staff/Admin
+* Assign priority
+
+Escalation triggers internal notification events.
+
+---
+
+## 9. Internal Notification System
+
+Event-driven architecture.
+
+### 9.1 Event Types
+
+* ShipmentCreated
+* InvoiceUpdated
+* DriverAssigned
+* DockReceiptGenerated
+* ConversationEscalated
+* PaymentRecorded
+
+### 9.2 Delivery
+
+Notifications stored in database.
+
+Displayed via:
+
+* Dropdown live component
+* Unread counter
+* Activity log page
+
+Supports:
+
+* Real-time refresh (polling)
+* Read/unread state
+* Role-based visibility
+
+---
+
+## 10. Activity Logging
+
+Every critical action triggers:
+
+* ActivityLog record
+* User ID
+* Role
+* Action type
+* Entity reference
+* Timestamp
+
+Used for:
+
+* Auditing
+* Accountability
+* Operational tracing
+
+---
+
+## 11. Security Architecture
+
+### 11.1 Authentication
+
+* Laravel authentication
+* Password hashing (bcrypt)
+* Session-based authentication
+
+### 11.2 Authorization
+
+Role-Based Access Control (RBAC):
+
+* Super Admin
+* Staff
+* Agent
+* Driver
+* Shipper
+
+Enforced through:
+
+* Policies
+* Middleware
+* Route guards
+
+### 11.3 Data Isolation
+
+* Shippers can only view their own shipments
+* Drivers can only view assigned jobs
+* Agents have restricted operational visibility
+
+---
+
+## 12. External Integrations
+
+### 12.1 Auction API (RapidAPI)
+
+Imports:
+
+* Vehicle details
+* Photos
+* Sales history
+* VIN
+* Lot number
+
+Handled by AuctionImportService.
+
+### 12.2 WhatsApp Business API
 
 Handles:
 
-* Pre-alert creation
-* Shipment creation
-* Driver assignment
-* Port assignment
-* Status updates
-* Workshop routing (if applicable)
-
-Core Table Examples:
-
-* shipments
-* shipment_status_history
-* drivers
-* ports
+* Incoming messages
+* Outgoing messages
+* Webhook processing
+* Media handling
 
 ---
 
-### 2.4.2 Document Management Module
+## 13. File Storage Architecture
 
-Handles:
-
-* Auction receipt uploads
-* Title uploads
-* Dock receipt generation
-* Bill of Lading uploads
-* Invoice PDF generation
-
-Core Table:
-
-* shipment_documents
+* Documents stored in secure storage (non-public directory)
+* Access controlled via signed URLs
+* Optional cloud storage upgrade (S3) in future phase
 
 ---
 
-### 2.4.3 Invoice & Financial Module
+## 14. Scalability Strategy
 
-Handles:
+Current deployment:
 
-* Invoice item templates (Admin)
-* Dynamic pricing by authorized staff
-* Invoice issuance
-* Wallet payments
-* Transaction logging
+* Single Laravel application
+* MySQL database
+* Shared or VPS hosting (Hostinger)
 
-Core Tables:
+Future-ready design:
 
-* invoice_items
-* invoices
-* invoice_line_items
-* wallets
-* wallet_transactions
+* Queue system (Redis)
+* Background jobs for:
 
----
-
-### 2.4.4 Communication Module
-
-Handles:
-
-* Email notifications
-* WhatsApp session-based messaging
-* Event-triggered alerts
-
-Core Tables:
-
-* whatsapp_sessions
-* outbound_messages
-* inbound_messages
+  * PDF generation
+  * Notification dispatch
+  * API imports
+* Horizontal scaling via load balancer (future phase)
 
 ---
 
-### 2.4.5 Internal Notification Module
+## 15. Deployment Architecture
 
-Handles:
-
-* Activity-based notification creation
-* Unread count tracking
-* Dropdown rendering
-* Mark-as-read actions
-
-Core Tables:
-
-* notifications
-* notification_reads
+* GitHub repository
+* Testing branch
+* Main branch (production)
+* Webhook-based deployment
+* Environment-based configuration (.env)
 
 ---
 
-### 2.4.6 Activity Logging Module
+## 16. Architectural Principles
 
-Handles:
-
-* Immutable logs of critical actions
-* Financial changes
-* Document generation
-* Status updates
-
-Core Table:
-
-* activity_logs
+1. Separation of concerns
+2. Role isolation
+3. Event-driven internal workflow
+4. Immutable financial records
+5. Centralized document control
+6. Service-based business logic
+7. Audit-first design
 
 ---
-
-## 2.5 Event-Driven Architecture
-
-The system shall use Laravel Events and Listeners for automation.
-
-Example Event Flow:
-
-1. TitleUploaded
-   → GenerateDockReceipt
-   → LogActivity
-   → SendEmailNotification
-
-2. InvoiceIssued
-   → SendInvoiceEmail
-   → SendWhatsAppNotification
-   → LogActivity
-
-3. WalletDebited
-   → MarkInvoicePaid
-   → NotifyShipper
-   → LogActivity
-
-All external communications shall be queued.
-
----
-
-## 2.6 Background Processing
-
-Redis-backed queues shall handle:
-
-* Email sending
-* WhatsApp messaging
-* PDF generation
-* Heavy report generation
-
-This prevents blocking user interaction and improves responsiveness.
-
----
-
-## 2.7 Database Architecture
-
-The database shall follow:
-
-* Strict foreign key relationships
-* Indexed frequently queried columns
-* Soft deletes where appropriate
-* Transaction wrapping for financial operations
-
-Critical transactional operations:
-
-* Wallet deduction
-* Invoice payment processing
-* Shipment state transitions
-
----
-
-## 2.8 Security Architecture
-
-The system shall implement:
-
-### 2.8.1 Role-Based Access Control (RBAC)
-
-* Permissions stored in database
-* Middleware enforcement
-* Policy-based authorization
-
----
-
-### 2.8.2 File Security
-
-* Documents stored in private directory
-* Access via signed URLs
-* Download logged in activity_logs
-
----
-
-### 2.8.3 Financial Integrity
-
-* Database transactions for wallet deduction
-* Invoice locking after issuance
-* No direct manual balance editing
-
----
-
-### 2.8.4 Webhook Security
-
-* WhatsApp webhook signature validation
-* Rate limiting
-* Request verification
-
----
-
-## 2.9 Deployment Architecture
-
-The system shall be deployable in the following configuration:
-
-* Web Server (Nginx or Apache)
-* PHP Runtime
-* MySQL Server
-* Redis Server
-* Queue Worker Process
-* SSL Certificate
-* Automated Backup System
-
-Environment separation:
-
-* Development
-* Staging
-* Production
-
----
-
-## 2.10 Scalability Considerations
-
-The architecture allows:
-
-* Horizontal scaling of queue workers
-* Separation of database and application servers
-* Future migration to containerized infrastructure
-* API-first extension for mobile application (future phase)
-
----
-
-## 2.11 Logging & Monitoring
-
-The system shall log:
-
-* Authentication events
-* Document generation
-* Financial transactions
-* Shipment status changes
-* Failed jobs
-
-Future enhancement:
-
-* Integration with monitoring tools
-* Error reporting dashboards
-
----
-
-## 2.12 Architectural Principles
-
-The system shall adhere to:
-
-1. Separation of Concerns
-2. Single Responsibility Principle
-3. Transaction Safety for Financial Logic
-4. Event-Driven Automation
-5. Compliance-Aware Workflow Enforcement
-6. Auditability by Design
-
----
-
-End of Document
-`02_Architecture.md`
-
----
-

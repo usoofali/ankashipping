@@ -1,254 +1,356 @@
----
-
 # 01_System_Overview.md
 
----
+## 1. Introduction
 
-# 1. System Overview
+### 1.1 Purpose of the System
 
-## 1.1 System Name
+The **Anka Shipping & Logistics Management System (ASLMS)** is a web-based enterprise platform designed to digitize and streamline the operations of **Anka Shipping & Logistics Services**, a US-based logistics company serving clients primarily in Nigeria and West Africa.
 
-**Anka Shipping Operations & Documentation Management System (ASODMS)**
+The system will:
 
----
+* Manage end-to-end vehicle shipment workflows
+* Handle auction vehicle intake (e.g., Copart integration)
+* Generate operational documents (Dock Receipt, Bill of Lading, Vehicle Receipt)
+* Manage dynamic invoice items and pricing
+* Enable WhatsApp-based customer communication
+* Provide internal activity notifications
+* Track drivers, shipments, and port processing
+* Provide role-based access control for all actors
 
-## 1.2 Organization Context
-
-This system is developed for **Anka Shipping & Logistic Services**, a United States-based vehicle export and freight forwarding company serving clients primarily in Nigeria and other West African countries.
-
-The company facilitates:
-
-* Purchase and export of vehicles from the United States
-* Inland transportation to US ports
-* RoRo (Roll-on/Roll-off) shipping
-* Container shipping
-* Documentation management
-* Client communication and invoicing
-* Delivery coordination to West Africa
-
-The system is designed to digitalize, automate, and control the operational workflow of these activities.
+The system replaces fragmented manual workflows with a centralized, auditable, and scalable digital platform.
 
 ---
 
-## 1.3 Purpose of the System
+## 2. Business Context
 
-The purpose of this system is to provide a centralized, compliance-aware platform for managing:
+Anka Shipping operates within the international vehicle logistics chain:
 
-* Vehicle shipment lifecycle
-* Export documentation
-* Dock receipt generation
-* Bill of Lading tracking
-* Invoice management
-* Wallet-based client payments
-* Driver coordination
-* WhatsApp and email communication
-* Internal notifications and activity auditing
+1. Vehicle purchased from US auction (e.g., Copart)
+2. Vehicle picked up by driver
+3. Vehicle transported to port
+4. Dock Receipt generated
+5. Ocean carrier issues Bill of Lading
+6. Vehicle shipped to Nigeria or West Africa
+7. Customer receives shipment
+8. Invoice generated based on dynamic pricing
 
-The system replaces fragmented manual processes with structured, traceable, and secure digital workflows.
-
----
-
-## 1.4 Business Objectives
-
-The system shall support the following business objectives:
-
-1. Reduce documentation errors during export processing.
-2. Prevent shipment rejection at US port terminals.
-3. Ensure compliance with US export regulations.
-4. Improve operational efficiency and coordination.
-5. Provide financial transparency for clients.
-6. Enable structured communication with West African clientele.
-7. Maintain complete audit trails for operational and financial events.
-8. Reduce dependency on manual WhatsApp coordination.
+The system must support this operational lifecycle.
 
 ---
 
-## 1.5 System Scope
+## 3. System Objectives
 
-### 1.5.1 In Scope
+### 3.1 Operational Objectives
 
-The system shall support:
+* Digitize shipment lifecycle management
+* Centralize document generation and storage
+* Provide structured invoice item management
+* Enable real-time WhatsApp customer support
+* Track internal staff activities
+* Improve transparency and accountability
 
-* Pre-alert vehicle registration
-* Shipment creation and lifecycle management
-* Driver assignment and coordination
-* Title document upload and validation
-* Automated Dock Receipt generation
-* Bill of Lading upload and tracking
-* Invoice creation using dynamic pricing
-* Wallet funding and deduction
-* Email notifications
-* Controlled WhatsApp communication
-* Internal notification dropdown system
-* Activity logging and auditing
-* Role-based access control
+### 3.2 Technical Objectives
 
----
-
-### 1.5.2 Out of Scope
-
-The following are not included in the initial release:
-
-* GPS vehicle tracking
-* Direct integration with US Customs AES filing system
-* Real-time ocean vessel tracking
-* Automated customs clearance in destination countries
-* Payment gateway integration (unless defined in future phases)
+* Role-based access control (RBAC)
+* Modular architecture (Laravel-based)
+* Activity logging and notification system
+* External API integration (RapidAPI / Auction data)
+* Document generation engine (PDF)
+* Scalable database structure
 
 ---
 
-## 1.6 Operational Geography
+## 4. System Actors
 
-### 1.6.1 Origin (United States)
+The system currently supports five primary actors:
 
-Primary operational ports may include:
+### 4.1 Super Admin (Admin)
 
-* Baltimore, MD
-* Houston, TX
-* New Jersey
+**Highest privilege role.**
 
-The system must support export compliance and port-specific operational requirements.
+Responsibilities:
 
----
-
-### 1.6.2 Destination (West Africa)
-
-Primary markets include:
-
-* Nigeria
-* Ghana
-* Benin
-* Other West African countries
-
-The system must support communication patterns and documentation expectations common in West African logistics operations.
+* Full system access
+* Manage staff, agents, drivers
+* Create invoice item types
+* Define invoice item descriptions
+* Manage system configuration
+* View global reports
+* Audit activities
+* Override operational decisions if necessary
 
 ---
 
-## 1.7 Business Model Overview
+### 4.2 Staff
 
-Anka Shipping operates as:
+Operational personnel responsible for shipment and invoice processing.
 
-* Freight forwarding intermediary
-* Vehicle export coordinator
-* Documentation processor
-* Client financial handler
-* Port delivery facilitator
+Responsibilities:
 
-The company does not operate ocean vessels but works with licensed ocean carriers to transport cargo internationally.
+* Create and manage shipments
+* Generate Dock Receipts
+* Upload and manage Bill of Lading
+* Assign drivers
+* Add pricing to invoice items (dynamic)
+* Create invoices from predefined invoice item templates
+* Track shipment status
 
-The system must therefore:
+Important rule:
 
-* Manage documentation before and after carrier issuance
-* Track third-party documentation (e.g., Bill of Lading)
-* Generate company-controlled documents (e.g., Dock Receipt, Invoice)
-
----
-
-## 1.8 High-Level System Capabilities
-
-The system shall provide:
-
-### 1. Shipment Lifecycle Control
-
-Structured workflow from:
-Pre-alert → Shipment → Port Delivery → Vessel Loading → Arrival → Delivery
+> Staff cannot create invoice item templates.
+> They can only assign dynamic pricing to existing invoice items created by Admin.
 
 ---
 
-### 2. Compliance-Oriented Document Management
+### 4.3 Agent (Customer Support – WhatsApp Role)
 
-Support for:
+Agents operate the WhatsApp communication system.
 
-* Auction Receipts
-* Vehicle Titles
-* Dock Receipts (System Generated)
-* Bill of Lading uploads
-* Invoice PDFs
+Responsibilities:
 
-Document sequencing rules must be enforced.
+* Respond to customer inquiries
+* Handle shipment tracking questions
+* Manage escalation to staff/admin
+* View shipment data (read-only operational access)
+* Attach shipment references to conversations
+* Log communication activities
 
----
+Agents operate through a **Dedicated Communication Interface** that includes:
 
-### 3. Financial Control Module
-
-* Invoice item template creation (Admin)
-* Dynamic pricing by authorized staff
-* Wallet-based payment system
-* Financial transaction logging
-
----
-
-### 4. Communication Module
-
-* Email notification engine
-* WhatsApp session-aware messaging
-* Internal notification dropdown system
-* Activity logs for communication events
+* Conversation panel
+* Customer profile
+* Shipment summary
+* Escalation controls
+* Internal notes
 
 ---
 
-### 5. Role-Based Access & Audit
+### 4.4 Shipper (Customer)
 
-* Defined user roles
-* Permission-based operations
-* Immutable activity logs
-* Action traceability
+The client shipping vehicles.
 
----
+Capabilities (limited access portal):
 
-## 1.9 System Users
+* View shipment status
+* View invoices
+* Download Dock Receipt
+* View Bill of Lading (if permitted)
+* Track vehicle details
 
-The system will be used by:
-
-* Super Administrator
-* Operations Staff
-* Invoice Staff
-* WhatsApp Agents
-* Drivers
-* Shippers (Customers)
-
-Each role shall have defined permissions and restricted access.
+Shippers do not manage system data.
 
 ---
 
-## 1.10 Technology Stack Overview
+### 4.5 Driver
 
-The system will be developed using:
+Responsible for vehicle transport to port.
 
-* Backend Framework: Laravel
-* Frontend Stack: Livewire + Tailwind CSS
+Capabilities:
+
+* View assigned pickup jobs
+* Confirm vehicle pickup
+* Upload proof (optional phase 2)
+* Access Dock Receipt for port processing
+* Update delivery status
+
+Drivers operate with limited system privileges.
+
+---
+
+## 5. Core Modules
+
+### 5.1 Shipment Management Module
+
+Handles full shipment lifecycle:
+
+* Auction data intake (RapidAPI)
+* Vehicle record creation
+* Shipment assignment
+* Driver allocation
+* Port status tracking
+* Shipment state machine
+
+---
+
+### 5.2 Document Management Module
+
+Supports generation and storage of:
+
+* Dock Receipt (Generated by Anka)
+* Bill of Lading (Uploaded from ocean carrier)
+* Vehicle Receipt (From auction company)
+* Other shipment-related documents
+
+All documents are:
+
+* Linked to shipment
+* Versioned
+* Downloadable
+* Stored securely
+
+---
+
+### 5.3 Invoice Management Module
+
+#### Invoice Item Structure
+
+Invoice Items are template-based.
+
+Created by:
+
+* Admin only
+
+Contain:
+
+* Item Name
+* Invoice Type
+* Description
+
+Staff Workflow:
+
+* Select existing invoice item
+* Add dynamic price
+* Attach to invoice
+* Generate final invoice
+
+Pricing is not fixed in the template.
+Pricing is determined per shipment.
+
+---
+
+### 5.4 WhatsApp Communication Module
+
+Dedicated Agent Interface including:
+
+* Inbox (real-time)
+* Conversation threads
+* Shipment linking
+* Internal notes
+* Escalation mechanism
+* Message logging
+
+Features:
+
+* Multi-agent support
+* Assignment logic
+* Audit trail
+* Conversation tagging
+
+---
+
+### 5.5 Internal Notification System
+
+Dropdown-style activity notification system.
+
+Features:
+
+* Real-time activity feed
+* Unread count
+* Clickable activity logs
+* Role-based visibility
+
+Examples:
+
+* New shipment created
+* Invoice updated
+* Driver assigned
+* Dock Receipt generated
+* Agent escalated conversation
+* Payment recorded
+
+Notifications persist when user is offline.
+
+---
+
+### 5.6 Activity Logging & Audit Trail
+
+Every major system action logs:
+
+* User
+* Role
+* Timestamp
+* Action
+* Entity affected
+
+Used for:
+
+* Accountability
+* Operational tracing
+* Compliance
+* Internal monitoring
+
+---
+
+### 5.7 Auction Integration Module
+
+Consumes RapidAPI auction response:
+
+* Vehicle details
+* VIN
+* Photos
+* Sales history
+* Lot number
+* Damage report
+
+Stores structured vehicle data for shipment creation.
+
+---
+
+## 6. System Boundaries
+
+### Included
+
+* Shipment lifecycle management
+* Document generation
+* Invoice processing
+* WhatsApp support
+* Role-based management
+* Notification system
+* Auction data integration
+
+### Excluded (Future Phase)
+
+* Payment gateway integration
+* Automated customs integration
+* Mobile native application
+* Advanced analytics dashboards
+* Container tracking API
+
+---
+
+## 7. Technology Stack
+
+* Backend: Laravel
+* Frontend: Livewire + TailwindCSS
 * Database: MySQL
-* Queue System: Redis
-* Email: SMTP
-* WhatsApp: WhatsApp Business API
-* PDF Generation: DomPDF or equivalent
-* Storage: Secure private file storage
+* Hosting: Hostinger
+* API Integration: RapidAPI (Auction)
+* WhatsApp Integration: WhatsApp Business API
+* Document Generation: PDF engine (Laravel compatible)
 
 ---
 
-## 1.11 System Design Principles
+## 8. System Principles
 
-The system shall be designed based on:
-
-1. Compliance-first architecture
-2. Event-driven automation
-3. Role-based access control
-4. Transaction-safe financial operations
-5. Scalable queue processing
-6. Secure document handling
-7. Clear auditability
+* Role-segregated architecture
+* Audit-first design
+* Modular scalability
+* Operational transparency
+* Customer-centric communication
+* Dynamic pricing flexibility
 
 ---
 
-## 1.12 Strategic Positioning
+## 9. Strategic Value
 
-This system is not merely a logistics tracking application.
+This system will:
 
-It is a:
-
-**Cross-Border Export Operations, Documentation, and Financial Control Platform**
-for US-to-West Africa vehicle logistics.
-
-It is designed to support current operations and scale with business growth into additional markets.
+* Reduce operational errors
+* Improve invoice accuracy
+* Enhance customer communication
+* Increase accountability
+* Create structured internal workflow
+* Position Anka competitively against established players
 
 ---
+
