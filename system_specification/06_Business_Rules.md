@@ -28,6 +28,8 @@ This document defines the non-negotiable operational constraints, validations, a
    * Modify invoice templates
    * Delete shipments
 
+6. **Staff type:** Every user with role Staff must have a **staff type** (Accountant, Booking Manager, or Logistics Officer). Permissions for Staff are enforced by **role + staff type**; the system must check both before allowing an action. See 03_Roles_and_Permissions §4.3 for the Staff-type permission matrix.
+
 ---
 
 ## 1.2 Audit Enforcement
@@ -44,7 +46,15 @@ This document defines the non-negotiable operational constraints, validations, a
 
 ---
 
-# 2. Shipment Rules
+# 2. Shipper Registration, Pre-Alert, and Shipment Rules
+
+---
+
+## 2.0 Shipper Registration and Pre-Alert
+
+1. New shippers (customers) are registered from the system; who may register (Admin, Staff, or self) is configurable. Once registered, a shipper may create pre-alerts (web or WhatsApp).
+2. **Pre-alert creation:** Shipper provides at least VIN (and for WhatsApp: receipt/bill of sale). System **calls the vehicle-details API, stores the full response** in vehicle_api_responses (keyed by VIN or similar) to avoid duplicate paid requests, then creates the pre-alert linked to that response. No second API call when converting to shipment. **Web:** If the API fails, allow manual entry or retry. **WhatsApp:** If the API fails, return an error message to the user via WhatsApp only; no manual override.
+3. Only Admin or authorised Staff (Booking Manager) may convert pre-alert to shipment. Conversion uses stored API data where available.
 
 ---
 
@@ -223,11 +233,23 @@ Messages cannot be deleted.
 
 ---
 
-# 6. Notification Rules
+# 6. Notification and Milestone Communication Rules
 
 ---
 
-1. Notifications created when:
+## 6.1 Milestone Communications to Shipper
+
+1. For each defined **shipment milestone** (e.g. pre-alert received, shipment created, driver assigned, dock receipt ready, invoice ready, invoice cleared, shipment completed), the system shall send:
+   * **Email** to the shipper using the configured template and the appropriate mailer (e.g. booking@ for booking-related, account@ for payment-related).
+   * **WhatsApp** to the shipper if the 24h session is still active (same or shortened message).
+2. Email templates are configurable (subject, body, placeholders). Multiple SMTP mailers (e.g. booking@, account@) are configured by Super Admin; templates by Admin or Super Admin.
+3. Optional: Log sent communications (channel, recipient, milestone, shipment_id) for support and audit.
+
+---
+
+## 6.2 Internal Notification Rules
+
+1. Internal (in-app) notifications created when:
 
    * Invoice cleared
    * Shipment completed

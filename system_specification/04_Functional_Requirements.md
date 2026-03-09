@@ -7,11 +7,33 @@ This document defines the functional requirements for the **Anka Shipping & Logi
 
 All requirements are written in structured, testable format using “shall” statements and are organized by module.
 
+**Staff types:** Staff users have a **staff type** (Accountant, Booking Manager, Logistics Officer). The system shall enforce that only the actions permitted for that staff type are available to each Staff user (see 03_Roles_and_Permissions §4.3). Where a requirement says “Admin and Staff” may perform an action, the system shall allow it only for Admin and for those Staff whose staff type is permitted (e.g. “create shipment” only for Staff type Booking Manager).
+
 ---
 
-# 2. Shipment & Order Management
+# 2. Shipper Registration and Pre-Alert
 
-## 2.1 Shipment Creation
+## 2.0 Shipper Registration
+
+**FR-SH-00**
+The system shall allow registration of new shippers (customers) from the system. Who may create shipper records (Admin, Staff, or self-registration) is configurable. Once a shipper is registered, they may create pre-alerts (via web portal or WhatsApp) and access the shipper portal if linked to a user account.
+
+---
+
+## 2.1 Pre-Alert Creation (Web or WhatsApp)
+
+**FR-SH-00a**
+The system shall allow Shipper to create a pre-alert by providing at least the **VIN** of the vehicle (and, for WhatsApp, the receipt/bill of sale as image or document).
+
+**FR-SH-00b**
+Before creating the pre-alert, the system shall call the designated vehicle-details API with the VIN, **store the full API response** in a dedicated table (e.g. vehicle_api_responses) to avoid duplicate paid requests, then create the pre-alert linked to that stored response. **Web:** If the API fails, the system shall allow manual entry or retry. **WhatsApp:** If the API fails during pre-alert creation via WhatsApp, the system shall return an error message to the user only (no manual override).
+
+**FR-SH-00c**
+Admin or authorised Staff (Booking Manager) shall convert a pre-alert into a formal shipment (acknowledgment of receipt). Conversion may use the stored API response so no second API call is required.
+
+---
+
+## 2.2 Shipment Creation
 
 **FR-SH-01**
 The system shall allow Admin and Staff to create a shipment.
@@ -257,61 +279,56 @@ If internal clearance is marked complete, dashboard shall update accordingly.
 
 # 7. WhatsApp Communication Module
 
-## 7.1 Message Handling
+WhatsApp has **two layers: Automation first, Agent on escalation.** Most shipper actions are handled by automation; a human agent is involved only after the customer escalates.
+
+## 7.1 Message Handling and Automation
 
 **FR-WA-01**
-The system shall receive inbound WhatsApp messages via webhook.
+The system shall receive inbound WhatsApp messages via webhook. The shipper is identified by phone number (linked to the Shipper record).
 
 **FR-WA-02**
-The system shall create or update conversation thread per customer.
+The system shall create or update conversation thread per shipper (by phone).
 
 **FR-WA-03**
-The system shall assign conversation to an agent.
-
----
-
-## 7.2 Agent Capabilities
+**Automation (first):** The system shall provide menu-driven self-service so that almost everything the shipper can do on the platform can be done via WhatsApp without a human agent:
+* **Get shipment information:** Shipper selects menu option and sends VIN or shipment reference number. The system shall look up the shipment (must belong to that shipper), return status, and allow sending documents (e.g. Dock Receipt) to the shipper via WhatsApp Business API (e.g. PDF).
+* **Create pre-alert:** Shipper sends VIN and receipt/bill of sale (image or document). The system shall call the vehicle API, store the response, create the pre-alert, and confirm to the shipper via WhatsApp. If the vehicle API fails, the system shall send an error message to the shipper via WhatsApp only (no manual override on WhatsApp).
+* Other menu options as defined (e.g. list my shipments, request document).
 
 **FR-WA-04**
-Agent shall view conversation history.
+**Escalation:** When the customer chooses to talk to a human (e.g. "Talk to agent"), the conversation status shall become escalated and the conversation shall be assigned to an agent. Only then shall a human agent respond via the Agent Interface.
 
 **FR-WA-05**
-Agent shall reply via system interface.
+If a conversation remains unassigned after escalation for a specified duration, the system shall assign it via round-robin to an available agent.
+
+---
+
+## 7.2 Agent Capabilities (Post-Escalation Only)
 
 **FR-WA-06**
-Agent shall escalate conversation to Staff/Admin.
+After escalation, Agent shall view conversation history and reply via the system interface (same WhatsApp channel).
 
 **FR-WA-07**
-Agent shall link shipment to conversation.
+Agent shall link shipment to conversation when needed. Agent shall escalate or reassign to Staff/Admin as defined in roles.
 
 ---
 
-## 7.3 Shipment Query Automation
+# 8. Notification and Milestone Communications
 
-**FR-WA-08**
-The system shall allow automated shipment status response when VIN or reference number is detected.
-
----
-
-# 8. Notification System
+## 8.1 Internal Notifications
 
 **FR-NOT-01**
-The system shall generate notification for key events:
+The system shall generate internal (in-app) notifications for key events (e.g. Shipment created, Driver assigned, Document uploaded, Invoice cleared, Conversation escalated). Notifications shall be displayed in dropdown, with read/unread state and retention as defined elsewhere.
 
-* Shipment created
-* Driver assigned
-* Document uploaded
-* Invoice cleared
-* Conversation escalated
+## 8.2 Milestone Communications to Shipper (Email + WhatsApp)
 
 **FR-NOT-02**
-Notifications shall be displayed in dropdown.
+For each defined **shipment milestone** (e.g. pre-alert received, shipment created, driver assigned, dock receipt ready, invoice ready, invoice cleared, shipment completed), the system shall:
+* Send an **email** to the shipper using a configurable **email template** (subject and body with placeholders) and the appropriate **sender address** (e.g. booking@ for booking-related milestones, account@ for payment-related such as invoice ready/cleared).
+* If the shipper's WhatsApp 24h session is still active, also send a **WhatsApp message** with the same or a shortened version of the milestone information.
 
 **FR-NOT-03**
-System shall track read/unread state.
-
-**FR-NOT-04**
-Notifications shall persist when user is offline.
+**System settings for email:** The system shall support **multiple SMTP mailers** (e.g. booking@, account@), each with its own credentials and default "from" address. **Email templates** shall be configurable per milestone (name, subject, body, which mailer to use). Placeholders (e.g. shipper name, reference number, link to shipment) shall be supported. Super Admin shall manage mailer credentials; Admin (or Super Admin) shall manage templates.
 
 ---
 

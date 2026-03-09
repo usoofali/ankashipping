@@ -12,7 +12,9 @@ The system will:
 * Handle auction vehicle intake (e.g., Copart integration)
 * Generate operational documents (Dock Receipt, Bill of Lading, Vehicle Receipt)
 * Manage dynamic invoice items and pricing
-* Enable WhatsApp-based customer communication
+* Enable WhatsApp-based customer communication (automation first for self-service; human agent only after escalation)
+* Register new shippers (customers) from the system; once registered, shippers can create pre-alerts (web or WhatsApp)
+* Send milestone emails and WhatsApp messages to shippers at each shipment event (using configurable templates and multiple sender addresses e.g. booking@, account@)
 * Provide internal activity notifications
 * Track drivers, shipments, and port processing
 * Provide role-based access control for all actors
@@ -83,22 +85,19 @@ Responsibilities:
 
 ### 4.2 Staff
 
-Operational personnel responsible for shipment and invoice processing.
+Operational personnel responsible for shipment and invoice processing. Staff are classified by **staff type**; permitted actions depend on that type (see Roles and Permissions).
 
-Responsibilities:
+**Staff types:**
 
-* Create and manage shipments
-* Generate Dock Receipts
-* Upload and manage Bill of Lading
-* Assign drivers
-* Add pricing to invoice items (dynamic)
-* Create invoices from predefined invoice item templates
-* Track shipment status
+* **Accountant** – invoices (create, lines, dynamic pricing, clear when authorised); view shipments and invoices. No shipment creation, driver assignment, or document upload.
+* **Booking Manager** – convert pre-alert to shipment, create and edit shipments, assign driver (when authorised), generate Dock Receipt, upload BoL/Vehicle Receipt; create invoice and add pricing. No invoice clear.
+* **Logistics Officer** – assign driver (when authorised), update logistics/clearance status, generate Dock Receipt, upload documents; view shipments and invoices. No shipment create/edit, no invoice create or clear.
 
 Important rule:
 
 > Staff cannot create invoice item templates.
 > They can only assign dynamic pricing to existing invoice items created by Admin.
+> Which Staff actions a user may perform is determined by their staff type (Accountant, Booking Manager, or Logistics Officer).
 
 ---
 
@@ -163,12 +162,13 @@ Drivers operate with limited system privileges.
 
 Handles full shipment lifecycle:
 
-* Auction data intake (RapidAPI)
+* **Shipper registration:** New shippers (customers) are registered from the system (by Admin/Staff or self-registration as defined in configuration). Once registered, a shipper can create pre-alerts and use the portal or WhatsApp.
+* **Pre-alert flow:** Shipper provides VIN (and optionally receipt/bill of sale). System calls the vehicle details API, **stores the full API response** in a dedicated table (to avoid paying for duplicate lookups), then creates the pre-alert linked to that stored response. Admin or authorised Staff convert pre-alert to shipment.
+* Auction data intake (designated vehicle API; response stored for reuse)
 * Vehicle record creation
-* Shipment assignment
-* Driver allocation
+* Shipment assignment and driver allocation
 * Port status tracking
-* Shipment state machine
+* Three status dimensions (logistics, invoice, payment/clearance)
 
 ---
 
@@ -220,45 +220,21 @@ Pricing is determined per shipment.
 
 ### 5.4 WhatsApp Communication Module
 
-Dedicated Agent Interface including:
+**Two layers: Automation first, Agent on escalation.**
 
-* Inbox (real-time)
-* Conversation threads
-* Shipment linking
-* Internal notes
-* Escalation mechanism
-* Message logging
-
-Features:
-
-* Multi-agent support
-* Assignment logic
-* Audit trail
-* Conversation tagging
+* **Automation (first):** Almost everything the shipper can do on the platform can be done via WhatsApp without a human. Menu-driven self-service: (1) **Get shipment information** – shipper sends VIN or reference number; system returns status and can send documents (e.g. Dock Receipt) via WhatsApp Business API. (2) **Create pre-alert** – shipper sends VIN and receipt/bill of sale (e.g. image/document); system calls vehicle API, stores response, creates pre-alert and confirms via WhatsApp; if the API fails, system returns an error message only (no manual override on WhatsApp). (3) Other options as defined in menu. Shipper identity by phone number (linked to Shipper record).
+* **Agent (after escalation):** Only when the customer escalates (e.g. "Talk to agent") because automation was not sufficient does the conversation go to a human agent. Agent responds through the same WhatsApp channel via the Agent Interface.
+* Dedicated Agent Interface: Inbox, conversation threads, shipment linking, internal notes, escalation handling, message logging. Multi-agent support, assignment logic, audit trail.
 
 ---
 
 ### 5.5 Internal Notification System
 
-Dropdown-style activity notification system.
+Dropdown-style activity notification system (for internal users). Plus **milestone communications to shippers:**
 
-Features:
-
-* Real-time activity feed
-* Unread count
-* Clickable activity logs
-* Role-based visibility
-
-Examples:
-
-* New shipment created
-* Invoice updated
-* Driver assigned
-* Dock Receipt generated
-* Agent escalated conversation
-* Payment recorded
-
-Notifications persist when user is offline.
+* For each shipment milestone (e.g. pre-alert received, shipment created, driver assigned, dock receipt ready, invoice ready, invoice cleared, shipment completed), the system sends: (1) **Email** to the shipper using a configurable template and the appropriate sender address (e.g. booking@ for booking-related, account@ for payment-related). (2) **WhatsApp** message to the shipper if the 24h session is still active.
+* **System settings:** Multiple SMTP mailers (e.g. booking@, account@) and **email templates** per milestone (subject, body, placeholders). Super Admin manages mailer credentials; Admin (or Super Admin) manages templates.
+* Internal notifications: real-time feed, unread count, clickable to shipment, role-based visibility. Examples: New shipment created, Driver assigned, Dock Receipt generated, Agent escalated conversation. Notifications persist when user is offline (subject to retention policy).
 
 ---
 

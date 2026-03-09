@@ -75,26 +75,17 @@ Shipment record created in Draft/Pending state.
 
 ---
 
-# 2. VIN Lookup Process Flow
+# 2. VIN Lookup and API Response Storage Flow
 
-## Actors:
+**Actors:** Shipper (pre-alert), Admin, Staff (shipment form).
 
-* Admin
-* Staff
+**Trigger:** VIN entered in pre-alert (web/WhatsApp) or shipment form.
 
----
-
-## Trigger:
-
-VIN entered in shipment form.
-
----
-
-## Flow:
-
-1. System calls external API.
-2. API response validated.
-3. System extracts:
+**Flow:**
+1. System checks if vehicle_api_responses already has a recent entry for this VIN (optional cache policy); if yes, reuse.
+2. Otherwise system calls the designated vehicle-details API.
+3. **System stores the full API response** in vehicle_api_responses (vin, raw_response, requested_at).
+4. System extracts (for pre-alert or shipment):
 
    * Make
    * Model
@@ -108,8 +99,8 @@ VIN entered in shipment form.
 
 If API fails:
 
-* Show error
-* Allow manual entry
+* **Web (pre-alert or shipment form):** Show error; allow manual entry or retry.
+* **WhatsApp (pre-alert creation):** Send error message to user via WhatsApp only; do not create pre-alert; no manual override.
 
 ---
 
@@ -313,12 +304,13 @@ System verifies:
 
 ---
 
-# 9. WhatsApp Message Flow
+# 9. WhatsApp Message Flow (Automation First, Agent on Escalation)
 
-## Actors:
+## Actors
 
-* Customer (External)
-* Agent
+* Customer (Shipper)
+* Automation (system)
+* Agent (human, only after escalation)
 * Admin
 
 ---
@@ -330,8 +322,8 @@ System verifies:
 
    * Finds or creates conversation.
    * Stores message.
-3. Assigns to available agent.
-4. Notification sent.
+3. **Automation** handles intent (menu): Get shipment info (VIN/ref → status + documents), Create pre-alert (VIN + receipt), or "Talk to agent" → Escalation. Only when customer escalates does conversation go to an agent.
+4. On escalation: conversation assigned to agent; notification sent.
 
 ---
 
@@ -354,25 +346,24 @@ System verifies:
 
 ---
 
-# 10. Notification Process Flow
+# 10. Notification and Milestone Communication Process Flow
 
-## Trigger Events:
+## Internal Notifications (In-App)
 
-* Shipment created
-* Driver assigned
-* Document uploaded
-* Invoice cleared
-* Conversation escalated
+Trigger events: Shipment created, Driver assigned, Document uploaded, Invoice cleared, Conversation escalated. Event dispatched → Notification record created → Stored in notifications table → Displayed in dropdown → Marked read when clicked.
 
 ---
 
-## Flow:
+## Milestone Communications to Shipper (Email + WhatsApp)
 
-1. Event dispatched.
-2. Notification record created.
-3. Stored in notifications table.
-4. Displayed in dropdown.
-5. Marked read when clicked.
+**Trigger events (examples):** Pre-alert received, Shipment created, Driver assigned, Dock receipt ready, Invoice ready, Invoice cleared, Shipment completed.
+
+**Flow:**
+1. Milestone event occurs.
+2. System loads email template for that milestone and the appropriate mailer (e.g. booking@ for booking milestones, account@ for invoice/payment milestones).
+3. System sends **email** to shipper (to shipper email address; subject and body from template with placeholders replaced).
+4. If shipper has an active WhatsApp conversation and 24h session is still active, system sends **WhatsApp message** with same or shortened milestone information.
+5. Optional: Log in sent_communications (channel, recipient, milestone, shipment_id).
 
 ---
 

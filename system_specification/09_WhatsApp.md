@@ -10,11 +10,10 @@
 
 This system extends ANKA’s legacy shipping platform by integrating WhatsApp Business Cloud API to enable:
 
-* Automated shipment tracking
-* Document delivery (PDF, invoice, receipt)
-* Status notifications
-* Escalation to human support
-* Agent-based conversation management
+* **Automation first:** Menu-driven self-service (get shipment info by VIN/ref, create pre-alert with VIN and receipt, send documents). No human until customer escalates.
+* Document delivery (PDF, invoice, receipt) via WhatsApp Business API
+* Status notifications and milestone messages (when 24h session active)
+* **Escalation to human support:** Only when customer chooses Talk to agent; then agent responds via Agent Dashboard
 * Full audit and reporting
 
 The system is composed of:
@@ -35,13 +34,13 @@ Meta Cloud API
 ↓
 Webhook (Laravel Controller)
 ↓
-Message Processing Service
+Message Processing Service (identify shipper by phone)
 ↓
-Database (MySQL)
+**Automation Handler** (menu, get shipment info, create pre-alert, send documents) → if intent not escalation, respond and stop
 ↓
-Livewire Agent/Admin Interface
+If escalation: Conversation assigned to Agent → Livewire Agent Interface → Outbound WhatsApp Service
 ↓
-Outbound WhatsApp Service
+Database (MySQL) – conversations, messages, shippers, shipments, pre_alerts, vehicle_api_responses
 
 ---
 
@@ -52,26 +51,28 @@ Outbound WhatsApp Service
 Responsible for:
 
 * Receiving webhook events
+* Identifying shipper by phone number (link to Shipper record)
 * Downloading media (audio, PDF, image)
-* Managing conversation sessions
-* Sending outbound text, templates, and media
-* Enforcing 24-hour session rules
+* Managing conversation sessions and 24-hour session rules
+* Sending outbound text, templates, and media (including documents e.g. Dock Receipt PDF)
 
 ### Core Services
 
 App\Services\WhatsApp\MessageService
 
-* sendText()
-* sendTemplate()
-* sendDocument()
-* sendAudio()
+* sendText(), sendTemplate(), sendDocument(), sendAudio()
 
 App\Services\WhatsApp\WebhookProcessor
 
-* handleIncomingMessage()
-* handleMediaDownload()
-* detectEscalation()
-* updateSessionExpiry()
+* handleIncomingMessage(), handleMediaDownload(), updateSessionExpiry()
+* **Route to Automation or Agent:** if message indicates escalation (e.g. "Talk to agent"), assign to agent; otherwise hand to Automation Handler.
+
+App\Services\WhatsApp\AutomationHandler (or equivalent)
+
+* **Menu / intent detection:** e.g. Get shipment info, Create pre-alert, Talk to agent.
+* **Get shipment info:** Input VIN or reference (from message). Look up shipment for this shipper; return status; optionally send document (e.g. Dock Receipt) via sendDocument().
+* **Create pre-alert:** Input VIN + receipt/bill of sale (image or document from message). Call vehicle API; if success, store response in vehicle_api_responses, create pre_alert, confirm to shipper via WhatsApp. If the API fails, send an error message to the shipper via WhatsApp only (no pre-alert created; no manual override).
+* **Escalation:** Set conversation status to escalated; assign to agent (e.g. round-robin); notify internal.
 
 ---
 
@@ -79,34 +80,34 @@ App\Services\WhatsApp\WebhookProcessor
 
 Handles:
 
-* Conversation creation
-* Escalation
-* Agent assignment
-* Session window validation
+* Conversation creation (shipper identified by phone)
+* **Automation first:** Menu-driven handling (get shipment info, create pre-alert, etc.) until customer escalates.
+* **Escalation:** Customer chooses "Talk to agent"; conversation status = escalated; assignment to agent (e.g. round-robin).
+* Session window validation (24h rule)
 * Status transitions
 
 Conversation statuses:
 
-* active (automation running)
-* escalated (awaiting agent)
+* active (automation handling)
+* escalated (customer requested human; awaiting assignment)
 * assigned (agent responding)
 * closed
 
 ---
 
-## 3.3 Agent Support System
+## 3.3 Agent Support System (Post-Escalation Only)
 
-Built entirely with Laravel + Livewire.
+Agents handle **only** conversations that have been escalated. Built with Laravel + Livewire.
 
 Features:
 
 * Real-time chat (polling or websockets)
 * Audio playback
 * PDF preview links
-* Shipment details panel
-* Conversation assignment
-* Session expiry detection
-* Template-based replies (when session expired)
+* Shipment details panel and shipment linking
+* Conversation assignment (escalated queue, round-robin)
+* Session expiry detection; template-based replies when session expired
+* Internal notes and close/reassign
 
 ---
 
@@ -200,13 +201,13 @@ timestamps
 
 ## 5.1 Trigger
 
-Customer selects:
-"Talk to Support"
+Customer selects "Talk to agent" (or equivalent menu option / keyword).
 
 System updates:
 
-conversation.status = escalated
-automation paused
+* conversation.status = escalated
+* Automation stops handling this conversation
+* Conversation queued for agent assignment (e.g. round-robin)
 
 ---
 

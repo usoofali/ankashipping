@@ -241,32 +241,23 @@ Documents are version-controlled and immutable once finalized.
 
 ## 8. WhatsApp Communication Architecture
 
+**Two layers: Automation first, Agent on escalation.**
+
 ### 8.1 Integration
 
-WhatsApp Business API integration layer.
+WhatsApp Business API integration layer. Webhook, message processor, **automation handler** (menu: get shipment info, create pre-alert, send documents), conversation manager. Shipper identified by phone (Shipper record).
 
-Handled through:
+### 8.2 Automation (First Layer)
 
-* Webhook endpoint
-* Message processor service
-* Conversation manager
+Menu-driven self-service: get shipment information (VIN/ref to status and documents e.g. Dock Receipt via API); create pre-alert (VIN and receipt/bill of sale; vehicle API called, response stored, pre_alert created). No human agent until customer escalates.
 
-### 8.2 Core Entities
+### 8.3 Core Entities
 
-* Conversation
-* Message
-* Agent
-* Customer (Shipper)
+* Conversation, Message, Agent, Customer (Shipper)
 
-### 8.3 Escalation Mechanism
+### 8.4 Escalation Mechanism (Second Layer)
 
-Agents can:
-
-* Tag conversation
-* Escalate to Staff/Admin
-* Assign priority
-
-Escalation triggers internal notification events.
+When customer selects Talk to agent: conversation status = escalated; assigned to agent (e.g. round-robin). Agents can tag conversation, link shipment, add notes, respond via same WhatsApp channel. Escalation triggers internal notification events.
 
 ---
 
@@ -333,7 +324,8 @@ Used for:
 Role-Based Access Control (RBAC):
 
 * Super Admin
-* Staff
+* Admin
+* Staff (with staff type: Accountant, Booking Manager, Logistics Officer; permissions vary by type)
 * Agent
 * Driver
 * Shipper

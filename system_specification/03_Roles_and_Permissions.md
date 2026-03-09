@@ -115,58 +115,78 @@ This role is typically limited to company executives or system owners.
 
 ### 4.1 Description
 
-Staff members handle operational workflows such as shipment processing and invoice generation.
+Staff members handle operational workflows such as shipment processing and invoice generation. Each Staff user has exactly one **staff type**, which determines which of the Staff permissions they may exercise. Staff do not control system configuration or invoice item templates.
 
-They do not control system configuration or invoice item templates.
+**Staff types:**
+
+* **Accountant** – financial and invoice focus
+* **Booking Manager** – customer/order intake, pre-alert conversion, booking details, driver assignment, documents
+* **Logistics Officer** – physical flow, driver assignment, documents, logistics and clearance status
+
+Authorization rule: a Staff user may perform an action only if that action is allowed for their **staff type** (see matrix below). Admin may still “authorise” specific Staff for certain actions where the spec refers to “authorised Staff”.
 
 ---
 
-### 4.2 Permissions
+### 4.2 Permissions (Consolidated)
+
+The following permissions apply to **Staff** in aggregate; which of them a given user has depends on their staff type (see §4.3).
 
 #### Shipment Management
 
-* Create shipment
-* Edit shipment (until locked state)
-* Assign driver
-* Update shipment status (within allowed transitions)
-* Link auction vehicle
-* View all shipments
+* Convert pre-alert to shipment, create shipment, edit shipment (until locked state)
+* Assign driver, update shipment status (within allowed transitions)
+* Link auction vehicle, view all shipments
 
 #### Document Management
 
-* Generate Dock Receipt
-* Upload Bill of Lading
-* Upload Vehicle Receipt
-* Download shipment documents
+* Generate Dock Receipt, upload Bill of Lading / Vehicle Receipt
+* Replace documents (when authorised), download shipment documents
 
 #### Invoice Management
 
-* Create invoice
-* Add invoice lines (select existing invoice item templates)
-* Set dynamic price per invoice line
-* Edit invoice before finalization
-* View all invoices
+* Create invoice, add invoice lines (select existing invoice item templates), set dynamic price per invoice line
+* Edit invoice before finalization, view all invoices
+* Mark invoice as cleared (when authorised; see staff type)
 
-Important Restriction:
-
-Staff CANNOT:
-
-* Create invoice item templates
-* Modify invoice item descriptions
-* Change invoice item types
-
-Only Admin defines invoice structure.
+**Restriction (all Staff types):** Staff cannot create invoice item templates, modify invoice item descriptions, or change invoice item types. Only Admin defines invoice structure.
 
 #### WhatsApp Visibility
 
-* View escalated conversations
-* Respond if reassigned
-* View shipment linked to conversation
+* View escalated conversations, respond if reassigned, view shipment linked to conversation
 
 #### Notifications
 
-* Receive shipment-related notifications
-* Receive escalation alerts
+* Receive shipment-related notifications, receive escalation alerts
+
+---
+
+### 4.3 Staff Types and Permitted Actions
+
+Permissions are enforced by **role = Staff** and **staff_type**. “✔” = allowed for that staff type; “✖” = not allowed.
+
+| Action / Capability                         | Accountant | Booking Manager | Logistics Officer |
+| ------------------------------------------- | ---------- | --------------- | ----------------- |
+| Convert pre-alert to shipment               | ✖          | ✔               | ✖                 |
+| Create shipment                             | ✖          | ✔               | ✖                 |
+| Edit shipment (until locked)                | ✖          | ✔               | ✖                 |
+| Update shipment status (logistics/clearance)| ✖          | ✖               | ✔                 |
+| Assign driver                               | ✖          | ✔*              | ✔*                |
+| View all shipments                          | ✔          | ✔               | ✔                 |
+| Generate Dock Receipt                       | ✖          | ✔               | ✔                 |
+| Upload / replace Bill of Lading, Vehicle Receipt, Title | ✖ | ✔*        | ✔*                |
+| Create invoice, add lines, set dynamic price| ✔          | ✔               | ✖                 |
+| Edit invoice (before finalization)          | ✔          | ✔               | ✖                 |
+| Mark invoice as cleared                    | ✔*         | ✖               | ✖                 |
+| View all invoices                           | ✔          | ✔               | ✔                 |
+| View escalated WhatsApp                     | ✔          | ✔               | ✔                 |
+
+*When authorised by Admin (where applicable).
+
+**Summary by staff type:**
+
+* **Accountant:** Invoices (create, lines, prices, clear when authorised). View shipments and invoices. No shipment creation, no driver assignment, no document generation/upload.
+* **Booking Manager:** Pre-alert conversion, shipment create/edit, assign driver and documents (when authorised). Invoice create/lines/prices (no clear). View all shipments and invoices.
+* **Logistics Officer:** Assign driver, documents, update logistics/clearance status. View shipments and invoices. No shipment create/edit, no invoice create or clear.
 
 ---
 
@@ -270,20 +290,25 @@ Shippers CANNOT:
 
 ## 8. Permission Matrix (Summary)
 
-| Feature                      | Admin | Staff | Agent         | Driver            | Shipper |
-| ---------------------------- | ----- | ----- | ------------- | ----------------- | ------- |
-| Create Shipment              | ✔     | ✔     | ✖             | ✖                 | ✖       |
-| Edit Shipment                | ✔     | ✔     | ✖             | ✖                 | ✖       |
-| Assign Driver                | ✔     | ✔     | ✖             | ✖                 | ✖       |
-| Generate Dock Receipt        | ✔     | ✔     | ✖             | ✖                 | ✖       |
-| Upload Bill of Lading        | ✔     | ✔     | ✖             | ✖                 | ✖       |
-| Create Invoice Item Template | ✔     | ✖     | ✖             | ✖                 | ✖       |
-| Add Dynamic Price to Invoice | ✔     | ✔     | ✖             | ✖                 | ✖       |
-| View All Invoices            | ✔     | ✔     | ✖             | ✖                 | ✖       |
-| Respond to WhatsApp          | ✔     | ✖     | ✔             | ✖                 | ✖       |
-| Escalate Conversation        | ✔     | ✖     | ✔             | ✖                 | ✖       |
-| View Assigned Jobs           | ✔     | ✔     | ✖             | ✔                 | ✖       |
-| View Own Shipment            | ✔     | ✔     | ✔ (Read-only) | ✔ (Assigned only) | ✔       |
+**System roles:** Admin, Staff, Agent, Driver, Shipper. **Staff** permissions are further restricted by **staff type** (Accountant, Booking Manager, Logistics Officer); see §4.3 for the Staff-type matrix. Below, “Staff” means at least one staff type has the permission.
+
+| Feature                      | Admin | Staff (by type) | Agent         | Driver            | Shipper |
+| ---------------------------- | ----- | ----------------- | ------------- | ----------------- | ------- |
+| Create Shipment              | ✔     | ✔ Booking Mgr    | ✖             | ✖                 | ✖       |
+| Edit Shipment                | ✔     | ✔ Booking Mgr    | ✖             | ✖                 | ✖       |
+| Assign Driver                | ✔     | ✔ Book/Log*      | ✖             | ✖                 | ✖       |
+| Generate Dock Receipt        | ✔     | ✔ Booking/Log    | ✖             | ✖                 | ✖       |
+| Upload / Replace Documents   | ✔     | ✔ Booking/Log*   | ✖             | ✖                 | ✖       |
+| Create Invoice Item Template | ✔     | ✖                | ✖             | ✖                 | ✖       |
+| Add Dynamic Price to Invoice | ✔     | ✔ Acct/Booking   | ✖             | ✖                 | ✖       |
+| Mark Invoice Cleared         | ✔     | ✔ Accountant*    | ✖             | ✖                 | ✖       |
+| View All Invoices            | ✔     | ✔ All staff      | ✖             | ✖                 | ✖       |
+| Respond to WhatsApp          | ✔     | ✖                | ✔             | ✖                 | ✖       |
+| Escalate Conversation        | ✔     | ✖                | ✔             | ✖                 | ✖       |
+| View Assigned Jobs           | ✔     | ✔ All staff      | ✖             | ✔                 | ✖       |
+| View Own Shipment            | ✔     | ✔ All staff      | ✔ (Read-only) | ✔ (Assigned only) | ✔       |
+
+*When authorised by Admin. Acct = Accountant, Book = Booking Manager, Log = Logistics Officer.
 
 ---
 

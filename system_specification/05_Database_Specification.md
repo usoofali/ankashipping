@@ -43,21 +43,24 @@ Stores system roles.
 
 Stores all authenticated users.
 
-| Field      | Type                | Notes        |
-| ---------- | ------------------- | ------------ |
-| id         | BIGINT PK           |              |
-| role_id    | BIGINT FK           | → roles.id   |
-| name       | VARCHAR(150)        |              |
-| email      | VARCHAR(150) UNIQUE |              |
-| phone      | VARCHAR(20)         | Nullable     |
-| password   | VARCHAR(255)        | Hashed       |
-| is_active  | BOOLEAN             | Default true |
-| created_at | TIMESTAMP           |              |
-| updated_at | TIMESTAMP           |              |
+| Field      | Type                | Notes                                                                 |
+| ---------- | ------------------- | --------------------------------------------------------------------- |
+| id         | BIGINT PK           |                                                                       |
+| role_id    | BIGINT FK           | → roles.id                                                            |
+| staff_type | VARCHAR(50)         | Nullable. Required when role_id = Staff. Values: accountant, booking_manager, logistics_officer |
+| name       | VARCHAR(150)        |                                                                       |
+| email      | VARCHAR(150) UNIQUE |                                                                       |
+| phone      | VARCHAR(20)         | Nullable                                                              |
+| password   | VARCHAR(255)        | Hashed                                                                |
+| is_active  | BOOLEAN             | Default true                                                          |
+| created_at | TIMESTAMP           |                                                                       |
+| updated_at | TIMESTAMP           |                                                                       |
 
 Relationship:
 
 * users.role_id → roles.id
+
+**Staff type:** When `role_id` corresponds to Staff, `staff_type` must be one of: `accountant`, `booking_manager`, `logistics_officer`. Permissions for Staff are enforced by role + staff_type (see 03_Roles_and_Permissions §4.3).
 
 ---
 
@@ -84,6 +87,60 @@ Represents customers.
 Relationship:
 
 * shippers.user_id → users.id (optional)
+
+---
+
+## 3.2 consignees
+
+Recipient/consignee records created by Shipper.
+
+| Field        | Type         | Notes          |
+| ------------ | ------------ | -------------- |
+| id           | BIGINT PK    |                |
+| shipper_id   | BIGINT FK    | → shippers.id  |
+| name         | VARCHAR(150)  |                |
+| contact      | VARCHAR(150)  | Nullable       |
+| phone        | VARCHAR(20)   | Nullable       |
+| address      | TEXT          | Nullable       |
+| created_at   | TIMESTAMP     |                |
+| updated_at   | TIMESTAMP     |                |
+
+---
+
+## 3.3 vehicle_api_responses
+
+Stores the full response from the vehicle-details API (e.g. VIN lookup) so that duplicate API calls are avoided (cost and rate limits). Referenced when creating a pre-alert and when converting to shipment.
+
+| Field          | Type         | Notes                        |
+| -------------- | ------------ | ---------------------------- |
+| id             | BIGINT PK    |                              |
+| vin            | VARCHAR(20)  |                              |
+| raw_response   | JSON         | Full API response            |
+| requested_at   | TIMESTAMP    | When the API was called      |
+| created_at     | TIMESTAMP    |                              |
+
+Index on vin (for lookup before calling API). Optional: pre_alert_id or first_use_shipment_id if tracking first use.
+
+---
+
+## 3.4 pre_alerts
+
+Shipper-created shipping request before conversion to shipment. Can be created via web portal or WhatsApp. Links to stored API response when VIN was used.
+
+| Field                   | Type         | Notes                          |
+| ----------------------- | ------------ | ------------------------------ |
+| id                      | BIGINT PK    |                                |
+| shipper_id              | BIGINT FK    | → shippers.id                  |
+| vin                     | VARCHAR(20)  | Nullable                       |
+| vehicle_api_response_id | BIGINT FK    | Nullable → vehicle_api_responses.id |
+| receipt_media_path     | TEXT         | Nullable; for WhatsApp bill of sale/receipt |
+| status                  | VARCHAR(50)  | e.g. pending, converted        |
+| reference               | VARCHAR(50)  | Nullable                       |
+| notes                   | TEXT         | Nullable                       |
+| converted_at            | DATETIME     | Nullable                       |
+| shipment_id             | BIGINT FK    | Nullable → shipments.id after conversion |
+| created_at              | TIMESTAMP    |                                |
+| updated_at              | TIMESTAMP    |                                |
 
 ---
 
@@ -344,6 +401,9 @@ Add indexes on:
 
 * shipments.reference_no
 * shipments.vin
+* vehicle_api_responses.vin
+* pre_alerts.shipper_id
+* pre_alerts.status
 * invoices.invoice_number
 * conversations.status
 * messages.conversation_id
@@ -381,7 +441,63 @@ Avoid soft deletes on:
 
 ---
 
-# 13. Future Expansion Ready
+# 13. System Settings (Email and Communications)
+
+## 13.1 mailers
+
+Configurable SMTP mailers for different sender addresses (e.g. booking@, account@). Super Admin manages. Stored in DB or config; if DB, table below.
+
+| Field           | Type         | Notes                    |
+| --------------- | ------------ | ------------------------- |
+| id              | BIGINT PK    |                           |
+| name            | VARCHAR(50)  | e.g. booking, account     |
+| from_address    | VARCHAR(150) |                           |
+| from_name       | VARCHAR(100) | Nullable                  |
+| smtp_host       | VARCHAR(150) |                           |
+| smtp_port       | INT          |                           |
+| smtp_username   | VARCHAR(150) | Nullable                  |
+| smtp_password   | TEXT         | Encrypted                 |
+| is_active       | BOOLEAN      | Default true              |
+| created_at      | TIMESTAMP    |                           |
+| updated_at      | TIMESTAMP    |                           |
+
+---
+
+## 13.2 email_templates
+
+One record per milestone (or per email type). Admin (or Super Admin) edits. Used for milestone emails to shippers.
+
+| Field        | Type         | Notes                                      |
+| ------------ | ------------ | ------------------------------------------ |
+| id           | BIGINT PK    |                                            |
+| name         | VARCHAR(100) | e.g. pre_alert_received, shipment_created  |
+| mailer_id    | BIGINT FK    | → mailers.id (which from-address)          |
+| subject      | VARCHAR(255) | With placeholders                          |
+| body_html    | TEXT         | With placeholders e.g. {{shipper_name}}    |
+| is_active    | BOOLEAN      | Default true                               |
+| created_at   | TIMESTAMP    |                                            |
+| updated_at   | TIMESTAMP    |                                            |
+
+---
+
+## 13.3 sent_communications (optional)
+
+Log of sent milestone emails/WhatsApp for support and auditing.
+
+| Field          | Type          | Notes                |
+| -------------- | ------------- | -------------------- |
+| id             | BIGINT PK     |                      |
+| channel        | ENUM('email','whatsapp') |              |
+| recipient_type | VARCHAR(50)   | e.g. shipper         |
+| recipient_id   | BIGINT        | e.g. shipper_id      |
+| template_name  | VARCHAR(100)  | Nullable             |
+| milestone      | VARCHAR(100)  | Nullable             |
+| shipment_id    | BIGINT FK     | Nullable             |
+| sent_at        | TIMESTAMP     |                      |
+
+---
+
+# 14. Future Expansion Ready
 
 Schema supports:
 

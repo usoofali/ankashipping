@@ -375,15 +375,17 @@ Clicking:
 
 # 8. Role-Based UI Rendering Rules
 
-| Component                | Admin | Staff | Agent     | Driver | Shipper |
-| ------------------------ | ----- | ----- | --------- | ------ | ------- |
-| Create Shipment          | ✔     | ✔     | ✖         | ✖      | ✖       |
-| Create Invoice           | ✔     | ✔     | ✖         | ✖      | ✖       |
-| Assign Driver            | ✔     | ✔     | ✖         | ✖      | ✖       |
-| Escalate Conversation    | ✔     | ✖     | ✔         | ✖      | ✖       |
-| View Financial Breakdown | ✔     | ✔     | Read-only | ✖      | ✔       |
+Staff permissions depend on **staff type** (Accountant, Booking Manager, Logistics Officer). Show actions only when the user’s staff type is allowed (see 03_Roles_and_Permissions §4.3).
 
-UI must hide buttons rather than disable them when unauthorized.
+| Component                | Admin | Accountant | Booking Mgr | Logistics Off | Agent     | Driver | Shipper |
+| ------------------------ | ----- | ---------- | ----------- | ------------- | --------- | ------ | ------- |
+| Create Shipment          | ✔     | ✖          | ✔           | ✖             | ✖         | ✖      | ✖       |
+| Create Invoice           | ✔     | ✔          | ✔           | ✖             | ✖         | ✖      | ✖       |
+| Assign Driver            | ✔     | ✖          | ✔*          | ✔*            | ✖         | ✖      | ✖       |
+| Escalate Conversation    | ✔     | ✖          | ✖           | ✖             | ✔         | ✖      | ✖       |
+| View Financial Breakdown | ✔     | ✔          | ✔           | ✔             | Read-only | ✖      | ✔       |
+
+*When authorised by Admin. UI must hide buttons rather than disable them when unauthorized.
 
 ---
 
