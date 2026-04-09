@@ -3,36 +3,38 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
+use Laravel\Fortify\TwoFactorAuthenticatable;
+use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable // implements MustVerifyEmail
+/**
+ * Authenticated users may be shipper owners (hasOne Shipper), internal Staff (hasOne Staff), or
+ * administrators with only Spatie roles (typically super_admin). Avoid attaching both Shipper and Staff
+ * to the same user unless a future domain rule explicitly requires it.
+ */
+#[Fillable(['name', 'email', 'password'])]
+#[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
+class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    /** @use HasFactory<UserFactory> */
+    use HasFactory, HasRoles, Notifiable, TwoFactorAuthenticatable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
-    ];
+    public function shipper(): HasOne
+    {
+        return $this->hasOne(Shipper::class);
+    }
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
+    public function staff(): HasOne
+    {
+        return $this->hasOne(Staff::class);
+    }
 
     /**
      * Get the attributes that should be cast.
@@ -54,7 +56,8 @@ class User extends Authenticatable // implements MustVerifyEmail
     {
         return Str::of($this->name)
             ->explode(' ')
-            ->map(fn (string $name) => Str::of($name)->substr(0, 1))
+            ->take(2)
+            ->map(fn ($word) => Str::substr($word, 0, 1))
             ->implode('');
     }
 }

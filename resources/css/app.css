@@ -12,10 +12,11 @@
     strategy: 'class';
 }
 
-@source "../views";
+@source '../views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../vendor/livewire/flux-pro/stubs/**/*.blade.php';
 @source '../../vendor/livewire/flux/stubs/**/*.blade.php';
+@source '../../vendor/wireui/wireui';
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -150,7 +151,6 @@
         --color-accent-foreground: #0f172a;
     }
 }
-
 @layer base {
 
     *,
@@ -167,7 +167,7 @@
 }
 
 [data-flux-label] {
-    @apply !mb-0 !leading-tight;
+    @apply  !mb-0 !leading-tight;
 }
 
 input:focus[data-flux-control],

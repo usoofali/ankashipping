@@ -101,7 +101,7 @@ return [
 
     'previous_keys' => [
         ...array_filter(
-            explode(',', env('APP_PREVIOUS_KEYS', ''))
+            explode(',', (string) env('APP_PREVIOUS_KEYS', '')),
         ),
     ],
 
@@ -122,5 +122,7 @@ return [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
+
+    'setup_enabled' => (bool) env('APP_SETUP_ENABLED', false),
 
 ];

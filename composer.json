@@ -10,11 +10,14 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "barryvdh/laravel-dompdf": "^3.1",
+        "laravel/fortify": "^1.36",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
         "livewire/flux": "^2.0",
         "livewire/livewire": "^4.2",
         "livewire/volt": "^1.6.7",
+        "power-components/livewire-powergrid": "^6.9",
         "spatie/laravel-permission": "^6.25",
         "wireui/wireui": "^2.6"
     },

@@ -1,0 +1,29 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('default_shipment_settings', function (Blueprint $table) {
+            $table->dropForeign(['destination_port_id']);
+            $table->dropColumn('destination_port_id');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('default_shipment_settings', function (Blueprint $table) {
+            $table->foreignId('destination_port_id')->nullable()->constrained('ports')->nullOnDelete();
+        });
+    }
+};

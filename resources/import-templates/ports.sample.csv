@@ -1,0 +1,8 @@
+name,type,country_iso2,state_code
+Long Beach,origin,US,CA
+Toronto Harbor,destination,CA,ON
+Tin Can Island,destination,NG,LA
+name,type,country_iso2,state_code
+Los Angeles Port,origin,US,CA
+Apapa Port,destination,NG,LA
+Halifax Port,origin,CA,NS

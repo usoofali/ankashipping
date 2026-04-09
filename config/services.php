@@ -15,7 +15,11 @@ return [
     */
 
     'postmark' => [
-        'token' => env('POSTMARK_TOKEN'),
+        'key' => env('POSTMARK_API_KEY'),
+    ],
+
+    'resend' => [
+        'key' => env('RESEND_API_KEY'),
     ],
 
     'ses' => [
@@ -24,15 +28,19 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
-    'resend' => [
-        'key' => env('RESEND_KEY'),
-    ],
-
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
+    ],
+
+    'copart_iaai' => [
+        'key' => env('COPART_IAAI_RAPIDAPI_KEY'),
+        'host' => env('COPART_IAAI_RAPIDAPI_HOST', 'api-for-copart-and-iaai.p.rapidapi.com'),
+        'base_url' => env('COPART_IAAI_RAPIDAPI_BASE_URL', 'https://api-for-copart-and-iaai.p.rapidapi.com'),
+        'timeout' => (int) env('COPART_IAAI_TIMEOUT', 30),
+        'rate_limit_per_minute' => (int) env('COPART_IAAI_RATE_LIMIT_PER_MINUTE', 30),
     ],
 
 ];
