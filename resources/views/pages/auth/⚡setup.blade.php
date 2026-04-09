@@ -16,6 +16,8 @@ new #[Title('System Setup')] #[\Livewire\Attributes\Layout('layouts.auth')] clas
 
     public bool $db_connected = false;
     public bool $storage_linked = false;
+    public bool $setup_enabled = false;
+    public string $app_env = '';
     public string $php_version = '';
     public array $folder_perms = [];
     public string $last_output = '';
@@ -47,6 +49,8 @@ new #[Title('System Setup')] #[\Livewire\Attributes\Layout('layouts.auth')] clas
     public function refreshStats(): void
     {
         $this->php_version = PHP_VERSION;
+        $this->app_env = config('app.env');
+        $this->setup_enabled = config('app.setup_enabled');
 
         try {
             DB::connection()->getPdo();
@@ -90,7 +94,8 @@ new #[Title('System Setup')] #[\Livewire\Attributes\Layout('layouts.auth')] clas
     public function initializeDatabase(): void
     {
         if (app()->isProduction() && ! config('app.setup_enabled')) {
-            $this->notification()->error(__('Database initialization from setup is disabled in production.'));
+            $this->last_output = __('Database initialization is restricted in production. Set APP_SETUP_ENABLED=true in your .env to enable this functionality.');
+            $this->notification()->error(__('Action restricted. See output for details.'));
 
             return;
         }
@@ -178,6 +183,16 @@ new #[Title('System Setup')] #[\Livewire\Attributes\Layout('layouts.auth')] clas
                 <div class="flex items-center justify-between text-sm">
                     <span class="text-stone-500">{{ __('PHP Version') }}</span>
                     <flux:badge size="sm" color="zinc">{{ $php_version }}</flux:badge>
+                </div>
+
+                <div class="flex items-center justify-between text-sm">
+                    <span class="text-stone-500">{{ __('Environment') }}</span>
+                    <flux:badge size="sm" :color="$app_env === 'production' ? 'amber' : 'blue'">{{ $app_env }}</flux:badge>
+                </div>
+
+                <div class="flex items-center justify-between text-sm">
+                    <span class="text-stone-500">{{ __('Setup Enabled') }}</span>
+                    <flux:badge size="sm" :color="$setup_enabled ? 'green' : 'zinc'">{{ $setup_enabled ? __('Yes') : __('No') }}</flux:badge>
                 </div>
 
                 <div class="flex items-center justify-between text-sm">
