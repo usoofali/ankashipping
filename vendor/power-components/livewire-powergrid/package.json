@@ -1,0 +1,40 @@
+{
+    "name": "livewire-powergrid",
+    "version": "1.0.0",
+    "description": "<div align=\"center\"> \t<p><img src=\"art/header.jpg\" alt=\"PowerGrid Logo\"></p>     <p align=\"center\">         <a href=\"https://packagist.org/packages/power-components/livewire-powergrid\"><img alt=\"Total Downloads\" src=\"https://img.shields.io/packagist/dt/power-components/livewire-powergrid\"></a>         <a href=\"https://packagist.org/packages/power-components/livewire-powergrid\"><img alt=\"Latest Version\" src=\"https://img.shields.io/packagist/v/power-components/livewire-powergrid\"></a>         <a href=\"https://packagist.org/packages/power-components/livewire-powergrid\"><img alt=\"License\" src=\"https://img.shields.io/packagist/l/power-components/livewire-powergrid\"></a>     </p>     <a href=\"https://livewire-powergrid.com/\" target=\"_blank\">📚 Documentation</a> |     <a href=\"#features\">🔥 Features</a> |     <a href=\"#get-started\">⌨️ Get started</a> </div>",
+    "main": "index.js",
+    "directories": {
+        "test": "tests"
+    },
+    "scripts": {
+        "build": "vite build",
+        "build:tailwind": "npx @tailwindcss/cli -i ./resources/css/tailwind4.css -o ./dist/tailwind4.css --minify",
+        "dev": "vite build --watch",
+        "blade-formatter": "blade-formatter --write resources/**/*.blade.php"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Power-Components/livewire-powergrid.git"
+    },
+    "author": "",
+    "license": "ISC",
+    "type": "module",
+    "bugs": {
+        "url": "https://github.com/Power-Components/livewire-powergrid/issues"
+    },
+    "homepage": "https://github.com/Power-Components/livewire-powergrid#readme",
+    "devDependencies": {
+        "@tailwindcss/forms": "^0.5.11",
+        "@tailwindcss/vite": "^4.1.18",
+        "alpinejs": "^3.15.3",
+        "autoprefixer": "^10.4.23",
+        "blade-formatter": "^1.44.2",
+        "cypress": "^15.8.2",
+        "resolve-url-loader": "^5.0.0",
+        "sass": "^1.97.2",
+        "sass-loader": "^16.0.6",
+        "tailwindcss": "^4.1.18",
+        "tom-select": "^2.4.3",
+        "vite": "^7.3.1"
+    }
+}
