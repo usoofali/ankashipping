@@ -1,0 +1,17 @@
+@custom-variant input-hover {
+    label[data-name="form.wrapper.container"]:has(input:hover) & {
+        @slot;
+    }
+}
+
+@custom-variant input-focus {
+    label[data-name="form.wrapper.container"]:has(input:focus) & {
+        @slot;
+    }
+}
+
+@custom-variant input-interaction {
+    label[data-name="form.wrapper.container"]:has(input:hover, input:focus) & {
+        @slot;
+    }
+}
