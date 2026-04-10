@@ -147,7 +147,7 @@ new #[Title('Newsletters')] class extends Component {
 
     <x-crud.panel class="p-6">
         <flux:table :paginate="$this->newsletters">
-            <flux:table.columns>
+            <flux:table.columns sticky class="bg-white dark:bg-zinc-900">
                 <flux:table.column>{{ __('Subject') }}</flux:table.column>
                 <flux:table.column>{{ __('Mailer') }}</flux:table.column>
                 <flux:table.column>{{ __('Recipients') }}</flux:table.column>
@@ -188,9 +188,11 @@ new #[Title('Newsletters')] class extends Component {
                                 <flux:button variant="ghost" icon="ellipsis-horizontal" size="sm" />
                                 <flux:menu>
                                     <flux:menu.item icon="paper-airplane" wire:click="confirmSend({{ $newsletter->id }})">
-                                        {{ __('Send Now') }}</flux:menu.item>
+                                        {{ __('Send Now') }}
+                                    </flux:menu.item>
                                     <flux:menu.item icon="pencil-square" wire:click="edit({{ $newsletter->id }})">
-                                        {{ __('Edit') }}</flux:menu.item>
+                                        {{ __('Edit') }}
+                                    </flux:menu.item>
                                     <flux:menu.separator />
                                     <flux:menu.item icon="trash" variant="danger"
                                         wire:click="delete({{ $newsletter->id }})">{{ __('Delete') }}</flux:menu.item>

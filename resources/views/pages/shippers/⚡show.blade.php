@@ -48,10 +48,10 @@ new #[Title('Shipper')] class extends Component {
 
         if ($request->filled('notification')) {
             $request->user()
-                ?->notifications()
+                    ?->notifications()
                 ->whereKey($request->query('notification'))
                 ->first()
-                ?->markAsRead();
+                    ?->markAsRead();
         }
 
         $this->shipper = $shipper->load(['user', 'country', 'state', 'city', 'wallet']);
@@ -67,7 +67,7 @@ new #[Title('Shipper')] class extends Component {
 
     public function updatedShowDiscountModal(bool $value): void
     {
-        if (! $value) {
+        if (!$value) {
             return;
         }
 
@@ -113,7 +113,7 @@ new #[Title('Shipper')] class extends Component {
             ->with(['vehicle', 'invoice.payment', 'originPort.state', 'originPort.country', 'driver', 'workshop'])
             ->when($this->search !== '', function ($query): void {
                 $query->where(function ($searchQuery): void {
-                    $term = '%'.trim($this->search).'%';
+                    $term = '%' . trim($this->search) . '%';
                     $searchQuery->where('vin', 'like', $term)
                         ->orWhere('reference_no', 'like', $term)
                         ->orWhereHas('vehicle', function ($vehicleQuery) use ($term): void {
@@ -149,7 +149,7 @@ new #[Title('Shipper')] class extends Component {
             ->whereNotNull('created_at')
             ->latest('created_at')
             ->get(['created_at'])
-            ->map(fn (Shipment $shipment): ?string => $shipment->created_at?->format('Y'))
+            ->map(fn(Shipment $shipment): ?string => $shipment->created_at?->format('Y'))
             ->filter()
             ->unique()
             ->values();
@@ -166,19 +166,19 @@ new #[Title('Shipper')] class extends Component {
 
         $paidCount = Payment::query()
             ->where('status', PaymentStatus::Paid)
-            ->whereHas('invoice', fn ($q) => $q->whereHas('shipment', fn ($sq) => $sq->where('shipper_id', $shipperId)))
+            ->whereHas('invoice', fn($q) => $q->whereHas('shipment', fn($sq) => $sq->where('shipper_id', $shipperId)))
             ->count();
 
         $paidSum = (float) Payment::query()
             ->where('status', PaymentStatus::Paid)
-            ->whereHas('invoice', fn ($q) => $q->whereHas('shipment', fn ($sq) => $sq->where('shipper_id', $shipperId)))
+            ->whereHas('invoice', fn($q) => $q->whereHas('shipment', fn($sq) => $sq->where('shipper_id', $shipperId)))
             ->sum('amount');
 
         $outstandingQuery = Invoice::query()
-            ->whereHas('shipment', fn ($q) => $q->where('shipper_id', $shipperId))
+            ->whereHas('shipment', fn($q) => $q->where('shipper_id', $shipperId))
             ->where(function ($query): void {
                 $query->whereDoesntHave('payment')
-                    ->orWhereHas('payment', fn ($q) => $q->where('status', '!=', PaymentStatus::Paid));
+                    ->orWhereHas('payment', fn($q) => $q->where('status', '!=', PaymentStatus::Paid));
             });
 
         $outstandingCount = (clone $outstandingQuery)->count();
@@ -211,8 +211,8 @@ new #[Title('Shipper')] class extends Component {
             ->where('shipper_id', $this->shipper->id)
             ->whereBetween('created_at', [$start, $end])
             ->get(['created_at'])
-            ->groupBy(fn (Shipment $s): string => $s->created_at?->format('Y-m') ?? '')
-            ->map(fn (Collection $group): int => $group->count());
+            ->groupBy(fn(Shipment $s): string => $s->created_at?->format('Y-m') ?? '')
+            ->map(fn(Collection $group): int => $group->count());
 
         $months = [];
         $max = 0;
@@ -285,7 +285,8 @@ new #[Title('Shipper')] class extends Component {
                     <flux:button variant="ghost" icon="tag" wire:click="openDiscountModal">
                         {{ __('Edit discount') }}
                     </flux:button>
-                    <flux:button variant="primary" :href="route('shippers.index', ['edit' => $shipper->id])" wire:navigate icon="pencil-square">
+                    <flux:button variant="primary" :href="route('shippers.index', ['edit' => $shipper->id])" wire:navigate
+                        icon="pencil-square">
                         {{ __('Edit profile') }}
                     </flux:button>
                 @else
@@ -301,8 +302,10 @@ new #[Title('Shipper')] class extends Component {
         <flux:card class="border-zinc-100 dark:border-zinc-800">
             <div class="flex items-start justify-between gap-3">
                 <div>
-                    <flux:text class="text-xs font-medium uppercase tracking-wide text-zinc-500">{{ __('Total shipments') }}</flux:text>
-                    <flux:heading size="xl" class="mt-1 tabular-nums">{{ number_format($this->totalShipmentsCount) }}</flux:heading>
+                    <flux:text class="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                        {{ __('Total shipments') }}</flux:text>
+                    <flux:heading size="xl" class="mt-1 tabular-nums">{{ number_format($this->totalShipmentsCount) }}
+                    </flux:heading>
                 </div>
                 <div class="rounded-lg bg-indigo-50 p-2 dark:bg-indigo-950/40">
                     <flux:icon.cube class="size-6 text-indigo-600 dark:text-indigo-400" />
@@ -313,9 +316,12 @@ new #[Title('Shipper')] class extends Component {
         <flux:card class="border-zinc-100 dark:border-zinc-800">
             <div class="flex items-start justify-between gap-3">
                 <div>
-                    <flux:text class="text-xs font-medium uppercase tracking-wide text-zinc-500">{{ __('Payments received') }}</flux:text>
-                    <flux:heading size="xl" class="mt-1 tabular-nums">${{ number_format($summary['paid_sum'], 2) }}</flux:heading>
-                    <flux:text class="mt-1 text-sm text-zinc-500">{{ __(':count paid invoice(s)', ['count' => $summary['paid_count']]) }}</flux:text>
+                    <flux:text class="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                        {{ __('Payments received') }}</flux:text>
+                    <flux:heading size="xl" class="mt-1 tabular-nums">${{ number_format($summary['paid_sum'], 2) }}
+                    </flux:heading>
+                    <flux:text class="mt-1 text-sm text-zinc-500">
+                        {{ __(':count paid invoice(s)', ['count' => $summary['paid_count']]) }}</flux:text>
                 </div>
                 <div class="rounded-lg bg-emerald-50 p-2 dark:bg-emerald-950/40">
                     <flux:icon.banknotes class="size-6 text-emerald-600 dark:text-emerald-400" />
@@ -326,9 +332,12 @@ new #[Title('Shipper')] class extends Component {
         <flux:card class="border-zinc-100 dark:border-zinc-800">
             <div class="flex items-start justify-between gap-3">
                 <div>
-                    <flux:text class="text-xs font-medium uppercase tracking-wide text-zinc-500">{{ __('Outstanding invoices') }}</flux:text>
-                    <flux:heading size="xl" class="mt-1 tabular-nums">${{ number_format($summary['outstanding_sum'], 2) }}</flux:heading>
-                    <flux:text class="mt-1 text-sm text-zinc-500">{{ __(':count open invoice(s)', ['count' => $summary['outstanding_count']]) }}</flux:text>
+                    <flux:text class="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                        {{ __('Outstanding invoices') }}</flux:text>
+                    <flux:heading size="xl" class="mt-1 tabular-nums">
+                        ${{ number_format($summary['outstanding_sum'], 2) }}</flux:heading>
+                    <flux:text class="mt-1 text-sm text-zinc-500">
+                        {{ __(':count open invoice(s)', ['count' => $summary['outstanding_count']]) }}</flux:text>
                 </div>
                 <div class="rounded-lg bg-amber-50 p-2 dark:bg-amber-950/40">
                     <flux:icon.clock class="size-6 text-amber-600 dark:text-amber-400" />
@@ -339,8 +348,10 @@ new #[Title('Shipper')] class extends Component {
         <flux:card class="border-zinc-100 dark:border-zinc-800">
             <div class="flex items-start justify-between gap-3">
                 <div>
-                    <flux:text class="text-xs font-medium uppercase tracking-wide text-zinc-500">{{ __('Wallet balance') }}</flux:text>
-                    <flux:heading size="xl" class="mt-1 tabular-nums">${{ number_format((float) ($shipper->wallet?->balance ?? 0), 2) }}</flux:heading>
+                    <flux:text class="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                        {{ __('Wallet balance') }}</flux:text>
+                    <flux:heading size="xl" class="mt-1 tabular-nums">
+                        ${{ number_format((float) ($shipper->wallet?->balance ?? 0), 2) }}</flux:heading>
                     <flux:text class="mt-1 text-sm text-zinc-500">{{ $currency }}</flux:text>
                 </div>
                 <div class="rounded-lg bg-sky-50 p-2 dark:bg-sky-950/40">
@@ -369,12 +380,10 @@ new #[Title('Shipper')] class extends Component {
                         @endphp
                         <div class="flex min-w-0 flex-1 flex-col items-center gap-2">
                             <flux:text class="text-xs tabular-nums text-zinc-500">{{ $bar['count'] }}</flux:text>
-                            <div
-                                class="w-full max-w-[2.5rem] rounded-t-md bg-indigo-500/90 transition-all dark:bg-indigo-400/80"
-                                style="height: {{ $barPx }}px;"
-                                title="{{ $bar['label'] }}: {{ $bar['count'] }}"
-                            ></div>
-                            <flux:text class="max-w-full truncate text-center text-[10px] uppercase text-zinc-400 sm:text-xs">{{ $bar['label'] }}</flux:text>
+                            <div class="w-full max-w-[2.5rem] rounded-t-md bg-indigo-500/90 transition-all dark:bg-indigo-400/80"
+                                style="height: {{ $barPx }}px;" title="{{ $bar['label'] }}: {{ $bar['count'] }}"></div>
+                            <flux:text class="max-w-full truncate text-center text-[10px] uppercase text-zinc-400 sm:text-xs">
+                                {{ $bar['label'] }}</flux:text>
                         </div>
                     @endforeach
                 </div>
@@ -386,24 +395,29 @@ new #[Title('Shipper')] class extends Component {
             <dl class="space-y-3 text-sm">
                 <div class="flex justify-between gap-2">
                     <dt class="text-zinc-500">{{ __('Consignees') }}</dt>
-                    <dd class="font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{{ number_format((int) $shipper->consignees_count) }}</dd>
+                    <dd class="font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+                        {{ number_format((int) $shipper->consignees_count) }}</dd>
                 </div>
                 <div class="flex justify-between gap-2">
                     <dt class="text-zinc-500">{{ __('Prealerts') }}</dt>
-                    <dd class="font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{{ number_format((int) $shipper->prealerts_count) }}</dd>
+                    <dd class="font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+                        {{ number_format((int) $shipper->prealerts_count) }}</dd>
                 </div>
                 <div class="flex justify-between gap-2">
                     <dt class="text-zinc-500">{{ __('Per-line discount (USD)') }}</dt>
-                    <dd class="font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">${{ number_format((float) $shipper->discount_amount, 2) }}</dd>
+                    <dd class="font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+                        ${{ number_format((float) $shipper->discount_amount, 2) }}</dd>
                 </div>
                 <div class="flex justify-between gap-2">
                     <dt class="text-zinc-500">{{ __('Last shipment') }}</dt>
-                    <dd class="font-medium text-zinc-900 dark:text-zinc-100">{{ $this->lastShipmentCreatedAt?->format('d M Y') ?? '—' }}</dd>
+                    <dd class="font-medium text-zinc-900 dark:text-zinc-100">
+                        {{ $this->lastShipmentCreatedAt?->format('d M Y') ?? '—' }}</dd>
                 </div>
             </dl>
             @if (count($this->shipmentStatusBreakdown) > 0)
                 <div>
-                    <flux:text class="mb-2 text-xs font-medium uppercase text-zinc-500">{{ __('By shipment status') }}</flux:text>
+                    <flux:text class="mb-2 text-xs font-medium uppercase text-zinc-500">{{ __('By shipment status') }}
+                    </flux:text>
                     <div class="flex flex-wrap gap-2">
                         @foreach ($this->shipmentStatusBreakdown as $statusLabel => $count)
                             <flux:badge size="sm" color="zinc" variant="subtle">{{ $statusLabel }}: {{ $count }}</flux:badge>
@@ -447,12 +461,8 @@ new #[Title('Shipper')] class extends Component {
     <flux:heading size="lg" weight="semibold" class="mb-4">{{ __('Shipments') }}</flux:heading>
 
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6 mb-6">
-        <flux:input
-            wire:model.live.debounce.300ms="search"
-            label="{{ __('Search') }}"
-            icon="magnifying-glass"
-            placeholder="{{ __('VIN, ref, vehicle') }}"
-        />
+        <flux:input wire:model.live.debounce.300ms="search" label="{{ __('Search') }}" icon="magnifying-glass"
+            placeholder="{{ __('VIN, ref, vehicle') }}" />
 
         <flux:select wire:model.live="filterMonth" label="{{ __('Month') }}" icon="calendar-days">
             <flux:select.option value="">{{ __('All months') }}</flux:select.option>
@@ -494,7 +504,7 @@ new #[Title('Shipper')] class extends Component {
 
     <x-crud.panel class="p-6">
         <flux:table :paginate="$this->shipments()">
-            <flux:table.columns>
+            <flux:table.columns sticky class="bg-white dark:bg-zinc-900">
                 <flux:table.column>{{ __('Ref / VIN / Created') }}</flux:table.column>
                 <flux:table.column>{{ __('Vehicle') }}</flux:table.column>
                 <flux:table.column>{{ __('Origin port') }}</flux:table.column>
@@ -510,11 +520,8 @@ new #[Title('Shipper')] class extends Component {
                     <flux:table.row :key="$shipment->id">
                         <flux:table.cell>
                             <div class="flex flex-col">
-                                <a
-                                    href="{{ route('shipments.show', $shipment) }}"
-                                    wire:navigate
-                                    class="font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
-                                >
+                                <a href="{{ route('shipments.show', $shipment) }}" wire:navigate
+                                    class="font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
                                     {{ $shipment->reference_no }}
                                 </a>
                                 <span class="font-mono text-xs text-zinc-500">
@@ -536,7 +543,8 @@ new #[Title('Shipper')] class extends Component {
                             @if ($shipment->originPort)
                                 {{ $shipment->originPort->name }}
                                 <span class="text-xs text-zinc-500">
-                                    ({{ $shipment->originPort->state?->code ?? '—' }} - {{ $shipment->originPort->country?->iso2 ?? '—' }})
+                                    ({{ $shipment->originPort->state?->code ?? '—' }} -
+                                    {{ $shipment->originPort->country?->iso2 ?? '—' }})
                                 </span>
                             @else
                                 —
@@ -585,15 +593,8 @@ new #[Title('Shipper')] class extends Component {
                         {{ __('Applied only to charge items marked to apply shipper discount. Currency: USD.') }}
                     </flux:text>
                 </div>
-                <flux:input
-                    wire:model="discount_amount"
-                    :label="__('Amount (USD)')"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    icon="tag"
-                    required
-                />
+                <flux:input wire:model="discount_amount" :label="__('Amount (USD)')" type="number" min="0" step="0.01"
+                    icon="tag" required />
                 <div class="flex justify-end gap-2">
                     <flux:modal.close>
                         <flux:button variant="ghost" type="button">{{ __('Cancel') }}</flux:button>

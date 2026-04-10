@@ -151,7 +151,7 @@ new #[Title('Workshops')] class extends Component {
 
         <x-crud.panel class="p-6">
             <flux:table :paginate="$this->workshops">
-                <flux:table.columns>
+                <flux:table.columns sticky class="bg-white dark:bg-zinc-900">
                     <flux:table.column icon="wrench-screwdriver">{{ __('Name') }}</flux:table.column>
                     <flux:table.column icon="phone">{{ __('Phone') }}</flux:table.column>
                     <flux:table.column icon="map-pin">{{ __('Address') }}</flux:table.column>

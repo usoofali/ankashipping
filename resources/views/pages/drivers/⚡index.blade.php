@@ -138,8 +138,8 @@ new #[Title('Drivers')] class extends Component {
 <div>
     <x-crud.page-shell>
         <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-4">
-            <x-crud.page-header :heading="__('Drivers')" :subheading="__('Manage drivers.')"
-                icon="identification" class="!mb-0" />
+            <x-crud.page-header :heading="__('Drivers')" :subheading="__('Manage drivers.')" icon="identification"
+                class="!mb-0" />
             @can('drivers.create')
                 <flux:button variant="primary" icon="plus" wire:click="openCreateModal">{{ __('Create Driver') }}
                 </flux:button>
@@ -153,7 +153,7 @@ new #[Title('Drivers')] class extends Component {
 
         <x-crud.panel class="p-6">
             <flux:table :paginate="$this->drivers">
-                <flux:table.columns>
+                <flux:table.columns sticky class="bg-white dark:bg-zinc-900">
                     <flux:table.column icon="building-office">{{ __('Company') }}</flux:table.column>
                     <flux:table.column icon="phone">{{ __('Phone') }}</flux:table.column>
                     <flux:table.column icon="envelope">{{ __('Email') }}</flux:table.column>

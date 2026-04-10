@@ -272,7 +272,8 @@ new #[Title('Ports')] class extends Component {
             <div class="flex items-center gap-2">
                 @can('ports.create')
                     <flux:button variant="outline" icon="arrow-down-tray" wire:click="openImportModal">
-                        {{ __('Import CSV') }}</flux:button>
+                        {{ __('Import CSV') }}
+                    </flux:button>
                     <flux:button variant="primary" icon="plus" wire:click="openCreateModal">{{ __('Create Port') }}
                     </flux:button>
                 @endcan
@@ -286,7 +287,7 @@ new #[Title('Ports')] class extends Component {
 
         <x-crud.panel class="p-6">
             <flux:table :paginate="$this->ports">
-                <flux:table.columns>
+                <flux:table.columns sticky class="bg-white dark:bg-zinc-900">
                     <flux:table.column icon="tag">{{ __('Type') }}</flux:table.column>
                     <flux:table.column icon="map-pin">{{ __('Name') }}</flux:table.column>
                     <flux:table.column icon="globe-alt">{{ __('Location') }}</flux:table.column>
@@ -318,7 +319,8 @@ new #[Title('Ports')] class extends Component {
                                     <flux:menu>
                                         @can('ports.update')
                                             <flux:menu.item icon="pencil-square" wire:click="openEditModal({{ $port->id }})">
-                                                {{ __('Edit') }}</flux:menu.item>
+                                                {{ __('Edit') }}
+                                            </flux:menu.item>
                                         @endcan
                                         @can('ports.delete')
                                             <flux:menu.item icon="trash" variant="danger"

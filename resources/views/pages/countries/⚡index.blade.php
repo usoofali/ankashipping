@@ -208,7 +208,8 @@ new #[Title('Countries')] class extends Component {
             <div class="flex items-center gap-2">
                 @can('countries.create')
                     <flux:button variant="outline" icon="arrow-down-tray" wire:click="openImportModal">
-                        {{ __('Import CSV') }}</flux:button>
+                        {{ __('Import CSV') }}
+                    </flux:button>
                     <flux:button variant="primary" icon="plus" wire:click="openCreateModal">{{ __('Create Country') }}
                     </flux:button>
                 @endcan
@@ -222,7 +223,7 @@ new #[Title('Countries')] class extends Component {
 
         <x-crud.panel class="p-6">
             <flux:table :paginate="$this->countries">
-                <flux:table.columns>
+                <flux:table.columns sticky class="bg-white dark:bg-zinc-900">
                     <flux:table.column icon="flag">{{ __('Name') }}</flux:table.column>
                     <flux:table.column>{{ __('ISO2') }}</flux:table.column>
                     <flux:table.column>{{ __('ISO3') }}</flux:table.column>
@@ -246,7 +247,8 @@ new #[Title('Countries')] class extends Component {
                                     <flux:menu>
                                         @can('countries.update')
                                             <flux:menu.item icon="pencil-square" wire:click="openEditModal({{ $country->id }})">
-                                                {{ __('Edit') }}</flux:menu.item>
+                                                {{ __('Edit') }}
+                                            </flux:menu.item>
                                         @endcan
                                         @can('countries.delete')
                                             <flux:menu.separator />

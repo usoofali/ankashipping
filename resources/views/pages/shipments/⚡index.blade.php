@@ -139,7 +139,7 @@ new #[Title('Shipments')] class extends Component {
     <x-crud.panel class="p-6">
 
         <flux:table :paginate="$this->shipments()">
-            <flux:table.columns>
+            <flux:table.columns sticky class="bg-white dark:bg-zinc-900">
                 <flux:table.column>{{ __('Ref / VIN / Created') }}</flux:table.column>
                 <flux:table.column>{{ __('Vehicle') }}</flux:table.column>
                 <flux:table.column>{{ __('Shipper') }}</flux:table.column>

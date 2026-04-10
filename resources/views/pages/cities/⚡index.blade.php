@@ -269,7 +269,8 @@ new #[Title('Cities')] class extends Component {
             <div class="flex items-center gap-2">
                 @can('cities.create')
                     <flux:button variant="outline" icon="arrow-down-tray" wire:click="openImportModal">
-                        {{ __('Import CSV') }}</flux:button>
+                        {{ __('Import CSV') }}
+                    </flux:button>
                     <flux:button variant="primary" icon="plus" wire:click="openCreateModal">{{ __('Create City') }}
                     </flux:button>
                 @endcan
@@ -297,7 +298,7 @@ new #[Title('Cities')] class extends Component {
 
         <x-crud.panel class="p-6">
             <flux:table :paginate="$this->cities">
-                <flux:table.columns>
+                <flux:table.columns sticky class="bg-white dark:bg-zinc-900">
                     <flux:table.column icon="map-pin">{{ __('Name') }}</flux:table.column>
                     <flux:table.column icon="map">{{ __('State') }}</flux:table.column>
                     <flux:table.column icon="flag">{{ __('Country') }}</flux:table.column>
@@ -316,7 +317,8 @@ new #[Title('Cities')] class extends Component {
                                     <flux:menu>
                                         @can('cities.update')
                                             <flux:menu.item icon="pencil-square" wire:click="openEditModal({{ $city->id }})">
-                                                {{ __('Edit') }}</flux:menu.item>
+                                                {{ __('Edit') }}
+                                            </flux:menu.item>
                                         @endcan
                                         @can('cities.delete')
                                             <flux:menu.separator />

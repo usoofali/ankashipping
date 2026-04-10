@@ -548,7 +548,7 @@ new #[Title('Shippers')] class extends Component {
     </div>
     <x-crud.panel class="p-6">
         <flux:table :paginate="$shippers">
-            <flux:table.columns>
+            <flux:table.columns sticky class="bg-white dark:bg-zinc-900">
                 <flux:table.column icon="user">{{ __('Shipper') }}</flux:table.column>
                 <flux:table.column icon="building-office">{{ __('Company') }}</flux:table.column>
                 <flux:table.column icon="phone">{{ __('Phone') }}</flux:table.column>
@@ -611,7 +611,8 @@ new #[Title('Shippers')] class extends Component {
                                 <flux:menu>
                                     @can('view', $shipper)
                                         <flux:menu.item icon="eye" :href="route('shippers.show', $shipper)" wire:navigate>
-                                            {{ __('View') }}</flux:menu.item>
+                                            {{ __('View') }}
+                                        </flux:menu.item>
                                     @endcan
                                     @can('update', $shipper)
                                         <flux:menu.item icon="pencil-square" wire:click="openEditModal({{ $shipper->id }})"
@@ -663,22 +664,27 @@ new #[Title('Shippers')] class extends Component {
                     <div class="flex items-center gap-2">
                         <flux:icon.user-circle variant="mini" class="text-zinc-400" />
                         <flux:heading size="sm" weight="semibold" class="uppercase tracking-wider text-zinc-500">
-                            {{ __('Account Information') }}</flux:heading>
+                            {{ __('Account Information') }}
+                        </flux:heading>
                     </div>
 
                     <flux:card class="bg-zinc-50/50 dark:bg-zinc-900/50 border-zinc-100 dark:border-zinc-800">
                         <div class="grid gap-6 sm:grid-cols-2">
                             <div class="space-y-1">
                                 <flux:text size="xs" weight="medium" class="uppercase tracking-widest text-zinc-400">
-                                    {{ __('Primary Contact') }}</flux:text>
+                                    {{ __('Primary Contact') }}
+                                </flux:text>
                                 <flux:text class="font-semibold text-zinc-900 dark:text-zinc-100">
-                                    {{ $ownerName ?: '—' }}</flux:text>
+                                    {{ $ownerName ?: '—' }}
+                                </flux:text>
                             </div>
                             <div class="space-y-1">
                                 <flux:text size="xs" weight="medium" class="uppercase tracking-widest text-zinc-400">
-                                    {{ __('Email Address') }}</flux:text>
+                                    {{ __('Email Address') }}
+                                </flux:text>
                                 <flux:text class="break-all font-semibold text-zinc-900 dark:text-zinc-100">
-                                    {{ $ownerEmail ?: '—' }}</flux:text>
+                                    {{ $ownerEmail ?: '—' }}
+                                </flux:text>
                             </div>
                         </div>
                         <flux:text size="xs" class="mt-4 italic text-zinc-400">
@@ -692,7 +698,8 @@ new #[Title('Shippers')] class extends Component {
                     <div class="flex items-center gap-2">
                         <flux:icon.building-office variant="mini" class="text-zinc-400" />
                         <flux:heading size="sm" weight="semibold" class="uppercase tracking-wider text-zinc-500">
-                            {{ __('Company Details') }}</flux:heading>
+                            {{ __('Company Details') }}
+                        </flux:heading>
                     </div>
 
                     <flux:card class="space-y-6 border-zinc-100 dark:border-zinc-800">
@@ -717,7 +724,8 @@ new #[Title('Shippers')] class extends Component {
                     <div class="flex items-center gap-2">
                         <flux:icon.globe-alt variant="mini" class="text-zinc-400" />
                         <flux:heading size="sm" weight="semibold" class="uppercase tracking-wider text-zinc-500">
-                            {{ __('Geographic Location') }}</flux:heading>
+                            {{ __('Geographic Location') }}
+                        </flux:heading>
                     </div>
 
                     <flux:card class="bg-zinc-50/20 dark:bg-zinc-900/10 border-zinc-100 dark:border-zinc-800">

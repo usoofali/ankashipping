@@ -41,7 +41,7 @@ new #[Title('Email Logs')] class extends Component {
     public function updatedSelectAll($value): void
     {
         if ($value) {
-            $this->selectedLogs = $this->emailLogs->pluck('id')->map(fn ($id) => (string) $id)->toArray();
+            $this->selectedLogs = $this->emailLogs->pluck('id')->map(fn($id) => (string) $id)->toArray();
         } else {
             $this->selectedLogs = [];
         }
@@ -67,7 +67,7 @@ new #[Title('Email Logs')] class extends Component {
     #[Computed]
     public function selectedLog(): ?EmailLog
     {
-        if (! $this->selectedLogId) {
+        if (!$this->selectedLogId) {
             return null;
         }
 
@@ -92,7 +92,7 @@ new #[Title('Email Logs')] class extends Component {
             ->when($this->search !== '', function (Builder $query) {
                 $query->where(function (Builder $q) {
                     $q->where('recipient_email', 'like', '%' . $this->search . '%')
-                      ->orWhere('subject', 'like', '%' . $this->search . '%');
+                        ->orWhere('subject', 'like', '%' . $this->search . '%');
                 });
             })
             ->when($this->statusFilter !== '', function (Builder $query) {
@@ -172,58 +172,81 @@ new #[Title('Email Logs')] class extends Component {
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <!-- Total Emails Card -->
-        <div class="relative overflow-hidden bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div class="absolute -right-6 -top-6 w-24 h-24 bg-zinc-100 dark:bg-zinc-800 rounded-full opacity-50 blur-2xl"></div>
+        <div
+            class="relative overflow-hidden bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div
+                class="absolute -right-6 -top-6 w-24 h-24 bg-zinc-100 dark:bg-zinc-800 rounded-full opacity-50 blur-2xl">
+            </div>
             <div class="relative z-10 flex flex-col justify-between h-full space-y-4">
                 <div class="flex items-center gap-3">
-                    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                    <div
+                        class="flex items-center justify-center w-10 h-10 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
                         <flux:icon.envelope-open class="w-5 h-5" />
                     </div>
-                    <span class="text-sm font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">{{ __('Total Emails') }}</span>
+                    <span
+                        class="text-sm font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">{{ __('Total Emails') }}</span>
                 </div>
-                <div class="text-4xl font-bold text-zinc-900 dark:text-white">{{ number_format($this->stats['total']) }}</div>
+                <div class="text-4xl font-bold text-zinc-900 dark:text-white">{{ number_format($this->stats['total']) }}
+                </div>
             </div>
         </div>
 
         <!-- Sent Card -->
-        <div class="relative overflow-hidden bg-linear-to-br from-white to-emerald-50 dark:from-zinc-900 dark:to-emerald-950/20 border border-emerald-100 dark:border-emerald-900/50 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div class="absolute -right-6 -top-6 w-24 h-24 bg-emerald-200 dark:bg-emerald-900 rounded-full opacity-40 blur-2xl"></div>
+        <div
+            class="relative overflow-hidden bg-linear-to-br from-white to-emerald-50 dark:from-zinc-900 dark:to-emerald-950/20 border border-emerald-100 dark:border-emerald-900/50 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div
+                class="absolute -right-6 -top-6 w-24 h-24 bg-emerald-200 dark:bg-emerald-900 rounded-full opacity-40 blur-2xl">
+            </div>
             <div class="relative z-10 flex flex-col justify-between h-full space-y-4">
                 <div class="flex items-center gap-3">
-                    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400">
+                    <div
+                        class="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400">
                         <flux:icon.check-circle class="w-5 h-5" />
                     </div>
-                    <span class="text-sm font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">{{ __('Sent') }}</span>
+                    <span
+                        class="text-sm font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">{{ __('Sent') }}</span>
                 </div>
-                <div class="text-4xl font-bold text-zinc-900 dark:text-white">{{ number_format($this->stats['sent']) }}</div>
+                <div class="text-4xl font-bold text-zinc-900 dark:text-white">{{ number_format($this->stats['sent']) }}
+                </div>
             </div>
         </div>
 
         <!-- Pending Card -->
-        <div class="relative overflow-hidden bg-linear-to-br from-white to-amber-50 dark:from-zinc-900 dark:to-amber-950/20 border border-amber-100 dark:border-amber-900/50 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div class="absolute -right-6 -top-6 w-24 h-24 bg-amber-200 dark:bg-amber-900 rounded-full opacity-40 blur-2xl"></div>
+        <div
+            class="relative overflow-hidden bg-linear-to-br from-white to-amber-50 dark:from-zinc-900 dark:to-amber-950/20 border border-amber-100 dark:border-amber-900/50 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div
+                class="absolute -right-6 -top-6 w-24 h-24 bg-amber-200 dark:bg-amber-900 rounded-full opacity-40 blur-2xl">
+            </div>
             <div class="relative z-10 flex flex-col justify-between h-full space-y-4">
                 <div class="flex items-center gap-3">
-                    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400">
+                    <div
+                        class="flex items-center justify-center w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400">
                         <flux:icon.clock class="w-5 h-5" />
                     </div>
-                    <span class="text-sm font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wider">{{ __('Pending') }}</span>
+                    <span
+                        class="text-sm font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wider">{{ __('Pending') }}</span>
                 </div>
-                <div class="text-4xl font-bold text-zinc-900 dark:text-white">{{ number_format($this->stats['pending']) }}</div>
+                <div class="text-4xl font-bold text-zinc-900 dark:text-white">
+                    {{ number_format($this->stats['pending']) }}</div>
             </div>
         </div>
 
         <!-- Failed Card -->
-        <div class="relative overflow-hidden bg-linear-to-br from-white to-red-50 dark:from-zinc-900 dark:to-red-950/20 border border-red-100 dark:border-red-900/50 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div class="absolute -right-6 -top-6 w-24 h-24 bg-red-200 dark:bg-red-900 rounded-full opacity-40 blur-2xl"></div>
+        <div
+            class="relative overflow-hidden bg-linear-to-br from-white to-red-50 dark:from-zinc-900 dark:to-red-950/20 border border-red-100 dark:border-red-900/50 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div class="absolute -right-6 -top-6 w-24 h-24 bg-red-200 dark:bg-red-900 rounded-full opacity-40 blur-2xl">
+            </div>
             <div class="relative z-10 flex flex-col justify-between h-full space-y-4">
                 <div class="flex items-center gap-3">
-                    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400">
+                    <div
+                        class="flex items-center justify-center w-10 h-10 rounded-lg bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400">
                         <flux:icon.x-circle class="w-5 h-5 relative z-10" />
                     </div>
-                    <span class="text-sm font-medium text-red-600 dark:text-red-400 uppercase tracking-wider">{{ __('Failed') }}</span>
+                    <span
+                        class="text-sm font-medium text-red-600 dark:text-red-400 uppercase tracking-wider">{{ __('Failed') }}</span>
                 </div>
-                <div class="text-4xl font-bold text-zinc-900 dark:text-white">{{ number_format($this->stats['failed']) }}</div>
+                <div class="text-4xl font-bold text-zinc-900 dark:text-white">
+                    {{ number_format($this->stats['failed']) }}</div>
             </div>
         </div>
     </div>
@@ -232,7 +255,8 @@ new #[Title('Email Logs')] class extends Component {
         <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex items-center gap-4 w-full sm:w-auto">
                 <div class="w-full sm:w-72">
-                    <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" :placeholder="__('Search email or subject...')" />
+                    <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass"
+                        :placeholder="__('Search email or subject...')" />
                 </div>
                 <div class="w-full sm:w-48">
                     <flux:select wire:model.live="statusFilter" :placeholder="__('All Statuses')">
@@ -243,17 +267,18 @@ new #[Title('Email Logs')] class extends Component {
                     </flux:select>
                 </div>
             </div>
-            
+
             @if (count($selectedLogs) > 0)
                 <div class="flex items-center gap-2">
                     <span class="text-sm text-zinc-500 dark:text-zinc-400">{{ count($selectedLogs) }} selected</span>
-                    <flux:button variant="danger" icon="trash" size="sm" wire:click="confirmDeleteSelected">{{ __('Delete Selected') }}</flux:button>
+                    <flux:button variant="danger" icon="trash" size="sm" wire:click="confirmDeleteSelected">
+                        {{ __('Delete Selected') }}</flux:button>
                 </div>
             @endif
         </div>
 
         <flux:table :paginate="$this->emailLogs">
-            <flux:table.columns>
+            <flux:table.columns sticky class="bg-white dark:bg-zinc-900">
                 <flux:table.column>
                     <flux:checkbox wire:model.live="selectAll" />
                 </flux:table.column>
@@ -299,9 +324,11 @@ new #[Title('Email Logs')] class extends Component {
                             <flux:dropdown align="end" variant="ghost">
                                 <flux:button variant="ghost" icon="ellipsis-horizontal" size="sm" />
                                 <flux:menu>
-                                    <flux:menu.item icon="eye" wire:click="viewContent({{ $log->id }})">{{ __('View Email') }}</flux:menu.item>
+                                    <flux:menu.item icon="eye" wire:click="viewContent({{ $log->id }})">
+                                        {{ __('View Email') }}</flux:menu.item>
                                     <flux:menu.separator />
-                                    <flux:menu.item icon="trash" variant="danger" wire:click="confirmDelete({{ $log->id }})">{{ __('Delete') }}</flux:menu.item>
+                                    <flux:menu.item icon="trash" variant="danger"
+                                        wire:click="confirmDelete({{ $log->id }})">{{ __('Delete') }}</flux:menu.item>
                                 </flux:menu>
                             </flux:dropdown>
                         </flux:table.cell>
@@ -324,14 +351,18 @@ new #[Title('Email Logs')] class extends Component {
                     <flux:heading size="lg">{{ __('Email Details') }}</flux:heading>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm bg-zinc-50 border border-zinc-200 dark:bg-zinc-800/50 dark:border-zinc-700 rounded-lg p-4">
-                    <div><span class="font-medium text-zinc-500">{{ __('To:') }}</span> {{ $this->selectedLog->recipient_email }}</div>
-                    <div><span class="font-medium text-zinc-500">{{ __('Subject:') }}</span> {{ $this->selectedLog->subject }}</div>
+                <div
+                    class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm bg-zinc-50 border border-zinc-200 dark:bg-zinc-800/50 dark:border-zinc-700 rounded-lg p-4">
+                    <div><span class="font-medium text-zinc-500">{{ __('To:') }}</span>
+                        {{ $this->selectedLog->recipient_email }}</div>
+                    <div><span class="font-medium text-zinc-500">{{ __('Subject:') }}</span>
+                        {{ $this->selectedLog->subject }}</div>
                     <div>
-                        <span class="font-medium text-zinc-500">{{ __('Status:') }}</span> 
+                        <span class="font-medium text-zinc-500">{{ __('Status:') }}</span>
                         <span class="capitalize">{{ $this->selectedLog->status->value }}</span>
                     </div>
-                    <div><span class="font-medium text-zinc-500">{{ __('Date:') }}</span> {{ $this->selectedLog->created_at->format('M j, Y g:i A') }}</div>
+                    <div><span class="font-medium text-zinc-500">{{ __('Date:') }}</span>
+                        {{ $this->selectedLog->created_at->format('M j, Y g:i A') }}</div>
                 </div>
 
                 <div class="space-y-2">
@@ -344,17 +375,20 @@ new #[Title('Email Logs')] class extends Component {
                 @if ($this->selectedLog->attempts->isNotEmpty())
                     <div class="space-y-4 pt-4 border-t border-zinc-200 dark:border-zinc-700">
                         <flux:heading size="sm" class="text-red-500">{{ __('Delivery Attempts & Errors') }}</flux:heading>
-                        
+
                         <div class="space-y-3 max-h-64 overflow-y-auto">
                             @foreach ($this->selectedLog->attempts as $attempt)
-                                <div class="bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-lg p-3 text-sm">
+                                <div
+                                    class="bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-lg p-3 text-sm">
                                     <div class="text-red-700 dark:text-red-400 font-medium mb-1 flex justify-between">
                                         <span>{{ __('Attempt at:') }} {{ $attempt->attempted_at->format('M j, Y g:i:s A') }}</span>
                                     </div>
-                                    <div class="text-red-600 dark:text-red-300 whitespace-pre-wrap font-mono text-xs">{{ $attempt->exception_message }}</div>
+                                    <div class="text-red-600 dark:text-red-300 whitespace-pre-wrap font-mono text-xs">
+                                        {{ $attempt->exception_message }}</div>
                                     @if ($attempt->smtp_response)
                                         <div class="mt-2 text-red-600 dark:text-red-300 font-medium">{{ __('SMTP Response:') }}</div>
-                                        <div class="text-red-600 dark:text-red-300 whitespace-pre-wrap font-mono text-xs">{{ $attempt->smtp_response }}</div>
+                                        <div class="text-red-600 dark:text-red-300 whitespace-pre-wrap font-mono text-xs">
+                                            {{ $attempt->smtp_response }}</div>
                                     @endif
                                 </div>
                             @endforeach

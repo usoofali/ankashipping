@@ -123,25 +123,22 @@ new #[Title('Failed Jobs')] class extends Component {
 <x-crud.page-shell>
     <div class="flex items-center justify-between mb-8 flex-wrap gap-4">
         <x-crud.page-header :heading="__('Failed Queue Jobs')" :subheading="__('Monitor and retry background tasks that failed to execute properly.')" icon="exclamation-triangle" class="mb-0!" />
-        
+
         <div class="flex items-center gap-2">
             @if ($this->failedJobs->total() > 0)
-                <flux:button variant="primary" icon="arrow-path" wire:click="confirmRetryAll">{{ __('Retry All') }}</flux:button>
+                <flux:button variant="primary" icon="arrow-path" wire:click="confirmRetryAll">{{ __('Retry All') }}
+                </flux:button>
                 <flux:button variant="danger" icon="trash" wire:click="confirmFlush">{{ __('Flush All') }}</flux:button>
             @endif
         </div>
     </div>
 
     @if ($this->failedJobs->isEmpty())
-        <x-crud.empty-state
-            icon="check-circle"
-            :title="__('All clear')"
-            :description="__('There are currently no failed background jobs.')"
-        />
+        <x-crud.empty-state icon="check-circle" :title="__('All clear')" :description="__('There are currently no failed background jobs.')" />
     @else
         <x-crud.panel class="p-6">
             <flux:table :paginate="$this->failedJobs">
-                <flux:table.columns>
+                <flux:table.columns sticky class="bg-white dark:bg-zinc-900">
                     <flux:table.column>{{ __('ID') }}</flux:table.column>
                     <flux:table.column>{{ __('Job Context') }}</flux:table.column>
                     <flux:table.column>{{ __('Exception Details') }}</flux:table.column>
@@ -163,15 +160,18 @@ new #[Title('Failed Jobs')] class extends Component {
                                     $queue = $job->queue;
                                 @endphp
                                 <div class="flex flex-col">
-                                    <span class="font-medium truncate max-w-xs" title="{{ $jobName }}">{{ class_basename($jobName) }}</span>
+                                    <span class="font-medium truncate max-w-xs"
+                                        title="{{ $jobName }}">{{ class_basename($jobName) }}</span>
                                     <span class="text-xs text-zinc-500">
-                                        <span class="font-mono">{{ $connection }}</span> / <span class="font-mono">{{ $queue }}</span>
+                                        <span class="font-mono">{{ $connection }}</span> / <span
+                                            class="font-mono">{{ $queue }}</span>
                                     </span>
                                 </div>
                             </flux:table.cell>
                             <flux:table.cell>
                                 <div class="max-w-md">
-                                    <div class="line-clamp-2 text-xs font-mono bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 p-2 rounded border border-red-100 dark:border-red-500/20" title="{{ $job->exception }}">
+                                    <div class="line-clamp-2 text-xs font-mono bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 p-2 rounded border border-red-100 dark:border-red-500/20"
+                                        title="{{ $job->exception }}">
                                         {{ explode("\n", (string) $job->exception)[0] }}
                                     </div>
                                 </div>
@@ -183,9 +183,11 @@ new #[Title('Failed Jobs')] class extends Component {
                                 <flux:dropdown align="end" variant="ghost">
                                     <flux:button variant="ghost" icon="ellipsis-horizontal" size="sm" />
                                     <flux:menu>
-                                        <flux:menu.item icon="arrow-path" wire:click="confirmRetry('{{ $job->uuid }}')">{{ __('Retry Job') }}</flux:menu.item>
+                                        <flux:menu.item icon="arrow-path" wire:click="confirmRetry('{{ $job->uuid }}')">
+                                            {{ __('Retry Job') }}</flux:menu.item>
                                         <flux:menu.separator />
-                                        <flux:menu.item icon="trash" variant="danger" wire:click="confirmForget('{{ $job->uuid }}')">{{ __('Delete') }}</flux:menu.item>
+                                        <flux:menu.item icon="trash" variant="danger"
+                                            wire:click="confirmForget('{{ $job->uuid }}')">{{ __('Delete') }}</flux:menu.item>
                                     </flux:menu>
                                 </flux:dropdown>
                             </flux:table.cell>

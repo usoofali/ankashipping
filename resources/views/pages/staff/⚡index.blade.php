@@ -210,7 +210,7 @@ new #[Title('Staff')] class extends Component {
 
         <x-crud.panel class="p-6">
             <flux:table :paginate="$this->staffList">
-                <flux:table.columns>
+                <flux:table.columns sticky class="bg-white dark:bg-zinc-900">
                     <flux:table.column icon="user">{{ __('Name') }}</flux:table.column>
                     <flux:table.column icon="briefcase">{{ __('Job Title') }}</flux:table.column>
                     <flux:table.column icon="phone">{{ __('Phone') }}</flux:table.column>
@@ -247,7 +247,8 @@ new #[Title('Staff')] class extends Component {
                                     <flux:menu>
                                         @can('staff.update')
                                             <flux:menu.item icon="pencil-square" wire:click="openEditModal({{ $member->id }})">
-                                                {{ __('Edit') }}</flux:menu.item>
+                                                {{ __('Edit') }}
+                                            </flux:menu.item>
                                         @endcan
                                         @can('staff.delete')
                                             <flux:menu.separator />

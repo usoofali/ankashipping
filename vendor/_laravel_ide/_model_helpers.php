@@ -5736,6 +5736,9 @@ namespace App\Models {
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property \App\Enums\ShipmentStatus $shipment_status
+     * @property string|null $sealed_at
+     * @property string|null $seal_number
+     * @property string|null $container_number
      * @property \App\Enums\ShippingMode $shipping_mode
      * @property \App\Enums\LogisticsService $logistics_service
      * @property string|null $auction_receipt
@@ -5780,6 +5783,9 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereAuctionReceipt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereLogisticsService($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereShippingMode($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereContainerNumber($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereSealNumber($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereSealedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereShipmentStatus($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereUpdatedAt($value)
@@ -9185,6 +9191,9 @@ namespace App\Models {
     /**
      * App\Models\Vehicle
      *
+     * @property string $tracking_status
+     * @property mixed $prealert_id
+     * @property mixed $shipment_id
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property \Illuminate\Support\Carbon|null $api_fetched_at
@@ -9252,6 +9261,9 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle whereApiFetchedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle whereShipmentId($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle wherePrealertId($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle whereTrackingStatus($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle query()

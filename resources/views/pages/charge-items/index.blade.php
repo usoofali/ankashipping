@@ -152,7 +152,7 @@ new #[Title('Charge Items')] class extends Component {
 
         <x-crud.panel class="p-6">
             <flux:table :paginate="$this->chargeItems">
-                <flux:table.columns>
+                <flux:table.columns sticky class="bg-white dark:bg-zinc-900">
                     <flux:table.column icon="tag">{{ __('Item Name') }}</flux:table.column>
                     <flux:table.column icon="document-text">{{ __('Description') }}</flux:table.column>
                     <flux:table.column align="right" icon="currency-dollar">{{ __('Amount') }}</flux:table.column>

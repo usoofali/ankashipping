@@ -109,7 +109,7 @@ new #[Title('Wallet Funding Approvals')] class extends Component {
 
         <x-crud.panel class="p-6">
             <flux:table :paginate="$this->topUps">
-                <flux:table.columns>
+                <flux:table.columns sticky class="bg-white dark:bg-zinc-900">
                     <flux:table.column icon="calendar">Date</flux:table.column>
                     <flux:table.column icon="building-office">Shipper</flux:table.column>
                     <flux:table.column icon="currency-dollar">Amount</flux:table.column>
@@ -125,7 +125,8 @@ new #[Title('Wallet Funding Approvals')] class extends Component {
                             </flux:table.cell>
                             <flux:table.cell>
                                 <div class="font-medium text-zinc-900 dark:text-zinc-100">
-                                    {{ $topUp->shipper->company_name ?? 'Shipper #' . $topUp->shipper_id }}</div>
+                                    {{ $topUp->shipper->company_name ?? 'Shipper #' . $topUp->shipper_id }}
+                                </div>
                             </flux:table.cell>
                             <flux:table.cell class="font-bold text-emerald-600 dark:text-emerald-400">
                                 ${{ number_format($topUp->amount, 2) }}

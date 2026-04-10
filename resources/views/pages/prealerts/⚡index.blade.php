@@ -168,7 +168,7 @@ new #[Title('Prealerts')] class extends Component {
     @else
         <x-crud.panel class="p-6">
             <flux:table :paginate="$this->prealerts">
-                <flux:table.columns>
+                <flux:table.columns sticky class="bg-white dark:bg-zinc-900">
                     <flux:table.column>{{ __('VIN / Lot #') }}</flux:table.column>
                     <flux:table.column>{{ __('Shipper') }}</flux:table.column>
                     <flux:table.column>{{ __('Vehicle') }}</flux:table.column>

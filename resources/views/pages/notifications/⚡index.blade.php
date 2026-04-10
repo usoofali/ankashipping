@@ -18,7 +18,7 @@ new #[Title('Notifications')] class extends Component {
     {
         /** @var DatabaseNotification|null $notification */
         $notification = auth()->user()
-            ?->notifications()
+                ?->notifications()
             ->whereKey($id)
             ->first();
 
@@ -68,7 +68,7 @@ new #[Title('Notifications')] class extends Component {
     {
         $user = auth()->user();
         $notifications = $user
-            ?->notifications()
+                ?->notifications()
             ->latest()
             ->paginate(20);
 
@@ -80,28 +80,16 @@ new #[Title('Notifications')] class extends Component {
 }; ?>
 
 <x-crud.page-shell>
-    <x-crud.page-header
-        :heading="__('Notifications')"
-        :subheading="__('Stay updated with account activity and shipment events.')"
-    >
-        @if (! $notifications->isEmpty())
+    <x-crud.page-header :heading="__('Notifications')" :subheading="__('Stay updated with account activity and shipment events.')">
+        @if (!$notifications->isEmpty())
             <x-slot name="actions">
                 <div class="flex flex-wrap items-center gap-2">
                     @if ($unreadNotificationsCount > 0)
-                        <flux:button
-                            variant="ghost"
-                            icon="check-badge"
-                            wire:click="markAllAsRead"
-                            wire:loading.attr="disabled"
-                        >
+                        <flux:button variant="ghost" icon="check-badge" wire:click="markAllAsRead" wire:loading.attr="disabled">
                             {{ __('Mark all as read') }}
                         </flux:button>
                     @endif
-                    <flux:button
-                        variant="danger"
-                        icon="trash"
-                        wire:click="openDeleteAllNotificationsModal"
-                    >
+                    <flux:button variant="danger" icon="trash" wire:click="openDeleteAllNotificationsModal">
                         {{ __('Delete all') }}
                     </flux:button>
                 </div>
@@ -110,15 +98,11 @@ new #[Title('Notifications')] class extends Component {
     </x-crud.page-header>
 
     @if ($notifications->isEmpty())
-        <x-crud.empty-state
-            icon="bell"
-            :title="__('No notifications yet')"
-            :description="__('When there is activity, you will see it here.')"
-        />
+        <x-crud.empty-state icon="bell" :title="__('No notifications yet')" :description="__('When there is activity, you will see it here.')" />
     @else
         <x-crud.panel class="p-6">
             <flux:table :paginate="$notifications">
-                <flux:table.columns>
+                <flux:table.columns sticky class="bg-white dark:bg-zinc-900">
                     <flux:table.column>{{ __('Status') }}</flux:table.column>
                     <flux:table.column>{{ __('Notification') }}</flux:table.column>
                     <flux:table.column>{{ __('Date') }}</flux:table.column>
@@ -146,7 +130,8 @@ new #[Title('Notifications')] class extends Component {
                             <flux:table.cell class="min-w-[20rem]">
                                 <div class="space-y-1">
                                     @if ($url)
-                                        <flux:link :href="$url" wire:navigate class="font-semibold text-zinc-900 dark:text-zinc-100">
+                                        <flux:link :href="$url" wire:navigate
+                                            class="font-semibold text-zinc-900 dark:text-zinc-100">
                                             {{ $title }}
                                         </flux:link>
                                     @else
@@ -165,12 +150,8 @@ new #[Title('Notifications')] class extends Component {
 
                             <flux:table.cell align="right">
                                 @if ($notification->unread())
-                                    <flux:button
-                                        size="xs"
-                                        variant="primary"
-                                        wire:click="markAsRead('{{ $notification->id }}')"
-                                        wire:loading.attr="disabled"
-                                    >
+                                    <flux:button size="xs" variant="primary" wire:click="markAsRead('{{ $notification->id }}')"
+                                        wire:loading.attr="disabled">
                                         {{ __('Mark as read') }}
                                     </flux:button>
                                 @else
@@ -187,7 +168,8 @@ new #[Title('Notifications')] class extends Component {
     <flux:modal wire:model.self="showDeleteAllNotificationsModal" class="max-w-md">
         <div class="space-y-4">
             <flux:heading size="lg">{{ __('Delete all notifications?') }}</flux:heading>
-            <flux:subheading>{{ __('This removes every notification from your account. This cannot be undone.') }}</flux:subheading>
+            <flux:subheading>{{ __('This removes every notification from your account. This cannot be undone.') }}
+            </flux:subheading>
             <div class="flex justify-end gap-2">
                 <flux:modal.close>
                     <flux:button variant="ghost" type="button">{{ __('Cancel') }}</flux:button>
@@ -199,4 +181,3 @@ new #[Title('Notifications')] class extends Component {
         </div>
     </flux:modal>
 </x-crud.page-shell>
-

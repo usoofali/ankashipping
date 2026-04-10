@@ -167,7 +167,7 @@ new #[Title('Carriers')] class extends Component {
 
         <x-crud.panel class="p-6">
             <flux:table :paginate="$this->carriers">
-                <flux:table.columns>
+                <flux:table.columns sticky class="bg-white dark:bg-zinc-900">
                     <flux:table.column icon="building-office">{{ __('Name') }}</flux:table.column>
                     <flux:table.column icon="document-text">{{ __('Description') }}</flux:table.column>
                     <flux:table.column icon="squares-2x2">{{ __('Shipments') }}</flux:table.column>
@@ -192,7 +192,8 @@ new #[Title('Carriers')] class extends Component {
                                     <flux:menu>
                                         @can('carriers.update')
                                             <flux:menu.item icon="pencil-square" wire:click="openEditModal({{ $carrier->id }})">
-                                                {{ __('Edit') }}</flux:menu.item>
+                                                {{ __('Edit') }}
+                                            </flux:menu.item>
                                         @endcan
                                         @can('carriers.delete')
                                             <flux:menu.item icon="trash" variant="danger"

@@ -158,7 +158,7 @@ new #[Title('Payment Methods')] class extends Component {
 
         <x-crud.panel class="p-6">
             <flux:table :paginate="$this->paymentMethods">
-                <flux:table.columns>
+                <flux:table.columns sticky class="bg-white dark:bg-zinc-900">
                     <flux:table.column icon="tag">{{ __('Name') }}</flux:table.column>
                     <flux:table.column icon="link">{{ __('Identifier (Slug)') }}</flux:table.column>
                     <flux:table.column icon="clock">{{ __('Last Updated') }}</flux:table.column>
