@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Livewire\Attributes\Url;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -30,6 +31,9 @@ new #[Title('Shippers')] class extends Component {
     use WireUiActions;
     use WithFileUploads;
     use WithPagination;
+
+    #[Url(as: 'q')]
+    public string $search = '';
 
     public bool $showImportModal = false;
 
@@ -73,7 +77,7 @@ new #[Title('Shippers')] class extends Component {
 
     public function updatedShowDeleteModal(bool $value): void
     {
-        if (! $value) {
+        if (!$value) {
             $this->shipperPendingDeleteId = null;
             $this->shipperPendingDeleteLabel = '';
         }
@@ -81,9 +85,14 @@ new #[Title('Shippers')] class extends Component {
 
     public function updatedShowEditModal(bool $value): void
     {
-        if (! $value) {
+        if (!$value) {
             $this->resetEditForm();
         }
+    }
+
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
     }
 
     public function openEditModal(int $shipperId): void
@@ -225,7 +234,7 @@ new #[Title('Shippers')] class extends Component {
             $stateCode = strtoupper(trim((string) ($row['state_code'] ?? '')));
             $cityName = trim((string) ($row['city_name'] ?? ''));
 
-            if ($ownerEmail === '' || ! filter_var($ownerEmail, FILTER_VALIDATE_EMAIL)) {
+            if ($ownerEmail === '' || !filter_var($ownerEmail, FILTER_VALIDATE_EMAIL)) {
                 $errors++;
 
                 continue;
@@ -238,7 +247,7 @@ new #[Title('Shippers')] class extends Component {
             }
 
             $country = Country::query()->where('iso2', $countryIso2)->first();
-            if (! $country) {
+            if (!$country) {
                 $errors++;
 
                 continue;
@@ -248,7 +257,7 @@ new #[Title('Shippers')] class extends Component {
                 ->where('country_id', $country->id)
                 ->where('code', $stateCode)
                 ->first();
-            if (! $state) {
+            if (!$state) {
                 $errors++;
 
                 continue;
@@ -258,7 +267,7 @@ new #[Title('Shippers')] class extends Component {
                 ->where('state_id', $state->id)
                 ->whereRaw('LOWER(name) = ?', [mb_strtolower($cityName)])
                 ->first();
-            if (! $city) {
+            if (!$city) {
                 $errors++;
 
                 continue;
@@ -441,7 +450,7 @@ new #[Title('Shippers')] class extends Component {
     public function states()
     {
         return State::query()
-            ->when($this->country_id, fn ($query) => $query->where('country_id', $this->country_id))
+            ->when($this->country_id, fn($query) => $query->where('country_id', $this->country_id))
             ->orderBy('name')
             ->get();
     }
@@ -453,7 +462,7 @@ new #[Title('Shippers')] class extends Component {
     public function cities()
     {
         return City::query()
-            ->when($this->state_id, fn ($query) => $query->where('state_id', $this->state_id))
+            ->when($this->state_id, fn($query) => $query->where('state_id', $this->state_id))
             ->orderBy('name')
             ->get();
     }
@@ -464,7 +473,15 @@ new #[Title('Shippers')] class extends Component {
     public function with(): array
     {
         $user = auth()->user();
-        $query = Shipper::query()->with(['user'])->latest();
+        $query = Shipper::query()->with(['user'])
+            ->when($this->search, function ($q) {
+                $q->where('company_name', 'like', "%{$this->search}%")
+                    ->orWhereHas('user', function ($qu) {
+                        $qu->where('name', 'like', "%{$this->search}%")
+                            ->orWhere('email', 'like', "%{$this->search}%");
+                    });
+            })
+            ->latest();
 
         if ($user?->hasRole('super_admin') || $user?->staff()->exists()) {
             $shippers = $query->paginate(15);
@@ -511,16 +528,23 @@ new #[Title('Shippers')] class extends Component {
 }; ?>
 
 <x-crud.page-shell>
-    <div class="mb-6 flex items-center justify-between">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
         <div class="flex items-center gap-3">
             <div class="rounded-lg bg-zinc-100 p-2 dark:bg-zinc-800">
                 <flux:icon.building-office-2 class="size-6 text-zinc-600 dark:text-zinc-400" />
             </div>
-            <x-crud.page-header :heading="__('Shippers')" :subheading="__('Companies registered on the platform.')" class="!mb-0" />
+            <x-crud.page-header :heading="__('Shippers')" :subheading="__('Manage registered shippers.')"
+                class="!mb-0" />
         </div>
         @if (auth()->user()?->hasRole('super_admin') || (auth()->user()?->can('shippers.update') && auth()->user()?->staff()->exists()))
-            <flux:button variant="outline" icon="arrow-down-tray" wire:click="openImportModal">{{ __('Import CSV') }}</flux:button>
+            <flux:button variant="outline" icon="arrow-down-tray" wire:click="openImportModal">{{ __('Import CSV') }}
+            </flux:button>
         @endif
+    </div>
+
+    <div class="mb-1">
+        <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass"
+            :placeholder="__('Search by company, owner name or email...')" clearable />
     </div>
     <x-crud.panel class="p-6">
         <flux:table :paginate="$shippers">
@@ -536,30 +560,33 @@ new #[Title('Shippers')] class extends Component {
                     <flux:table.row :key="$shipper->id">
                         <flux:table.cell>
                             @can('view', $shipper)
-                                <a
-                                    href="{{ route('shippers.show', $shipper) }}"
-                                    wire:navigate
-                                    class="flex items-center gap-3 rounded-lg outline-none ring-offset-2 transition-colors hover:opacity-95 focus-visible:ring-2 focus-visible:ring-indigo-500 dark:ring-offset-zinc-900"
-                                >
-                                    <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-950/30 dark:text-primary-400">
+                                <a href="{{ route('shippers.show', $shipper) }}" wire:navigate
+                                    class="flex items-center gap-3 rounded-lg outline-none ring-offset-2 transition-colors hover:opacity-95 focus-visible:ring-2 focus-visible:ring-indigo-500 dark:ring-offset-zinc-900">
+                                    <div
+                                        class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-950/30 dark:text-primary-400">
                                         <flux:icon.user variant="mini" />
                                     </div>
                                     <div class="flex min-w-0 flex-col">
-                                        <span class="font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300">{{ $shipper->user?->name ?: '—' }}</span>
+                                        <span
+                                            class="font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300">{{ $shipper->user?->name ?: '—' }}</span>
                                         @if (filled($shipper->user?->email))
-                                            <span class="text-xs text-zinc-500 dark:text-zinc-400">{{ $shipper->user?->email }}</span>
+                                            <span
+                                                class="text-xs text-zinc-500 dark:text-zinc-400">{{ $shipper->user?->email }}</span>
                                         @endif
                                     </div>
                                 </a>
                             @else
                                 <div class="flex items-center gap-3">
-                                    <div class="flex size-9 items-center justify-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-950/30 dark:text-primary-400">
+                                    <div
+                                        class="flex size-9 items-center justify-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-950/30 dark:text-primary-400">
                                         <flux:icon.user variant="mini" />
                                     </div>
                                     <div class="flex flex-col">
-                                        <span class="font-semibold text-zinc-900 dark:text-zinc-100">{{ $shipper->user?->name }}</span>
+                                        <span
+                                            class="font-semibold text-zinc-900 dark:text-zinc-100">{{ $shipper->user?->name }}</span>
                                         @if (filled($shipper->user?->email))
-                                            <span class="text-xs text-zinc-500 dark:text-zinc-400">{{ $shipper->user?->email }}</span>
+                                            <span
+                                                class="text-xs text-zinc-500 dark:text-zinc-400">{{ $shipper->user?->email }}</span>
                                         @endif
                                     </div>
                                 </div>
@@ -568,7 +595,8 @@ new #[Title('Shippers')] class extends Component {
                         <flux:table.cell>
                             <div class="flex items-center gap-2">
                                 <flux:icon.building-office variant="mini" class="text-zinc-400" />
-                                <span class="font-medium text-zinc-700 dark:text-zinc-300">{{ $shipper->company_name ?: '—' }}</span>
+                                <span
+                                    class="font-medium text-zinc-700 dark:text-zinc-300">{{ $shipper->company_name ?: '—' }}</span>
                             </div>
                         </flux:table.cell>
                         <flux:table.cell>
@@ -582,14 +610,18 @@ new #[Title('Shippers')] class extends Component {
                                 <flux:button variant="ghost" icon="ellipsis-horizontal" size="sm" />
                                 <flux:menu>
                                     @can('view', $shipper)
-                                        <flux:menu.item icon="eye" :href="route('shippers.show', $shipper)" wire:navigate>{{ __('View') }}</flux:menu.item>
+                                        <flux:menu.item icon="eye" :href="route('shippers.show', $shipper)" wire:navigate>
+                                            {{ __('View') }}</flux:menu.item>
                                     @endcan
                                     @can('update', $shipper)
-                                        <flux:menu.item icon="pencil-square" wire:click="openEditModal({{ $shipper->id }})" wire:key="edit-open-{{ $shipper->id }}">{{ __('Edit') }}</flux:menu.item>
+                                        <flux:menu.item icon="pencil-square" wire:click="openEditModal({{ $shipper->id }})"
+                                            wire:key="edit-open-{{ $shipper->id }}">{{ __('Edit') }}</flux:menu.item>
                                     @endcan
                                     @can('delete', $shipper)
                                         <flux:menu.separator />
-                                        <flux:menu.item icon="trash" variant="danger" wire:click="openDeleteModal({{ $shipper->id }})" wire:key="delete-open-{{ $shipper->id }}">{{ __('Delete') }}</flux:menu.item>
+                                        <flux:menu.item icon="trash" variant="danger"
+                                            wire:click="openDeleteModal({{ $shipper->id }})"
+                                            wire:key="delete-open-{{ $shipper->id }}">{{ __('Delete') }}</flux:menu.item>
                                     @endcan
                                 </flux:menu>
                             </flux:dropdown>
@@ -616,7 +648,8 @@ new #[Title('Shippers')] class extends Component {
                     <flux:heading size="xl" weight="bold">{{ __('Edit Shipper Profile') }}</flux:heading>
                     @if ($ownerName !== '' || $ownerEmail !== '')
                         <flux:subheading class="mt-1 flex items-center gap-2">
-                            <span class="font-medium text-zinc-900 dark:text-zinc-100">{{ $company_name ?: $ownerName }}</span>
+                            <span
+                                class="font-medium text-zinc-900 dark:text-zinc-100">{{ $company_name ?: $ownerName }}</span>
                             <span class="text-zinc-400 dark:text-zinc-500">•</span>
                             <span>{{ $ownerEmail }}</span>
                         </flux:subheading>
@@ -629,18 +662,23 @@ new #[Title('Shippers')] class extends Component {
                 <div class="space-y-4">
                     <div class="flex items-center gap-2">
                         <flux:icon.user-circle variant="mini" class="text-zinc-400" />
-                        <flux:heading size="sm" weight="semibold" class="uppercase tracking-wider text-zinc-500">{{ __('Account Information') }}</flux:heading>
+                        <flux:heading size="sm" weight="semibold" class="uppercase tracking-wider text-zinc-500">
+                            {{ __('Account Information') }}</flux:heading>
                     </div>
 
                     <flux:card class="bg-zinc-50/50 dark:bg-zinc-900/50 border-zinc-100 dark:border-zinc-800">
                         <div class="grid gap-6 sm:grid-cols-2">
                             <div class="space-y-1">
-                                <flux:text size="xs" weight="medium" class="uppercase tracking-widest text-zinc-400">{{ __('Primary Contact') }}</flux:text>
-                                <flux:text class="font-semibold text-zinc-900 dark:text-zinc-100">{{ $ownerName ?: '—' }}</flux:text>
+                                <flux:text size="xs" weight="medium" class="uppercase tracking-widest text-zinc-400">
+                                    {{ __('Primary Contact') }}</flux:text>
+                                <flux:text class="font-semibold text-zinc-900 dark:text-zinc-100">
+                                    {{ $ownerName ?: '—' }}</flux:text>
                             </div>
                             <div class="space-y-1">
-                                <flux:text size="xs" weight="medium" class="uppercase tracking-widest text-zinc-400">{{ __('Email Address') }}</flux:text>
-                                <flux:text class="break-all font-semibold text-zinc-900 dark:text-zinc-100">{{ $ownerEmail ?: '—' }}</flux:text>
+                                <flux:text size="xs" weight="medium" class="uppercase tracking-widest text-zinc-400">
+                                    {{ __('Email Address') }}</flux:text>
+                                <flux:text class="break-all font-semibold text-zinc-900 dark:text-zinc-100">
+                                    {{ $ownerEmail ?: '—' }}</flux:text>
                             </div>
                         </div>
                         <flux:text size="xs" class="mt-4 italic text-zinc-400">
@@ -653,48 +691,24 @@ new #[Title('Shippers')] class extends Component {
                 <div class="space-y-4">
                     <div class="flex items-center gap-2">
                         <flux:icon.building-office variant="mini" class="text-zinc-400" />
-                        <flux:heading size="sm" weight="semibold" class="uppercase tracking-wider text-zinc-500">{{ __('Company Details') }}</flux:heading>
+                        <flux:heading size="sm" weight="semibold" class="uppercase tracking-wider text-zinc-500">
+                            {{ __('Company Details') }}</flux:heading>
                     </div>
 
                     <flux:card class="space-y-6 border-zinc-100 dark:border-zinc-800">
                         <div class="grid gap-6 sm:grid-cols-2">
-                            <flux:input 
-                                wire:model="company_name" 
-                                :label="__('Display Name')" 
-                                type="text" 
-                                required 
-                                autocomplete="organization" 
-                                icon="building-office-2"
-                                placeholder="{{ __('Enter company name') }}"
-                            />
-                            <flux:input 
-                                wire:model="phone" 
-                                :label="__('Contact Phone')" 
-                                type="tel" 
-                                required 
-                                autocomplete="tel" 
-                                icon="phone"
-                                placeholder="+1 (555) 000-0000"
-                            />
+                            <flux:input wire:model="company_name" :label="__('Display Name')" type="text" required
+                                autocomplete="organization" icon="building-office-2"
+                                placeholder="{{ __('Enter company name') }}" />
+                            <flux:input wire:model="phone" :label="__('Contact Phone')" type="tel" required
+                                autocomplete="tel" icon="phone" placeholder="+1 (555) 000-0000" />
                         </div>
-                        <flux:input 
-                            wire:model="address" 
-                            :label="__('Street Address')" 
-                            type="text" 
-                            required 
-                            autocomplete="street-address" 
-                            icon="map-pin"
-                            placeholder="{{ __('123 Business Way, Suite 100') }}"
-                        />
-                        <flux:input
-                            wire:model="discount_amount"
-                            :label="__('Per-line shipper discount (USD)')"
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            icon="tag"
-                            :description="__('Applied only to charge items marked “apply shipper discount”. Default 0.')"
-                        />
+                        <flux:input wire:model="address" :label="__('Street Address')" type="text" required
+                            autocomplete="street-address" icon="map-pin"
+                            placeholder="{{ __('123 Business Way, Suite 100') }}" />
+                        <flux:input wire:model="discount_amount" :label="__('Per-line shipper discount (USD)')"
+                            type="number" min="0" step="0.01" icon="tag"
+                            :description="__('Applied only to charge items marked “apply shipper discount”. Default 0.')" />
                     </flux:card>
                 </div>
 
@@ -702,7 +716,8 @@ new #[Title('Shippers')] class extends Component {
                 <div class="space-y-4">
                     <div class="flex items-center gap-2">
                         <flux:icon.globe-alt variant="mini" class="text-zinc-400" />
-                        <flux:heading size="sm" weight="semibold" class="uppercase tracking-wider text-zinc-500">{{ __('Geographic Location') }}</flux:heading>
+                        <flux:heading size="sm" weight="semibold" class="uppercase tracking-wider text-zinc-500">
+                            {{ __('Geographic Location') }}</flux:heading>
                     </div>
 
                     <flux:card class="bg-zinc-50/20 dark:bg-zinc-900/10 border-zinc-100 dark:border-zinc-800">
@@ -714,14 +729,16 @@ new #[Title('Shippers')] class extends Component {
                                 @endforeach
                             </flux:select>
 
-                            <flux:select wire:model.live="state_id" :label="__('State / Region')" :disabled="! $country_id" icon="map">
+                            <flux:select wire:model.live="state_id" :label="__('State / Region')"
+                                :disabled="! $country_id" icon="map">
                                 <option value="">{{ __('Select state') }}</option>
                                 @foreach ($this->states as $state)
                                     <option value="{{ $state->id }}">{{ $state->name }}</option>
                                 @endforeach
                             </flux:select>
 
-                            <flux:select wire:model.live="city_id" :label="__('City / Town')" :disabled="! $state_id" icon="building-library">
+                            <flux:select wire:model.live="city_id" :label="__('City / Town')" :disabled="! $state_id"
+                                icon="building-library">
                                 <option value="">{{ __('Select city') }}</option>
                                 @foreach ($this->cities as $city)
                                     <option value="{{ $city->id }}">{{ $city->name }}</option>
@@ -752,7 +769,9 @@ new #[Title('Shippers')] class extends Component {
         <form wire:submit="importCsv" class="space-y-6">
             <div>
                 <flux:heading size="lg">{{ __('Import Shippers CSV') }}</flux:heading>
-                <flux:subheading>{{ __('Expected headers: owner_name, owner_email, owner_password, company_name, phone, address, country_iso2, state_code, city_name') }}</flux:subheading>
+                <flux:subheading>
+                    {{ __('Expected headers: owner_name, owner_email, owner_password, company_name, phone, address, country_iso2, state_code, city_name') }}
+                </flux:subheading>
             </div>
             <div class="space-y-3">
                 <input type="file" wire:model="importFile" accept=".csv,text/csv" class="block w-full text-sm" />
@@ -762,7 +781,9 @@ new #[Title('Shippers')] class extends Component {
                 </flux:link>
             </div>
             <div class="flex justify-end gap-2">
-                <flux:modal.close><flux:button variant="ghost" type="button">{{ __('Cancel') }}</flux:button></flux:modal.close>
+                <flux:modal.close>
+                    <flux:button variant="ghost" type="button">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
                 <flux:button type="submit" variant="primary">{{ __('Import') }}</flux:button>
             </div>
         </form>

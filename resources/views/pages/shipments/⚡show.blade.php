@@ -104,13 +104,13 @@ new #[Title('Shipment Details')] class extends Component {
             'documents.files',
             'activityLogs.user',
             'trackings.workshop',
-            'trackings' => static fn ($query) => $query->orderByDesc('recorded_at'),
+            'trackings' => static fn($query) => $query->orderByDesc('recorded_at'),
         ]);
     }
 
     public function updatedShowInvoiceStatusConfirmModal(bool $value): void
     {
-        if (! $value) {
+        if (!$value) {
             $this->pendingInvoiceStatus = null;
         }
     }
@@ -180,7 +180,7 @@ new #[Title('Shipment Details')] class extends Component {
         $validated = $this->validate([
             'item_description' => ['required', 'string', 'max:255', Rule::exists('charge_items', 'item')],
             'item_amount' => [
-                Rule::requiredIf(fn () => ! $this->chargeItemForInvoiceForm()?->apply_customer_discount),
+                Rule::requiredIf(fn() => !$this->chargeItemForInvoiceForm()?->apply_customer_discount),
                 'nullable',
                 'numeric',
                 'min:0',
@@ -230,7 +230,7 @@ new #[Title('Shipment Details')] class extends Component {
                     'to_amount' => $net,
                     'gross_amount' => $gross !== 0.0 ? $gross : null,
                     'discount_amount' => $discount !== 0.0 ? $discount : null,
-                ], fn ($v) => $v !== null),
+                ], fn($v) => $v !== null),
             ]);
         } else {
             /** @var InvoiceItem $item */
@@ -254,7 +254,7 @@ new #[Title('Shipment Details')] class extends Component {
                     'amount' => $net,
                     'gross_amount' => $gross !== 0.0 ? $gross : null,
                     'discount_amount' => $discount !== 0.0 ? $discount : null,
-                ], fn ($v) => $v !== null),
+                ], fn($v) => $v !== null),
             ]);
         }
 
@@ -317,7 +317,7 @@ new #[Title('Shipment Details')] class extends Component {
                 'amount' => (float) $item->amount,
                 'gross_amount' => (float) $item->gross_amount !== 0.0 ? (float) $item->gross_amount : null,
                 'discount_amount' => (float) $item->discount_amount !== 0.0 ? (float) $item->discount_amount : null,
-            ], fn ($v) => $v !== null);
+            ], fn($v) => $v !== null);
 
             $item->delete();
 
@@ -431,7 +431,7 @@ new #[Title('Shipment Details')] class extends Component {
             ->role($adminRoleNames)
             ->pluck('id')
             ->merge(User::query()->whereHas('staff')->pluck('id'))
-            ->merge(User::query()->whereHas('roles', fn ($q) => $q->where('name', 'super_admin'))->pluck('id'))
+            ->merge(User::query()->whereHas('roles', fn($q) => $q->where('name', 'super_admin'))->pluck('id'))
             ->unique()
             ->values();
     }
@@ -518,8 +518,8 @@ new #[Title('Shipment Details')] class extends Component {
                 ->role($adminRoleNames)
                 ->pluck('id')
                 ->merge(User::query()->whereHas('staff')->pluck('id'))
-                ->merge(User::query()->whereHas('roles', fn ($q) => $q->where('name', 'super_admin'))->pluck('id'))
-                ->when($this->shipment->shipper?->user_id, fn ($q) => $q->push($this->shipment->shipper->user_id))
+                ->merge(User::query()->whereHas('roles', fn($q) => $q->where('name', 'super_admin'))->pluck('id'))
+                ->when($this->shipment->shipper?->user_id, fn($q) => $q->push($this->shipment->shipper->user_id))
                 ->unique()
                 ->values();
 
@@ -611,7 +611,7 @@ new #[Title('Shipment Details')] class extends Component {
             'attachFiles' => ['required', 'array', 'min:1'],
             'attachFiles.*' => ['file', 'max:20480'],
             'attachTitleVehicleIs' => [
-                Rule::requiredIf(fn () => $this->attachDocumentType === ShipmentDocumentType::TitleDocument->value),
+                Rule::requiredIf(fn() => $this->attachDocumentType === ShipmentDocumentType::TitleDocument->value),
                 'nullable',
                 'string',
                 Rule::enum(VehicleIs::class),
@@ -655,7 +655,7 @@ new #[Title('Shipment Details')] class extends Component {
             $attachedFileNames = [];
 
             foreach ($this->attachFiles as $uploaded) {
-                $path = $uploaded->store('shipment-documents/'.$this->shipment->id, 'local');
+                $path = $uploaded->store('shipment-documents/' . $this->shipment->id, 'local');
                 $createdFile = ShipmentDocumentFile::query()->create([
                     'shipment_document_id' => $document->id,
                     'path' => $path,
@@ -710,10 +710,12 @@ new #[Title('Shipment Details')] class extends Component {
                 'properties' => $logProperties,
             ]);
 
-            $noteParts = [__('Document attached: :type (:count files)', [
-                'type' => $documentType->label(),
-                'count' => $fileCount,
-            ])];
+            $noteParts = [
+                __('Document attached: :type (:count files)', [
+                    'type' => $documentType->label(),
+                    'count' => $fileCount,
+                ])
+            ];
 
             if ($fromShipmentStatus !== $toShipmentStatus && $fromShipmentStatus !== null && $toShipmentStatus !== null) {
                 $noteParts[] = __('Status: :from → :to', [
@@ -1025,14 +1027,14 @@ new #[Title('Shipment Details')] class extends Component {
             'documents.files',
             'activityLogs.user',
             'trackings.workshop',
-            'trackings' => static fn ($query) => $query->orderByDesc('recorded_at'),
+            'trackings' => static fn($query) => $query->orderByDesc('recorded_at'),
         ]);
     }
 
     protected function authorizeStaffOrSuperAdmin(): void
     {
         $user = Auth::user();
-        if ($user === null || (! $user->hasRole('super_admin') && ! $user->staff()->exists())) {
+        if ($user === null || (!$user->hasRole('super_admin') && !$user->staff()->exists())) {
             abort(403);
         }
     }
@@ -1081,10 +1083,7 @@ new #[Title('Shipment Details')] class extends Component {
                     <flux:icon.document-text class="size-6 text-zinc-600 dark:text-zinc-400" />
                 </div> --}}
                 <div class="min-w-0 flex-1">
-                    <x-crud.page-header 
-                        :heading="__('SHIPMENT #') . $shipment->reference_no" 
-                        :subheading="__('View full shipment, tracking, and financial details.')"
-                    />
+                    <x-crud.page-header :heading="__('SHIPMENT #') . $shipment->reference_no" :subheading="__('View full shipment, tracking, and financial details.')" />
                     <div class="mt-2 flex flex-wrap gap-2">
                         @if($shipment->shipment_status)
                             <flux:badge color="indigo" variant="subtle" size="sm" icon="truck">
@@ -1137,7 +1136,8 @@ new #[Title('Shipment Details')] class extends Component {
                         @endif
 
                         @can('invoices.manage')
-                            <flux:menu.item icon="document-arrow-down" :href="route('shipments.invoice.download', $shipment)">
+                            <flux:menu.item icon="document-arrow-down"
+                                :href="route('shipments.invoice.download', $shipment)">
                                 {{ __('Download Invoice') }}
                             </flux:menu.item>
                         @endcan
@@ -1257,13 +1257,14 @@ new #[Title('Shipment Details')] class extends Component {
                                 </flux:text>
                                 <flux:text size="sm" class="font-medium">
                                     {{ $shipment->consignee->name }}@if(filled($shipment->consignee->address))
-                                        <span class="font-normal text-zinc-600 dark:text-zinc-400">({{ $shipment->consignee->address }})</span>
+                                        <span
+                                            class="font-normal text-zinc-600 dark:text-zinc-400">({{ $shipment->consignee->address }})</span>
                                     @endif
                                 </flux:text>
                             </div>
                         @endif
 
-                        @if(! $shipment->shipper && ! $shipment->consignee)
+                        @if(!$shipment->shipper && !$shipment->consignee)
                             <flux:text size="sm" class="text-zinc-500">
                                 {{ __('No shipper or consignee on this shipment.') }}
                             </flux:text>
@@ -1291,7 +1292,8 @@ new #[Title('Shipment Details')] class extends Component {
                             <flux:text class="font-medium">
                                 @if($shipment->originPort)
                                     {{ $shipment->originPort->name }}
-                                    ({{ $shipment->originPort->state?->code ?? '—' }} - {{ $shipment->originPort->country?->iso2 ?? '—' }})
+                                    ({{ $shipment->originPort->state?->code ?? '—' }} -
+                                    {{ $shipment->originPort->country?->iso2 ?? '—' }})
                                 @else
                                     —
                                 @endif
@@ -1304,7 +1306,8 @@ new #[Title('Shipment Details')] class extends Component {
                             <flux:text class="font-medium">
                                 @if($shipment->destinationPort)
                                     {{ $shipment->destinationPort->name }}
-                                    ({{ $shipment->destinationPort->state?->code ?? '—' }} - {{ $shipment->destinationPort->country?->iso2 ?? '—' }})
+                                    ({{ $shipment->destinationPort->state?->code ?? '—' }} -
+                                    {{ $shipment->destinationPort->country?->iso2 ?? '—' }})
                                 @else
                                     —
                                 @endif
@@ -1355,23 +1358,24 @@ new #[Title('Shipment Details')] class extends Component {
                             <x-crud.panel class="overflow-hidden p-0 h-full min-h-[360px]">
                                 @php $photos = $shipment->vehicle->copartCarPhotoUrls(); @endphp
                                 @if(count($photos) > 0)
-                                    <div 
-                                        x-data="{ 
-                                            active: 0, 
-                                            photos: {{ json_encode($photos) }},
-                                            next() { this.active = (this.active + 1) % this.photos.length },
-                                            prev() { this.active = (this.active - 1 + this.photos.length) % this.photos.length }
-                                        }" 
-                                        class="relative h-full w-full group"
-                                    >
-                                        <img :src="photos[active]" class="h-full w-full object-cover transition-all duration-500 ease-in-out" />
+                                    <div x-data="{ 
+                                                    active: 0, 
+                                                    photos: {{ json_encode($photos) }},
+                                                    next() { this.active = (this.active + 1) % this.photos.length },
+                                                    prev() { this.active = (this.active - 1 + this.photos.length) % this.photos.length }
+                                                }" class="relative h-full w-full group">
+                                        <img :src="photos[active]"
+                                            class="h-full w-full object-cover transition-all duration-500 ease-in-out" />
 
-                                        <div class="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent p-6">
+                                        <div
+                                            class="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent p-6">
                                             <flux:heading class="text-white! text-2xl!">
-                                                {{ $shipment->vehicle->year }} {{ $shipment->vehicle->make }} {{ $shipment->vehicle->model }}
+                                                {{ $shipment->vehicle->year }} {{ $shipment->vehicle->make }}
+                                                {{ $shipment->vehicle->model }}
                                             </flux:heading>
                                             <div class="flex items-center gap-4 mt-2">
-                                                <flux:badge color="white" variant="solid" size="sm" icon="finger-print" class="text-zinc-900!">
+                                                <flux:badge color="white" variant="solid" size="sm" icon="finger-print"
+                                                    class="text-zinc-900!">
                                                     {{ $shipment->vehicle->vin }}
                                                 </flux:badge>
                                                 <flux:badge color="indigo" variant="solid" size="sm" icon="ticket">
@@ -1381,34 +1385,27 @@ new #[Title('Shipment Details')] class extends Component {
                                         </div>
 
                                         @if(count($photos) > 1)
-                                            <button 
-                                                type="button" 
-                                                @click="prev()" 
-                                                class="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-black/30 hover:bg-black/50 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-subtle"
-                                            >
+                                            <button type="button" @click="prev()"
+                                                class="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-black/30 hover:bg-black/50 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-subtle">
                                                 <flux:icon.chevron-left class="size-6" />
                                             </button>
-                                            <button 
-                                                type="button" 
-                                                @click="next()" 
-                                                class="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-black/30 hover:bg-black/50 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-subtle"
-                                            >
+                                            <button type="button" @click="next()"
+                                                class="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-black/30 hover:bg-black/50 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-subtle">
                                                 <flux:icon.chevron-right class="size-6" />
                                             </button>
 
                                             <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
                                                 <template x-for="(photo, index) in photos" :key="index">
-                                                    <div 
-                                                        @click="active = index" 
-                                                        :class="active === index ? 'bg-white w-6' : 'bg-white/30 hover:bg-white/50 w-2'" 
-                                                        class="h-1.5 rounded-full transition-all duration-300 cursor-pointer"
-                                                    ></div>
+                                                    <div @click="active = index"
+                                                        :class="active === index ? 'bg-white w-6' : 'bg-white/30 hover:bg-white/50 w-2'"
+                                                        class="h-1.5 rounded-full transition-all duration-300 cursor-pointer"></div>
                                                 </template>
                                             </div>
                                         @endif
                                     </div>
                                 @else
-                                    <div class="h-full flex flex-col items-center justify-center p-12 text-zinc-400 bg-zinc-50 dark:bg-zinc-900">
+                                    <div
+                                        class="h-full flex flex-col items-center justify-center p-12 text-zinc-400 bg-zinc-50 dark:bg-zinc-900">
                                         <flux:icon.camera class="size-16 mb-4 opacity-20" />
                                         <flux:text>{{ __('No photos available for this vehicle.') }}</flux:text>
                                     </div>
@@ -1513,12 +1510,12 @@ new #[Title('Shipment Details')] class extends Component {
                         </div>
                     </div>
 
-                    <div class="mb-4">
+                    <div class="mb-1">
                         <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
                             {{ __('Total') }}
                         </flux:text>
                         <flux:text class="font-mono font-semibold text-indigo-600 dark:text-indigo-400">
-                            {{ '$'.number_format((float) ($shipment->invoice?->total_amount ?? 0), 2) }}
+                            {{ '$' . number_format((float) ($shipment->invoice?->total_amount ?? 0), 2) }}
                         </flux:text>
                     </div>
 
@@ -1540,25 +1537,22 @@ new #[Title('Shipment Details')] class extends Component {
                                         <div class="flex flex-col items-end gap-0.5">
                                             @if((float) $item->discount_amount > 0)
                                                 <flux:text size="xs" class="text-zinc-500 line-through font-mono">
-                                                    {{ '$'.number_format((float) $item->gross_amount, 2) }}
+                                                    {{ '$' . number_format((float) $item->gross_amount, 2) }}
                                                 </flux:text>
                                                 <flux:text size="xs" class="text-emerald-600 dark:text-emerald-400">
-                                                    −{{ '$'.number_format((float) $item->discount_amount, 2) }}
+                                                    −{{ '$' . number_format((float) $item->discount_amount, 2) }}
                                                 </flux:text>
                                             @endif
                                             <flux:text size="sm" class="font-mono font-semibold">
-                                                {{ '$'.number_format((float) $item->amount, 2) }}
+                                                {{ '$' . number_format((float) $item->amount, 2) }}
                                             </flux:text>
                                         </div>
                                         <div class="flex items-center gap-2">
-                                            <flux:button icon="pencil-square" size="xs" variant="ghost" wire:click="editItem({{ $item->id }})" />
-                                            <flux:button
-                                                icon="trash"
-                                                size="xs"
-                                                variant="ghost"
+                                            <flux:button icon="pencil-square" size="xs" variant="ghost"
+                                                wire:click="editItem({{ $item->id }})" />
+                                            <flux:button icon="trash" size="xs" variant="ghost"
                                                 class="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950/40"
-                                                wire:click="deleteItem({{ $item->id }})"
-                                            />
+                                                wire:click="deleteItem({{ $item->id }})" />
                                         </div>
                                     </div>
                                 </div>
@@ -1573,7 +1567,8 @@ new #[Title('Shipment Details')] class extends Component {
                     </div>
 
                     <form wire:submit.prevent="addOrUpdateItem" class="space-y-3">
-                        <flux:select wire:model.live="item_description" label="{{ __('Invoice item') }}" icon="document-text">
+                        <flux:select wire:model.live="item_description" label="{{ __('Invoice item') }}"
+                            icon="document-text">
                             <flux:select.option value="">{{ __('Select invoice item') }}</flux:select.option>
                             @foreach(\App\Models\ChargeItem::query()->whereNotNull('item')->orderBy('item')->get() as $chargeItem)
                                 <flux:select.option :value="$chargeItem->item">
@@ -1581,21 +1576,15 @@ new #[Title('Shipment Details')] class extends Component {
                                 </flux:select.option>
                             @endforeach
                         </flux:select>
-                        <flux:input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            wire:model="item_amount"
-                            :label="__('Amount')"
-                            icon="currency-dollar"
-                            :readonly="$this->invoiceItemAmountReadonly"
-                        />
+                        <flux:input type="number" min="0" step="0.01" wire:model="item_amount" :label="__('Amount')"
+                            icon="currency-dollar" :readonly="$this->invoiceItemAmountReadonly" />
                         <div class="flex gap-2">
                             <flux:button type="submit" variant="primary" icon="plus-circle" class="flex-1">
                                 {{ $invoiceItemId ? __('Update Item') : __('Add Item') }}
                             </flux:button>
                             @if($invoiceItemId)
-                                <flux:button type="button" variant="ghost" class="flex-none" wire:click="$set('invoiceItemId', null)">
+                                <flux:button type="button" variant="ghost" class="flex-none"
+                                    wire:click="$set('invoiceItemId', null)">
                                     {{ __('Cancel') }}
                                 </flux:button>
                             @endif
@@ -1622,19 +1611,18 @@ new #[Title('Shipment Details')] class extends Component {
                             @foreach($shipment->trackings as $index => $tracking)
                                 <div class="flex gap-3">
                                     <div class="flex flex-col items-center">
-                                        <div class="size-3 rounded-full {{ $index === 0 ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-600' }}"></div>
-                                        @if(! $loop->last)
+                                        <div
+                                            class="size-3 rounded-full {{ $index === 0 ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-600' }}">
+                                        </div>
+                                        @if(!$loop->last)
                                             <div class="flex-1 w-px bg-zinc-200 dark:bg-zinc-800 mt-1"></div>
                                         @endif
                                     </div>
                                     <div class="flex-1 pb-4">
                                         <div class="flex items-center justify-between gap-2">
                                             <div class="flex items-center gap-2">
-                                                <flux:badge 
-                                                    :color="$index === 0 ? 'indigo' : 'zinc'" 
-                                                    variant="subtle" 
-                                                    size="sm"
-                                                >
+                                                <flux:badge :color="$index === 0 ? 'indigo' : 'zinc'" variant="subtle"
+                                                    size="sm">
                                                     @if($tracking->status === \App\Enums\ShipmentStatus::AtWorkshop && filled($tracking->workshop?->name))
                                                         {{ $tracking->workshop->name }}
                                                     @else
@@ -1662,11 +1650,9 @@ new #[Title('Shipment Details')] class extends Component {
                                         @if(count($trackingDetailBadges) > 0)
                                             <div class="mt-2 flex flex-wrap items-center gap-2">
                                                 @foreach($trackingDetailBadges as $tb)
-                                                    @if(! empty($tb['href']))
-                                                        <a
-                                                            href="{{ $tb['href'] }}"
-                                                            class="inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-800 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-200 dark:hover:bg-indigo-900/40"
-                                                        >
+                                                    @if(!empty($tb['href']))
+                                                        <a href="{{ $tb['href'] }}"
+                                                            class="inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-800 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-200 dark:hover:bg-indigo-900/40">
                                                             {{ $tb['text'] }}
                                                         </a>
                                                     @else
@@ -1701,12 +1687,10 @@ new #[Title('Shipment Details')] class extends Component {
                         @endphp
                         <div class="space-y-3">
                             @foreach($shipment->activityLogs->sortByDesc('created_at') as $log)
-                                <div class="flex items-start gap-3 border-b border-zinc-100 dark:border-zinc-800 pb-3 last:border-0 last:pb-0">
-                                    <flux:avatar 
-                                        :name="$log->user?->name ?? 'System'" 
-                                        size="xs" 
-                                        class="bg-zinc-100! text-zinc-700!" 
-                                    />
+                                <div
+                                    class="flex items-start gap-3 border-b border-zinc-100 dark:border-zinc-800 pb-3 last:border-0 last:pb-0">
+                                    <flux:avatar :name="$log->user?->name ?? 'System'" size="xs"
+                                        class="bg-zinc-100! text-zinc-700!" />
                                     <div class="flex-1">
                                         <div class="flex items-center justify-between gap-2">
                                             <flux:text size="sm" class="font-medium">
@@ -1749,14 +1733,16 @@ new #[Title('Shipment Details')] class extends Component {
                     </flux:heading>
 
                     @php
-                        $documents = $shipment->documents->sortByDesc(fn ($d) => $d->created_at?->timestamp ?? 0)->values();
+                        $documents = $shipment->documents->sortByDesc(fn($d) => $d->created_at?->timestamp ?? 0)->values();
                         $isStaffOrAdmin = auth()->user()?->hasRole('super_admin') || auth()->user()?->staff()->exists();
                     @endphp
 
                     <div class="space-y-4">
                         @if($shipment->auction_receipt)
-                            <div class="flex items-center gap-3 p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800">
-                                <div class="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400">
+                            <div
+                                class="flex items-center gap-3 p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800">
+                                <div
+                                    class="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400">
                                     <flux:icon.document-arrow-down class="size-5" />
                                 </div>
                                 <div class="flex-1 min-w-0">
@@ -1770,7 +1756,7 @@ new #[Title('Shipment Details')] class extends Component {
                             </div>
                         @endif
 
-                        @if($documents->isEmpty() && ! $shipment->auction_receipt)
+                        @if($documents->isEmpty() && !$shipment->auction_receipt)
                             <flux:text size="sm" class="text-zinc-500">
                                 {{ __('No documents attached yet.') }}
                             </flux:text>
@@ -1790,15 +1776,10 @@ new #[Title('Shipment Details')] class extends Component {
                                                 @endif
                                             </div>
                                             @if($isStaffOrAdmin)
-                                                <flux:button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    icon="trash"
+                                                <flux:button type="button" variant="ghost" size="sm" icon="trash"
                                                     class="text-red-600 dark:text-red-400"
                                                     wire:click="openDeleteDocumentConfirm({{ $document->id }})"
-                                                    wire:key="del-doc-{{ $document->id }}"
-                                                />
+                                                    wire:key="del-doc-{{ $document->id }}" />
                                             @endif
                                         </div>
                                         <ul class="space-y-2">
@@ -1806,7 +1787,8 @@ new #[Title('Shipment Details')] class extends Component {
                                                 @php
                                                     $ext = strtoupper(pathinfo((string) ($docFile->original_name ?? $docFile->path), PATHINFO_EXTENSION) ?: '—');
                                                 @endphp
-                                                <li class="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 px-3 py-2">
+                                                <li
+                                                    class="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 px-3 py-2">
                                                     <div class="min-w-0 flex-1">
                                                         <flux:text size="sm" class="font-medium truncate">
                                                             {{ $docFile->original_name ?? basename($docFile->path) }}
@@ -1814,29 +1796,22 @@ new #[Title('Shipment Details')] class extends Component {
                                                         <flux:text size="xs" class="text-zinc-500">
                                                             {{ __('Format') }}: {{ $ext }}
                                                             @if(\Illuminate\Support\Facades\Storage::disk('local')->exists($docFile->path))
-                                                                · {{ number_format(\Illuminate\Support\Facades\Storage::disk('local')->size($docFile->path) / 1024, 1) }} KB
+                                                                ·
+                                                                {{ number_format(\Illuminate\Support\Facades\Storage::disk('local')->size($docFile->path) / 1024, 1) }}
+                                                                KB
                                                             @endif
                                                         </flux:text>
                                                     </div>
                                                     <div class="flex items-center gap-1 shrink-0">
-                                                        <flux:button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            icon="arrow-down-tray"
-                                                            :href="\App\Support\ShipmentDocumentSignedDownloadUrl::for($shipment, $docFile)"
-                                                        >
+                                                        <flux:button size="sm" variant="outline" icon="arrow-down-tray"
+                                                            :href="\App\Support\ShipmentDocumentSignedDownloadUrl::for($shipment, $docFile)">
                                                             {{ __('Download') }}
                                                         </flux:button>
                                                         @if($isStaffOrAdmin)
-                                                            <flux:button
-                                                                type="button"
-                                                                size="sm"
-                                                                variant="ghost"
-                                                                icon="trash"
+                                                            <flux:button type="button" size="sm" variant="ghost" icon="trash"
                                                                 class="text-red-600 dark:text-red-400"
                                                                 wire:click="openDeleteFileConfirm({{ $docFile->id }})"
-                                                                wire:key="del-file-{{ $docFile->id }}"
-                                                            />
+                                                                wire:key="del-file-{{ $docFile->id }}" />
                                                         @endif
                                                     </div>
                                                 </li>
@@ -1852,11 +1827,13 @@ new #[Title('Shipment Details')] class extends Component {
                                 {{ __('Manage attachments') }}
                             </flux:text>
                             @can('documents.manage')
-                                <flux:button variant="outline" icon="arrow-up-tray" class="w-full" wire:click="openAttachDocumentModal">
+                                <flux:button variant="outline" icon="arrow-up-tray" class="w-full"
+                                    wire:click="openAttachDocumentModal">
                                     {{ __('Attach document') }}
                                 </flux:button>
                             @else
-                                <flux:text size="sm" class="text-zinc-500">{{ __('You do not have permission to attach documents.') }}</flux:text>
+                                <flux:text size="sm" class="text-zinc-500">
+                                    {{ __('You do not have permission to attach documents.') }}</flux:text>
                             @endcan
                         </div>
                     </div>
@@ -1871,11 +1848,11 @@ new #[Title('Shipment Details')] class extends Component {
                 <flux:heading size="lg">{{ __('Change invoice status') }}</flux:heading>
                 <flux:subheading>
                     @if($pendingInvoiceStatus)
-                        @php
-                            $pendingToStatus = InvoiceStatus::from($pendingInvoiceStatus);
-                            $fromStatusLabel = ($shipment->invoice?->status ?? $shipment->invoice_status)?->name ?? __('None');
-                        @endphp
-                        {{ __('Change from :from to :to?', [
+                                        @php
+                                            $pendingToStatus = InvoiceStatus::from($pendingInvoiceStatus);
+                                            $fromStatusLabel = ($shipment->invoice?->status ?? $shipment->invoice_status)?->name ?? __('None');
+                                        @endphp
+                                        {{ __('Change from :from to :to?', [
                             'from' => $fromStatusLabel,
                             'to' => $pendingToStatus->name,
                         ]) }}
@@ -1897,31 +1874,23 @@ new #[Title('Shipment Details')] class extends Component {
 
     <flux:modal wire:model="showAssignDriverModal" class="max-w-xl min-h-[40vh] max-h-[65vh]">
         <form wire:submit="assignDriver" class="space-auto-y">
-            <div class="mb-4">
+            <div class="mb-1">
                 <flux:heading size="lg">{{ __('Assign Driver') }}</flux:heading>
-                <flux:subheading>{{ __('Select an existing driver or add a new one, then assign to this shipment.') }}</flux:subheading>
+                <flux:subheading>{{ __('Select an existing driver or add a new one, then assign to this shipment.') }}
+                </flux:subheading>
             </div>
             @can('drivers.create')
-            <div class="flex justify-end">
-                <flux:button type="button" variant="ghost" icon="plus" wire:click="openCreateDriverModal">
-                    {{ __('Add New Driver') }}
-                </flux:button>
-            </div>
-        @endcan
+                <div class="flex justify-end">
+                    <flux:button type="button" variant="ghost" icon="plus" wire:click="openCreateDriverModal">
+                        {{ __('Add New Driver') }}
+                    </flux:button>
+                </div>
+            @endcan
             <div class="space-y-3">
-                <x-select
-                    wire:model.live="driver_id"
-                    name="driver_id"
-                    :label="__('Driver')"
-                    :placeholder="__('Search and select driver')"
-                    option-value="id"
-                    option-label="name"
-                    :async-data="route('api.drivers.search')"
-                    searchable
-                    required
-                />
+                <x-select wire:model.live="driver_id" name="driver_id" :label="__('Driver')" :placeholder="__('Search and select driver')" option-value="id" option-label="name" :async-data="route('api.drivers.search')"
+                    searchable required />
                 <flux:error name="driver_id" />
-                
+
             </div>
 
             <div class="flex justify-end gap-2">
@@ -1941,9 +1910,12 @@ new #[Title('Shipment Details')] class extends Component {
             </div>
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <flux:input wire:model="new_driver_company" :label="__('Company')" icon="building-office" placeholder="e.g. Danmazari Transport LTD" />
-                <flux:input wire:model="new_driver_phone" :label="__('Phone')" icon="phone" required placeholder="+2348167768410" />
-                <flux:input wire:model="new_driver_email" :label="__('Email')" icon="envelope" type="email" placeholder="driver@example.com" />
+                <flux:input wire:model="new_driver_company" :label="__('Company')" icon="building-office"
+                    placeholder="e.g. Danmazari Transport LTD" />
+                <flux:input wire:model="new_driver_phone" :label="__('Phone')" icon="phone" required
+                    placeholder="+2348167768410" />
+                <flux:input wire:model="new_driver_email" :label="__('Email')" icon="envelope" type="email"
+                    placeholder="driver@example.com" />
             </div>
 
             <div class="flex justify-end gap-2">
@@ -1984,16 +1956,14 @@ new #[Title('Shipment Details')] class extends Component {
                 <flux:textarea wire:model="attachDocumentNotes" :label="__('Notes (optional)')" rows="2" />
 
                 <div>
-                    <flux:text class="mb-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">{{ __('Files') }}</flux:text>
-                    <input
-                        type="file"
-                        wire:model="attachFiles"
-                        multiple
-                        class="block w-full text-sm text-zinc-600 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-indigo-700 hover:file:bg-indigo-100 dark:text-zinc-400 dark:file:bg-indigo-950 dark:file:text-indigo-300"
-                    />
+                    <flux:text class="mb-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">{{ __('Files') }}
+                    </flux:text>
+                    <input type="file" wire:model="attachFiles" multiple
+                        class="block w-full text-sm text-zinc-600 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-indigo-700 hover:file:bg-indigo-100 dark:text-zinc-400 dark:file:bg-indigo-950 dark:file:text-indigo-300" />
                     <flux:error name="attachFiles" />
                     <flux:error name="attachFiles.*" />
-                    <div wire:loading wire:target="attachFiles" class="mt-1 text-xs text-zinc-500">{{ __('Uploading…') }}</div>
+                    <div wire:loading wire:target="attachFiles" class="mt-1 text-xs text-zinc-500">{{ __('Uploading…') }}
+                    </div>
                 </div>
 
                 <div class="flex justify-end gap-2">
@@ -2014,7 +1984,9 @@ new #[Title('Shipment Details')] class extends Component {
                 <form wire:submit="saveToWorkshop" class="space-y-4">
                     <div>
                         <flux:heading size="lg">{{ __('Send to workshop') }}</flux:heading>
-                        <flux:subheading>{{ __('Choose the workshop. Current status will be saved and restored when you use “From workshop”.') }}</flux:subheading>
+                        <flux:subheading>
+                            {{ __('Choose the workshop. Current status will be saved and restored when you use “From workshop”.') }}
+                        </flux:subheading>
                     </div>
                     <flux:select wire:model="toWorkshopWorkshopId" :label="__('Workshop')" required>
                         <flux:select.option value="">{{ __('Select workshop…') }}</flux:select.option>
@@ -2035,7 +2007,8 @@ new #[Title('Shipment Details')] class extends Component {
             <flux:modal wire:model.self="showFromWorkshopConfirmModal" class="max-w-md">
                 <div class="space-y-4">
                     <flux:heading size="lg">{{ __('Return from workshop') }}</flux:heading>
-                    <flux:subheading>{{ __('Restore the shipment to its previous status and clear the workshop assignment.') }}</flux:subheading>
+                    <flux:subheading>{{ __('Restore the shipment to its previous status and clear the workshop assignment.') }}
+                    </flux:subheading>
                     <div class="flex justify-end gap-2">
                         <flux:modal.close>
                             <flux:button variant="ghost" type="button">{{ __('Cancel') }}</flux:button>
@@ -2051,12 +2024,14 @@ new #[Title('Shipment Details')] class extends Component {
         <flux:modal wire:model.self="showDeleteDocumentConfirmModal" class="max-w-md">
             <div class="space-y-4">
                 <flux:heading size="lg">{{ __('Remove attachment?') }}</flux:heading>
-                <flux:subheading>{{ __('This deletes all files in this group from storage. This cannot be undone.') }}</flux:subheading>
+                <flux:subheading>{{ __('This deletes all files in this group from storage. This cannot be undone.') }}
+                </flux:subheading>
                 <div class="flex justify-end gap-2">
                     <flux:modal.close>
                         <flux:button variant="ghost" type="button">{{ __('Cancel') }}</flux:button>
                     </flux:modal.close>
-                    <flux:button variant="danger" wire:click="deleteShipmentDocumentConfirmed">{{ __('Delete') }}</flux:button>
+                    <flux:button variant="danger" wire:click="deleteShipmentDocumentConfirmed">{{ __('Delete') }}
+                    </flux:button>
                 </div>
             </div>
         </flux:modal>
@@ -2064,12 +2039,15 @@ new #[Title('Shipment Details')] class extends Component {
         <flux:modal wire:model.self="showDeleteFileConfirmModal" class="max-w-md">
             <div class="space-y-4">
                 <flux:heading size="lg">{{ __('Remove file?') }}</flux:heading>
-                <flux:subheading>{{ __('The file will be deleted from storage. If it was the last file, the attachment group is removed.') }}</flux:subheading>
+                <flux:subheading>
+                    {{ __('The file will be deleted from storage. If it was the last file, the attachment group is removed.') }}
+                </flux:subheading>
                 <div class="flex justify-end gap-2">
                     <flux:modal.close>
                         <flux:button variant="ghost" type="button">{{ __('Cancel') }}</flux:button>
                     </flux:modal.close>
-                    <flux:button variant="danger" wire:click="deleteShipmentDocumentFileConfirmed">{{ __('Delete') }}</flux:button>
+                    <flux:button variant="danger" wire:click="deleteShipmentDocumentFileConfirmed">{{ __('Delete') }}
+                    </flux:button>
                 </div>
             </div>
         </flux:modal>

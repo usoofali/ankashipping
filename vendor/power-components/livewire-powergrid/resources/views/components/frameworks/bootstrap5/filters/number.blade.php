@@ -12,7 +12,7 @@
 
     $componentAttributes = (array) data_get($filter, 'attributes');
 
-    $defaultAttributes = $fieldClassName::getWireAttributes($field, array_merge($filter, (array)$column));
+    $defaultAttributes = $fieldClassName::getWireAttributes($field, array_merge($filter, (array) $column));
 
     $filterClasses = Arr::toCssClasses([theme_style($theme, 'filterNumber.input')]);
 
@@ -29,7 +29,7 @@
         :attributes="new \Illuminate\View\ComponentAttributeBag($params)"
     />
 @else
-    <div class="mb-2">
+    <div class="mb-1">
         @if (!$inline)
             <label class="form-label fw-semibold mb-1">{{ $title ?? '' }}</label>
         @endif

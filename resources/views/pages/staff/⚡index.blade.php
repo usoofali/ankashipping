@@ -58,10 +58,10 @@ new #[Title('Staff')] class extends Component {
     {
         return Staff::query()
             ->with('user.roles')
-            ->when($this->search, fn ($q) => $q->whereHas('user', fn ($uq) => $uq->where('name', 'like', "%{$this->search}%")
+            ->when($this->search, fn($q) => $q->whereHas('user', fn($uq) => $uq->where('name', 'like', "%{$this->search}%")
                 ->orWhere('email', 'like', "%{$this->search}%"))
                 ->orWhere('job_title', 'like', "%{$this->search}%"))
-            ->when($this->filterRole, fn ($q) => $q->whereHas('user.roles', fn ($rq) => $rq->where('name', $this->filterRole)))
+            ->when($this->filterRole, fn($q) => $q->whereHas('user.roles', fn($rq) => $rq->where('name', $this->filterRole)))
             ->orderByDesc('created_at')
             ->paginate(20);
     }
@@ -189,15 +189,17 @@ new #[Title('Staff')] class extends Component {
 
 <div>
     <x-crud.page-shell>
-        <div class="flex items-center justify-between mb-8">
-            <x-crud.page-header :heading="__('Staff')" :subheading="__('Manage platform staff members and their roles.')" icon="users" class="!mb-0" />
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+            <x-crud.page-header :heading="__('Staff')" :subheading="__('Manage staff members.')" icon="users"
+                class="!mb-0" />
             @can('staff.create')
                 <flux:button variant="primary" icon="plus" wire:click="openCreateModal">{{ __('Add Staff') }}</flux:button>
             @endcan
         </div>
 
         <div class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" :placeholder="__('Search by name, email or job title...')" clearable />
+            <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass"
+                :placeholder="__('Search by name, email or job title...')" clearable />
             <flux:select wire:model.live="filterRole" icon="shield-check">
                 <option value="">{{ __('All Roles') }}</option>
                 @foreach ($this->staffRoles as $r)
@@ -232,8 +234,7 @@ new #[Title('Staff')] class extends Component {
                                 @if ($roleName)
                                     <flux:badge
                                         color="{{ $roleName === 'super_admin' ? 'red' : ($roleName === 'staff_admin' ? 'blue' : 'zinc') }}"
-                                        size="sm"
-                                    >
+                                        size="sm">
                                         {{ str_replace('_', ' ', $roleName) }}
                                     </flux:badge>
                                 @else
@@ -245,11 +246,14 @@ new #[Title('Staff')] class extends Component {
                                     <flux:button variant="ghost" icon="ellipsis-horizontal" size="sm" />
                                     <flux:menu>
                                         @can('staff.update')
-                                            <flux:menu.item icon="pencil-square" wire:click="openEditModal({{ $member->id }})">{{ __('Edit') }}</flux:menu.item>
+                                            <flux:menu.item icon="pencil-square" wire:click="openEditModal({{ $member->id }})">
+                                                {{ __('Edit') }}</flux:menu.item>
                                         @endcan
                                         @can('staff.delete')
                                             <flux:menu.separator />
-                                            <flux:menu.item icon="trash" variant="danger" wire:click="openDeleteModal({{ $member->id }})">{{ __('Delete') }}</flux:menu.item>
+                                            <flux:menu.item icon="trash" variant="danger"
+                                                wire:click="openDeleteModal({{ $member->id }})">{{ __('Delete') }}
+                                            </flux:menu.item>
                                         @endcan
                                     </flux:menu>
                                 </flux:dropdown>
@@ -273,39 +277,37 @@ new #[Title('Staff')] class extends Component {
             <div class="flex items-center gap-3">
                 <flux:icon name="users" class="text-zinc-500" />
                 <div>
-                    <flux:heading size="lg">{{ __('Add Staff Member') }}</flux:heading>
-                    <flux:subheading>{{ __('Create a new user account and assign them to staff.') }}</flux:subheading>
+                    <flux:heading size="lg">{{ __('Create Staff') }}</flux:heading>
+                    <flux:subheading>{{ __('Add a new staff member to the system.') }}</flux:subheading>
                 </div>
             </div>
 
-            <div class="space-y-4">
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <flux:input wire:model="name" :label="__('Full Name')" icon="user" required placeholder="Jane Smith" />
-                    <flux:input wire:model="email" :label="__('Email')" icon="envelope" type="email" required placeholder="jane@example.com" />
-                </div>
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <flux:input wire:model="password" :label="__('Password')" icon="lock-closed" type="password" required placeholder="Min. 8 characters" />
-                    <flux:select wire:model="role" :label="__('Role')" icon="shield-check" required>
-                        <option value="">{{ __('Select role...') }}</option>
-                        @foreach ($this->staffRoles as $r)
-                            <option value="{{ $r->name }}">{{ str_replace('_', ' ', $r->name) }}</option>
-                        @endforeach
-                    </flux:select>
-                </div>
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <flux:input wire:model="job_title" :label="__('Job Title')" icon="briefcase" placeholder="e.g. Operations Manager" />
-                    <flux:input wire:model="phone" :label="__('Phone')" icon="phone" placeholder="+1 555 000 0000" />
-                </div>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <flux:input wire:model="name" :label="__('Full Name')" icon="user" required placeholder="Jane Smith" />
+                <flux:input wire:model="email" :label="__('Email')" icon="envelope" type="email" required
+                    placeholder="jane@example.com" />
+                <flux:input wire:model="password" :label="__('Password')" icon="lock-closed" type="password" required
+                    placeholder="Min. 8 characters" />
+                <flux:select wire:model="role" :label="__('Role')" icon="shield-check" required>
+                    <option value="">{{ __('Select role...') }}</option>
+                    @foreach ($this->staffRoles as $r)
+                        <option value="{{ $r->name }}">{{ str_replace('_', ' ', $r->name) }}</option>
+                    @endforeach
+                </flux:select>
+                <flux:input wire:model="job_title" :label="__('Job Title')" icon="briefcase"
+                    placeholder="e.g. Operations Manager" />
+                <flux:input wire:model="phone" :label="__('Phone')" icon="phone" placeholder="+1 555 000 0000" />
             </div>
 
             <div class="flex justify-end gap-2">
                 <flux:modal.close>
                     <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
                 </flux:modal.close>
-                <flux:button type="submit" variant="primary">{{ __('Create Staff Member') }}</flux:button>
+                <flux:button type="submit" variant="primary">{{ __('Create Staff') }}</flux:button>
             </div>
         </form>
     </flux:modal>
+
 
     {{-- Edit Modal --}}
     <flux:modal wire:model="showEditModal" class="md:max-w-2xl">
@@ -313,29 +315,24 @@ new #[Title('Staff')] class extends Component {
             <div class="flex items-center gap-3">
                 <flux:icon name="pencil-square" class="text-zinc-500" />
                 <div>
-                    <flux:heading size="lg">{{ __('Edit Staff Member') }}</flux:heading>
-                    <flux:subheading>{{ __('Update account details, role, and contact info. Leave password blank to keep current.') }}</flux:subheading>
+                    <flux:heading size="lg">{{ __('Edit Staff') }}</flux:heading>
+                    <flux:subheading>{{ __('Update staff member details.') }}</flux:subheading>
                 </div>
             </div>
 
-            <div class="space-y-4">
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <flux:input wire:model="name" :label="__('Full Name')" icon="user" required />
-                    <flux:input wire:model="email" :label="__('Email')" icon="envelope" type="email" required />
-                </div>
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <flux:input wire:model="password" :label="__('New Password')" icon="lock-closed" type="password" placeholder="{{ __('Leave blank to keep current') }}" />
-                    <flux:select wire:model="role" :label="__('Role')" icon="shield-check" required>
-                        <option value="">{{ __('Select role...') }}</option>
-                        @foreach ($this->staffRoles as $r)
-                            <option value="{{ $r->name }}">{{ str_replace('_', ' ', $r->name) }}</option>
-                        @endforeach
-                    </flux:select>
-                </div>
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <flux:input wire:model="job_title" :label="__('Job Title')" icon="briefcase" />
-                    <flux:input wire:model="phone" :label="__('Phone')" icon="phone" />
-                </div>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <flux:input wire:model="name" :label="__('Full Name')" icon="user" required />
+                <flux:input wire:model="email" :label="__('Email')" icon="envelope" type="email" required />
+                <flux:input wire:model="password" :label="__('New Password')" icon="lock-closed" type="password"
+                    :placeholder="__('Leave blank to keep current')" />
+                <flux:select wire:model="role" :label="__('Role')" icon="shield-check" required>
+                    <option value="">{{ __('Select role...') }}</option>
+                    @foreach ($this->staffRoles as $r)
+                        <option value="{{ $r->name }}">{{ str_replace('_', ' ', $r->name) }}</option>
+                    @endforeach
+                </flux:select>
+                <flux:input wire:model="job_title" :label="__('Job Title')" icon="briefcase" />
+                <flux:input wire:model="phone" :label="__('Phone')" icon="phone" />
             </div>
 
             <div class="flex justify-end gap-2">
@@ -347,13 +344,14 @@ new #[Title('Staff')] class extends Component {
         </form>
     </flux:modal>
 
+
     {{-- Delete Modal --}}
     <flux:modal wire:model="showDeleteModal" class="max-w-md">
         <form wire:submit="deleteStaff" class="space-y-6">
             <div>
-                <flux:heading size="lg">{{ __('Delete Staff Member') }}</flux:heading>
+                <flux:heading size="lg">{{ __('Delete Staff') }}</flux:heading>
                 <flux:subheading>
-                    {{ __('This will permanently delete ":name" and their user account. This action cannot be undone.', ['name' => $staffPendingDeleteLabel]) }}
+                    {{ __('Are you sure you want to delete ":name"? This action cannot be undone.', ['name' => $staffPendingDeleteLabel]) }}
                 </flux:subheading>
             </div>
             <div class="flex justify-end gap-2">
@@ -364,4 +362,5 @@ new #[Title('Staff')] class extends Component {
             </div>
         </form>
     </flux:modal>
+
 </div>

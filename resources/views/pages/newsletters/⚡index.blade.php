@@ -138,9 +138,11 @@ new #[Title('Newsletters')] class extends Component {
 }; ?>
 
 <x-crud.page-shell>
-    <div class="flex items-center justify-between mb-8">
-        <x-crud.page-header :heading="__('Newsletters')" :subheading="__('Draft and send announcements to your shippers.')" icon="envelope" class="mb-0!" />
-        <flux:button variant="primary" icon="plus" wire:click="openCreateModal">{{ __('Draft Newsletter') }}</flux:button>
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+        <x-crud.page-header :heading="__('Newsletters')" :subheading="__('Manage newsletters.')" icon="envelope"
+            class="!mb-0" />
+        <flux:button variant="primary" icon="plus" wire:click="openCreateModal">{{ __('Draft Newsletter') }}
+        </flux:button>
     </div>
 
     <x-crud.panel class="p-6">
@@ -160,14 +162,16 @@ new #[Title('Newsletters')] class extends Component {
                         <flux:table.cell class="font-medium">
                             <div class="flex flex-col">
                                 <span>{{ $newsletter->subject }}</span>
-                                <span class="text-xs text-zinc-500 line-clamp-1">{{ Str::limit($newsletter->body, 50) }}</span>
+                                <span
+                                    class="text-xs text-zinc-500 line-clamp-1">{{ Str::limit($newsletter->body, 50) }}</span>
                             </div>
                         </flux:table.cell>
                         <flux:table.cell>
                             <flux:badge size="sm" color="zinc" inset="left">{{ $newsletter->mailer }}</flux:badge>
                         </flux:table.cell>
                         <flux:table.cell>
-                            <flux:badge size="sm" color="indigo" inset="left">{{ $newsletter->recipients_count }}</flux:badge>
+                            <flux:badge size="sm" color="indigo" inset="left">{{ $newsletter->recipients_count }}
+                            </flux:badge>
                         </flux:table.cell>
                         <flux:table.cell>
                             @if ($newsletter->sent_at)
@@ -183,10 +187,13 @@ new #[Title('Newsletters')] class extends Component {
                             <flux:dropdown align="end" variant="ghost">
                                 <flux:button variant="ghost" icon="ellipsis-horizontal" size="sm" />
                                 <flux:menu>
-                                    <flux:menu.item icon="paper-airplane" wire:click="confirmSend({{ $newsletter->id }})">{{ __('Send Now') }}</flux:menu.item>
-                                    <flux:menu.item icon="pencil-square" wire:click="edit({{ $newsletter->id }})">{{ __('Edit') }}</flux:menu.item>
+                                    <flux:menu.item icon="paper-airplane" wire:click="confirmSend({{ $newsletter->id }})">
+                                        {{ __('Send Now') }}</flux:menu.item>
+                                    <flux:menu.item icon="pencil-square" wire:click="edit({{ $newsletter->id }})">
+                                        {{ __('Edit') }}</flux:menu.item>
                                     <flux:menu.separator />
-                                    <flux:menu.item icon="trash" variant="danger" wire:click="delete({{ $newsletter->id }})">{{ __('Delete') }}</flux:menu.item>
+                                    <flux:menu.item icon="trash" variant="danger"
+                                        wire:click="delete({{ $newsletter->id }})">{{ __('Delete') }}</flux:menu.item>
                                 </flux:menu>
                             </flux:dropdown>
                         </flux:table.cell>
@@ -201,7 +208,8 @@ new #[Title('Newsletters')] class extends Component {
             <div class="flex items-center gap-3">
                 <flux:icon name="envelope" class="text-zinc-500" />
                 <div>
-                    <flux:heading size="lg">{{ $editingNewsletterId ? __('Edit Newsletter') : __('Draft Newsletter') }}</flux:heading>
+                    <flux:heading size="lg">{{ $editingNewsletterId ? __('Edit Newsletter') : __('Draft Newsletter') }}
+                    </flux:heading>
                     <flux:subheading>{{ __('Create a new announcement for your shippers.') }}</flux:subheading>
                 </div>
             </div>
@@ -209,24 +217,16 @@ new #[Title('Newsletters')] class extends Component {
             <div class="space-y-4">
                 <flux:input wire:model="subject" :label="__('Subject')" required />
                 <flux:textarea wire:model="body" :label="__('Message Body')" rows="10" required />
-                <flux:input wire:model="url" :label="__('Call to Action URL (Optional)')" icon="link" placeholder="https://..." />
-                
-                <flux:radio.group
-                    wire:model="mailer"
-                    :label="__('Send Via')"
+                <flux:input wire:model="url" :label="__('Call to Action URL (Optional)')" icon="link"
+                    placeholder="https://..." />
+
+                <flux:radio.group wire:model="mailer" :label="__('Send Via')"
                     :description="__('Select the sending stack. Newsletter uses the dedicated roundrobin accounts (news1/2/3@ankshipping.com).')"
-                    class="grid grid-cols-1 gap-4 sm:grid-cols-2"
-                >
-                    <flux:radio
-                        value="newsletter"
-                        :label="__('Newsletter Accounts (Recommended)')"
-                        :description="__('Cycles evenly: news1@, news2@, news3@ankshipping.com')"
-                    />
-                    <flux:radio
-                        value="google"
-                        :label="__('Google Workspace')"
-                        :description="__('Uses your configured Google Workspace account.')"
-                    />
+                    class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <flux:radio value="newsletter" :label="__('Newsletter Accounts (Recommended)')"
+                        :description="__('Cycles evenly: news1@, news2@, news3@ankshipping.com')" />
+                    <flux:radio value="google" :label="__('Google Workspace')"
+                        :description="__('Uses your configured Google Workspace account.')" />
                 </flux:radio.group>
 
             </div>

@@ -26,7 +26,7 @@
         :attributes="new \Illuminate\View\ComponentAttributeBag($params)"
     />
 @else
-    <div class="mb-2">
+    <div class="mb-1">
         @if (!$inline)
             <label class="form-label fw-semibold mb-1">{{ $title ?? '' }}</label>
         @endif

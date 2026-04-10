@@ -122,7 +122,7 @@ new #[Title('Carriers')] class extends Component {
         }
 
         $carrier = Carrier::findOrFail($this->carrierPendingDeleteId);
-        
+
         if ($carrier->shipments()->exists()) {
             $this->showDeleteModal = false;
             $this->notification()->warning(__('Cannot delete carrier because it is associated with one or more shipments.'));
@@ -143,7 +143,7 @@ new #[Title('Carriers')] class extends Component {
     {
         return Carrier::query()
             ->withCount('shipments')
-            ->when($this->search, fn ($q) => $q->where('name', 'like', "%{$this->search}%"))
+            ->when($this->search, fn($q) => $q->where('name', 'like', "%{$this->search}%"))
             ->orderBy('name')
             ->paginate(15);
     }
@@ -151,15 +151,18 @@ new #[Title('Carriers')] class extends Component {
 
 <div>
     <x-crud.page-shell>
-        <div class="flex items-center justify-between mb-8">
-            <x-crud.page-header :heading="__('Carriers')" :subheading="__('Manage logistics and transport companies.')" icon="truck" class="!mb-0" />
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+            <x-crud.page-header :heading="__('Carriers')" :subheading="__('Manage transport companies.')" icon="truck"
+                class="!mb-0" />
             @can('carriers.create')
-                <flux:button variant="primary" icon="plus" wire:click="openCreateModal">{{ __('Create Carrier') }}</flux:button>
+                <flux:button variant="primary" icon="plus" wire:click="openCreateModal">{{ __('Create Carrier') }}
+                </flux:button>
             @endcan
         </div>
 
-        <div class="mb-4">
-            <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" :placeholder="__('Search carriers...')" clearable />
+        <div class="mb-1">
+            <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass"
+                :placeholder="__('Search carriers...')" clearable />
         </div>
 
         <x-crud.panel class="p-6">
@@ -188,10 +191,13 @@ new #[Title('Carriers')] class extends Component {
                                     <flux:button variant="ghost" size="sm" icon="ellipsis-horizontal" inset="top bottom" />
                                     <flux:menu>
                                         @can('carriers.update')
-                                            <flux:menu.item icon="pencil-square" wire:click="openEditModal({{ $carrier->id }})">{{ __('Edit') }}</flux:menu.item>
+                                            <flux:menu.item icon="pencil-square" wire:click="openEditModal({{ $carrier->id }})">
+                                                {{ __('Edit') }}</flux:menu.item>
                                         @endcan
                                         @can('carriers.delete')
-                                            <flux:menu.item icon="trash" variant="danger" wire:click="openDeleteModal({{ $carrier->id }})">{{ __('Delete') }}</flux:menu.item>
+                                            <flux:menu.item icon="trash" variant="danger"
+                                                wire:click="openDeleteModal({{ $carrier->id }})">{{ __('Delete') }}
+                                            </flux:menu.item>
                                         @endcan
                                     </flux:menu>
                                 </flux:dropdown>

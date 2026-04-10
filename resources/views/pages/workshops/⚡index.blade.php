@@ -43,7 +43,7 @@ new #[Title('Workshops')] class extends Component {
     {
         return Workshop::query()
             ->withCount('shipmentTrackings')
-            ->when($this->search, fn ($q) => $q->where('name', 'like', "%{$this->search}%")
+            ->when($this->search, fn($q) => $q->where('name', 'like', "%{$this->search}%")
                 ->orWhere('phone', 'like', "%{$this->search}%")
                 ->orWhere('address', 'like', "%{$this->search}%"))
             ->orderBy('name')
@@ -135,15 +135,18 @@ new #[Title('Workshops')] class extends Component {
 
 <div>
     <x-crud.page-shell>
-        <div class="flex items-center justify-between mb-8">
-            <x-crud.page-header :heading="__('Workshops')" :subheading="__('Manage vehicle workshops and processing facilities.')" icon="wrench-screwdriver" class="!mb-0" />
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+            <x-crud.page-header :heading="__('Workshops')" :subheading="__('Manage vehicle workshops.')"
+                icon="wrench-screwdriver" class="!mb-0" />
             @can('workshops.create')
-                <flux:button variant="primary" icon="plus" wire:click="openCreateModal">{{ __('Create Workshop') }}</flux:button>
+                <flux:button variant="primary" icon="plus" wire:click="openCreateModal">{{ __('Create Workshop') }}
+                </flux:button>
             @endcan
         </div>
 
-        <div class="mb-4">
-            <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" :placeholder="__('Search by name, phone or address...')" clearable />
+        <div class="mb-1">
+            <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass"
+                :placeholder="__('Search by name, phone or address...')" clearable />
         </div>
 
         <x-crud.panel class="p-6">
@@ -161,7 +164,8 @@ new #[Title('Workshops')] class extends Component {
                         <flux:table.row :key="$workshop->id">
                             <flux:table.cell class="font-medium">{{ $workshop->name }}</flux:table.cell>
                             <flux:table.cell>{{ $workshop->phone ?: '—' }}</flux:table.cell>
-                            <flux:table.cell class="max-w-xs truncate text-sm text-zinc-500">{{ $workshop->address ?: '—' }}</flux:table.cell>
+                            <flux:table.cell class="max-w-xs truncate text-sm text-zinc-500">{{ $workshop->address ?: '—' }}
+                            </flux:table.cell>
                             <flux:table.cell>
                                 <flux:badge color="zinc" size="sm">{{ $workshop->shipment_trackings_count }}</flux:badge>
                             </flux:table.cell>
@@ -170,11 +174,15 @@ new #[Title('Workshops')] class extends Component {
                                     <flux:button variant="ghost" icon="ellipsis-horizontal" size="sm" />
                                     <flux:menu>
                                         @can('workshops.update')
-                                            <flux:menu.item icon="pencil-square" wire:click="openEditModal({{ $workshop->id }})">{{ __('Edit') }}</flux:menu.item>
+                                            <flux:menu.item icon="pencil-square"
+                                                wire:click="openEditModal({{ $workshop->id }})">{{ __('Edit') }}
+                                            </flux:menu.item>
                                         @endcan
                                         @can('workshops.delete')
                                             <flux:menu.separator />
-                                            <flux:menu.item icon="trash" variant="danger" wire:click="openDeleteModal({{ $workshop->id }})">{{ __('Delete') }}</flux:menu.item>
+                                            <flux:menu.item icon="trash" variant="danger"
+                                                wire:click="openDeleteModal({{ $workshop->id }})">{{ __('Delete') }}
+                                            </flux:menu.item>
                                         @endcan
                                     </flux:menu>
                                 </flux:dropdown>
@@ -205,10 +213,12 @@ new #[Title('Workshops')] class extends Component {
 
             <div class="space-y-4">
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <flux:input wire:model="name" :label="__('Workshop Name')" icon="wrench-screwdriver" required placeholder="e.g. Downtown Auto Center" />
+                    <flux:input wire:model="name" :label="__('Workshop Name')" icon="wrench-screwdriver" required
+                        placeholder="e.g. Downtown Auto Center" />
                     <flux:input wire:model="phone" :label="__('Phone')" icon="phone" placeholder="+1 555 000 0000" />
                 </div>
-                <flux:textarea wire:model="address" :label="__('Address')" placeholder="123 Workshop Lane, City, State" rows="2" />
+                <flux:textarea wire:model="address" :label="__('Address')" placeholder="123 Workshop Lane, City, State"
+                    rows="2" />
             </div>
 
             <div class="flex justify-end gap-2">

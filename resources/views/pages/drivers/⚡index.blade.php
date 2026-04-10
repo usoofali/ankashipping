@@ -43,7 +43,7 @@ new #[Title('Drivers')] class extends Component {
     {
         return Driver::query()
             ->withCount('shipments')
-            ->when($this->search, fn ($q) => $q->where('phone', 'like', "%{$this->search}%")
+            ->when($this->search, fn($q) => $q->where('phone', 'like', "%{$this->search}%")
                 ->orWhere('company', 'like', "%{$this->search}%")
                 ->orWhere('email', 'like', "%{$this->search}%"))
             ->orderBy('company')
@@ -137,15 +137,18 @@ new #[Title('Drivers')] class extends Component {
 
 <div>
     <x-crud.page-shell>
-        <div class="flex items-center justify-between mb-8">
-            <x-crud.page-header :heading="__('Drivers')" :subheading="__('Manage delivery drivers.')" icon="identification" class="!mb-0" />
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-4">
+            <x-crud.page-header :heading="__('Drivers')" :subheading="__('Manage drivers.')"
+                icon="identification" class="!mb-0" />
             @can('drivers.create')
-                <flux:button variant="primary" icon="plus" wire:click="openCreateModal">{{ __('Create Driver') }}</flux:button>
+                <flux:button variant="primary" icon="plus" wire:click="openCreateModal">{{ __('Create Driver') }}
+                </flux:button>
             @endcan
         </div>
 
-        <div class="mb-4">
-            <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" :placeholder="__('Search by company, phone or email...')" clearable />
+        <div class="mb-1">
+            <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass"
+                :placeholder="__('Search by company, phone or email...')" clearable />
         </div>
 
         <x-crud.panel class="p-6">
@@ -172,11 +175,15 @@ new #[Title('Drivers')] class extends Component {
                                     <flux:button variant="ghost" icon="ellipsis-horizontal" size="sm" />
                                     <flux:menu>
                                         @can('drivers.update')
-                                            <flux:menu.item icon="pencil-square" wire:click="openEditModal({{ $driver->id }})">{{ __('Edit') }}</flux:menu.item>
+                                            <flux:menu.item icon="pencil-square" wire:click="openEditModal({{ $driver->id }})">
+                                                {{ __('Edit') }}
+                                            </flux:menu.item>
                                         @endcan
                                         @can('drivers.delete')
                                             <flux:menu.separator />
-                                            <flux:menu.item icon="trash" variant="danger" wire:click="openDeleteModal({{ $driver->id }})">{{ __('Delete') }}</flux:menu.item>
+                                            <flux:menu.item icon="trash" variant="danger"
+                                                wire:click="openDeleteModal({{ $driver->id }})">{{ __('Delete') }}
+                                            </flux:menu.item>
                                         @endcan
                                     </flux:menu>
                                 </flux:dropdown>
@@ -206,9 +213,12 @@ new #[Title('Drivers')] class extends Component {
             </div>
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <flux:input wire:model="phone" :label="__('Phone')" icon="phone" required placeholder="+1 555 000 0000" />
-                <flux:input wire:model="email" :label="__('Email')" icon="envelope" type="email" placeholder="john@example.com" />
-                <flux:input wire:model="company" :label="__('Company')" icon="building-office" placeholder="e.g. Fast Delivery Co." />
+                <flux:input wire:model="phone" :label="__('Phone')" icon="phone" required
+                    placeholder="+1 555 000 0000" />
+                <flux:input wire:model="email" :label="__('Email')" icon="envelope" type="email"
+                    placeholder="john@example.com" />
+                <flux:input wire:model="company" :label="__('Company')" icon="building-office"
+                    placeholder="e.g. Fast Delivery Co." />
             </div>
 
             <div class="flex justify-end gap-2">

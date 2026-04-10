@@ -92,9 +92,9 @@ new #[Title('Cities')] class extends Component {
     {
         return City::query()
             ->with(['state', 'state.country'])
-            ->when($this->search, fn ($q) => $q->where('name', 'like', "%{$this->search}%"))
-            ->when($this->filterStateId, fn ($q) => $q->where('state_id', $this->filterStateId))
-            ->when($this->filterCountryId && !$this->filterStateId, fn ($q) => $q->whereHas('state', fn ($sq) => $sq->where('country_id', $this->filterCountryId)))
+            ->when($this->search, fn($q) => $q->where('name', 'like', "%{$this->search}%"))
+            ->when($this->filterStateId, fn($q) => $q->where('state_id', $this->filterStateId))
+            ->when($this->filterCountryId && !$this->filterStateId, fn($q) => $q->whereHas('state', fn($sq) => $sq->where('country_id', $this->filterCountryId)))
             ->orderBy('name')
             ->paginate(20);
     }
@@ -145,7 +145,7 @@ new #[Title('Cities')] class extends Component {
             }
 
             $country = Country::query()->where('iso2', $countryIso2)->first();
-            if (! $country) {
+            if (!$country) {
                 $errors++;
                 continue;
             }
@@ -154,7 +154,7 @@ new #[Title('Cities')] class extends Component {
                 ->where('country_id', $country->id)
                 ->where('code', $stateCode)
                 ->first();
-            if (! $state) {
+            if (!$state) {
                 $errors++;
                 continue;
             }
@@ -206,7 +206,7 @@ new #[Title('Cities')] class extends Component {
     {
         $this->authorize('cities.update');
         $city = City::with('state')->findOrFail($id);
-        
+
         $this->editingCityId = $city->id;
         $this->country_id = $city->state->country_id;
         $this->state_id = $city->state_id;
@@ -263,18 +263,22 @@ new #[Title('Cities')] class extends Component {
 
 <div>
     <x-crud.page-shell>
-        <div class="flex items-center justify-between mb-8">
-            <x-crud.page-header :heading="__('Cities')" :subheading="__('Manage cities and locations.')" icon="map-pin" class="!mb-0" />
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+            <x-crud.page-header :heading="__('Cities')" :subheading="__('Manage shipping cities.')" icon="map-pin"
+                class="!mb-0" />
             <div class="flex items-center gap-2">
                 @can('cities.create')
-                    <flux:button variant="outline" icon="arrow-down-tray" wire:click="openImportModal">{{ __('Import CSV') }}</flux:button>
-                    <flux:button variant="primary" icon="plus" wire:click="openCreateModal">{{ __('Create City') }}</flux:button>
+                    <flux:button variant="outline" icon="arrow-down-tray" wire:click="openImportModal">
+                        {{ __('Import CSV') }}</flux:button>
+                    <flux:button variant="primary" icon="plus" wire:click="openCreateModal">{{ __('Create City') }}
+                    </flux:button>
                 @endcan
             </div>
         </div>
 
         <div class="mb-4 space-y-3">
-            <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" :placeholder="__('Search cities...')" clearable />
+            <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass"
+                :placeholder="__('Search cities...')" clearable />
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <flux:select wire:model.live="filterCountryId" icon="flag">
                     <option value="">{{ __('All Countries') }}</option>
@@ -311,11 +315,14 @@ new #[Title('Cities')] class extends Component {
                                     <flux:button variant="ghost" icon="ellipsis-horizontal" size="sm" />
                                     <flux:menu>
                                         @can('cities.update')
-                                            <flux:menu.item icon="pencil-square" wire:click="openEditModal({{ $city->id }})">{{ __('Edit') }}</flux:menu.item>
+                                            <flux:menu.item icon="pencil-square" wire:click="openEditModal({{ $city->id }})">
+                                                {{ __('Edit') }}</flux:menu.item>
                                         @endcan
                                         @can('cities.delete')
                                             <flux:menu.separator />
-                                            <flux:menu.item icon="trash" variant="danger" wire:click="openDeleteModal({{ $city->id }})">{{ __('Delete') }}</flux:menu.item>
+                                            <flux:menu.item icon="trash" variant="danger"
+                                                wire:click="openDeleteModal({{ $city->id }})">{{ __('Delete') }}
+                                            </flux:menu.item>
                                         @endcan
                                     </flux:menu>
                                 </flux:dropdown>
@@ -346,14 +353,16 @@ new #[Title('Cities')] class extends Component {
                             <option value="{{ $country->id }}">{{ $country->name }}</option>
                         @endforeach
                     </flux:select>
-                    <flux:select wire:model.live="state_id" :label="__('State')" icon="map" required :disabled="!$country_id">
+                    <flux:select wire:model.live="state_id" :label="__('State')" icon="map" required
+                        :disabled="!$country_id">
                         <option value="">{{ __('Select State') }}</option>
                         @foreach ($this->states as $state)
                             <option value="{{ $state->id }}">{{ $state->name }}</option>
                         @endforeach
                     </flux:select>
                 </div>
-                <flux:input wire:model="name" :label="__('City Name')" icon="map-pin" required placeholder="e.g. Los Angeles" :disabled="!$state_id" />
+                <flux:input wire:model="name" :label="__('City Name')" icon="map-pin" required
+                    placeholder="e.g. Los Angeles" :disabled="!$state_id" />
             </div>
 
             <div class="flex justify-end gap-2">
@@ -384,7 +393,8 @@ new #[Title('Cities')] class extends Component {
                             <option value="{{ $country->id }}">{{ $country->name }}</option>
                         @endforeach
                     </flux:select>
-                    <flux:select wire:model.live="state_id" :label="__('State')" icon="map" required :disabled="!$country_id">
+                    <flux:select wire:model.live="state_id" :label="__('State')" icon="map" required
+                        :disabled="!$country_id">
                         <option value="">{{ __('Select State') }}</option>
                         @foreach ($this->states as $state)
                             <option value="{{ $state->id }}">{{ $state->name }}</option>
@@ -434,7 +444,9 @@ new #[Title('Cities')] class extends Component {
                 </flux:link>
             </div>
             <div class="flex justify-end gap-2">
-                <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
+                <flux:modal.close>
+                    <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
                 <flux:button type="submit" variant="primary">{{ __('Import') }}</flux:button>
             </div>
         </form>

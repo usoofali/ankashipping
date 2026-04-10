@@ -65,9 +65,9 @@ new #[Title('States')] class extends Component {
         return State::query()
             ->with('country')
             ->withCount('cities')
-            ->when($this->search, fn ($q) => $q->where('name', 'like', "%{$this->search}%")
+            ->when($this->search, fn($q) => $q->where('name', 'like', "%{$this->search}%")
                 ->orWhere('code', 'like', "%{$this->search}%"))
-            ->when($this->filterCountryId, fn ($q) => $q->where('country_id', $this->filterCountryId))
+            ->when($this->filterCountryId, fn($q) => $q->where('country_id', $this->filterCountryId))
             ->orderBy('name')
             ->paginate(20);
     }
@@ -99,7 +99,7 @@ new #[Title('States')] class extends Component {
     {
         $this->authorize('states.update');
         $state = State::findOrFail($id);
-        
+
         $this->editingStateId = $state->id;
         $this->country_id = $state->country_id;
         $this->name = $state->name;
@@ -188,7 +188,7 @@ new #[Title('States')] class extends Component {
             }
 
             $country = Country::query()->where('iso2', $countryIso2)->first();
-            if (! $country) {
+            if (!$country) {
                 $errors++;
                 continue;
             }
@@ -224,18 +224,22 @@ new #[Title('States')] class extends Component {
 
 <div>
     <x-crud.page-shell>
-        <div class="flex items-center justify-between mb-8">
-            <x-crud.page-header :heading="__('States')" :subheading="__('Manage regions and states within countries.')" icon="map" class="!mb-0" />
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+            <x-crud.page-header :heading="__('States')" :subheading="__('Manage states and regions.')" icon="map"
+                class="!mb-0" />
             <div class="flex items-center gap-2">
                 @can('states.create')
-                    <flux:button variant="outline" icon="arrow-down-tray" wire:click="openImportModal">{{ __('Import CSV') }}</flux:button>
-                    <flux:button variant="primary" icon="plus" wire:click="openCreateModal">{{ __('Create State') }}</flux:button>
+                    <flux:button variant="outline" icon="arrow-down-tray" wire:click="openImportModal">
+                        {{ __('Import CSV') }}</flux:button>
+                    <flux:button variant="primary" icon="plus" wire:click="openCreateModal">{{ __('Create State') }}
+                    </flux:button>
                 @endcan
             </div>
         </div>
 
         <div class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" :placeholder="__('Search by name or code...')" clearable />
+            <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass"
+                :placeholder="__('Search by name or code...')" clearable />
             <flux:select wire:model.live="filterCountryId" icon="flag">
                 <option value="">{{ __('All Countries') }}</option>
                 @foreach($this->countries as $country)
@@ -268,11 +272,14 @@ new #[Title('States')] class extends Component {
                                     <flux:button variant="ghost" icon="ellipsis-horizontal" size="sm" />
                                     <flux:menu>
                                         @can('states.update')
-                                            <flux:menu.item icon="pencil-square" wire:click="openEditModal({{ $state->id }})">{{ __('Edit') }}</flux:menu.item>
+                                            <flux:menu.item icon="pencil-square" wire:click="openEditModal({{ $state->id }})">
+                                                {{ __('Edit') }}</flux:menu.item>
                                         @endcan
                                         @can('states.delete')
                                             <flux:menu.separator />
-                                            <flux:menu.item icon="trash" variant="danger" wire:click="openDeleteModal({{ $state->id }})">{{ __('Delete') }}</flux:menu.item>
+                                            <flux:menu.item icon="trash" variant="danger"
+                                                wire:click="openDeleteModal({{ $state->id }})">{{ __('Delete') }}
+                                            </flux:menu.item>
                                         @endcan
                                     </flux:menu>
                                 </flux:dropdown>
@@ -303,8 +310,10 @@ new #[Title('States')] class extends Component {
                     @endforeach
                 </flux:select>
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <flux:input wire:model="name" :label="__('State Name')" icon="map" required placeholder="e.g. California" />
-                    <flux:input wire:model="code" :label="__('State Code')" icon="qr-code" required placeholder="CA" class="uppercase font-mono" />
+                    <flux:input wire:model="name" :label="__('State Name')" icon="map" required
+                        placeholder="e.g. California" />
+                    <flux:input wire:model="code" :label="__('State Code')" icon="qr-code" required placeholder="CA"
+                        class="uppercase font-mono" />
                 </div>
             </div>
 
@@ -337,7 +346,8 @@ new #[Title('States')] class extends Component {
                 </flux:select>
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <flux:input wire:model="name" :label="__('State Name')" icon="map" required />
-                    <flux:input wire:model="code" :label="__('State Code')" icon="qr-code" required class="uppercase font-mono" />
+                    <flux:input wire:model="code" :label="__('State Code')" icon="qr-code" required
+                        class="uppercase font-mono" />
                 </div>
             </div>
 
@@ -381,7 +391,9 @@ new #[Title('States')] class extends Component {
                 </flux:link>
             </div>
             <div class="flex justify-end gap-2">
-                <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
+                <flux:modal.close>
+                    <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
                 <flux:button type="submit" variant="primary">{{ __('Import') }}</flux:button>
             </div>
         </form>

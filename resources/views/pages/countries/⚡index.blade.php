@@ -49,7 +49,7 @@ new #[Title('Countries')] class extends Component {
     {
         return Country::query()
             ->withCount('states')
-            ->when($this->search, fn ($q) => $q->where('name', 'like', "%{$this->search}%")
+            ->when($this->search, fn($q) => $q->where('name', 'like', "%{$this->search}%")
                 ->orWhere('iso2', 'like', "%{$this->search}%")
                 ->orWhere('iso3', 'like', "%{$this->search}%"))
             ->orderBy('name')
@@ -85,7 +85,7 @@ new #[Title('Countries')] class extends Component {
     {
         $this->authorize('countries.update');
         $country = Country::findOrFail($id);
-        
+
         $this->editingCountryId = $country->id;
         $this->name = $country->name;
         $this->iso2 = $country->iso2;
@@ -202,18 +202,22 @@ new #[Title('Countries')] class extends Component {
 
 <div>
     <x-crud.page-shell>
-        <div class="flex items-center justify-between mb-8">
-            <x-crud.page-header :heading="__('Countries')" :subheading="__('Manage global countries and ISO codes.')" icon="flag" class="!mb-0" />
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+            <x-crud.page-header :heading="__('Countries')" :subheading="__('Manage global countries.')" icon="flag"
+                class="!mb-0" />
             <div class="flex items-center gap-2">
                 @can('countries.create')
-                    <flux:button variant="outline" icon="arrow-down-tray" wire:click="openImportModal">{{ __('Import CSV') }}</flux:button>
-                    <flux:button variant="primary" icon="plus" wire:click="openCreateModal">{{ __('Create Country') }}</flux:button>
+                    <flux:button variant="outline" icon="arrow-down-tray" wire:click="openImportModal">
+                        {{ __('Import CSV') }}</flux:button>
+                    <flux:button variant="primary" icon="plus" wire:click="openCreateModal">{{ __('Create Country') }}
+                    </flux:button>
                 @endcan
             </div>
         </div>
 
-        <div class="mb-4">
-            <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" :placeholder="__('Search by name or ISO code...')" clearable />
+        <div class="mb-1">
+            <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass"
+                :placeholder="__('Search by name or ISO code...')" clearable />
         </div>
 
         <x-crud.panel class="p-6">
@@ -231,7 +235,8 @@ new #[Title('Countries')] class extends Component {
                         <flux:table.row :key="$country->id">
                             <flux:table.cell class="font-medium">{{ $country->name }}</flux:table.cell>
                             <flux:table.cell class="font-mono text-xs uppercase">{{ $country->iso2 }}</flux:table.cell>
-                            <flux:table.cell class="font-mono text-xs uppercase">{{ $country->iso3 ?: '—' }}</flux:table.cell>
+                            <flux:table.cell class="font-mono text-xs uppercase">{{ $country->iso3 ?: '—' }}
+                            </flux:table.cell>
                             <flux:table.cell>
                                 <flux:badge size="sm" color="zinc" inset="left">{{ $country->states_count }}</flux:badge>
                             </flux:table.cell>
@@ -240,11 +245,14 @@ new #[Title('Countries')] class extends Component {
                                     <flux:button variant="ghost" icon="ellipsis-horizontal" size="sm" />
                                     <flux:menu>
                                         @can('countries.update')
-                                            <flux:menu.item icon="pencil-square" wire:click="openEditModal({{ $country->id }})">{{ __('Edit') }}</flux:menu.item>
+                                            <flux:menu.item icon="pencil-square" wire:click="openEditModal({{ $country->id }})">
+                                                {{ __('Edit') }}</flux:menu.item>
                                         @endcan
                                         @can('countries.delete')
                                             <flux:menu.separator />
-                                            <flux:menu.item icon="trash" variant="danger" wire:click="openDeleteModal({{ $country->id }})">{{ __('Delete') }}</flux:menu.item>
+                                            <flux:menu.item icon="trash" variant="danger"
+                                                wire:click="openDeleteModal({{ $country->id }})">{{ __('Delete') }}
+                                            </flux:menu.item>
                                         @endcan
                                     </flux:menu>
                                 </flux:dropdown>
@@ -268,10 +276,13 @@ new #[Title('Countries')] class extends Component {
             </div>
 
             <div class="space-y-4">
-                <flux:input wire:model="name" :label="__('Country Name')" icon="flag" required placeholder="e.g. United States" />
+                <flux:input wire:model="name" :label="__('Country Name')" icon="flag" required
+                    placeholder="e.g. United States" />
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <flux:input wire:model="iso2" :label="__('ISO2 Code')" icon="qr-code" required placeholder="US" maxlength="2" class="uppercase font-mono" />
-                    <flux:input wire:model="iso3" :label="__('ISO3 Code')" icon="qr-code" placeholder="USA" maxlength="3" class="uppercase font-mono" />
+                    <flux:input wire:model="iso2" :label="__('ISO2 Code')" icon="qr-code" required placeholder="US"
+                        maxlength="2" class="uppercase font-mono" />
+                    <flux:input wire:model="iso3" :label="__('ISO3 Code')" icon="qr-code" placeholder="USA"
+                        maxlength="3" class="uppercase font-mono" />
                 </div>
             </div>
 
@@ -298,8 +309,10 @@ new #[Title('Countries')] class extends Component {
             <div class="space-y-4">
                 <flux:input wire:model="name" :label="__('Country Name')" icon="flag" required />
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <flux:input wire:model="iso2" :label="__('ISO2 Code')" icon="qr-code" required maxlength="2" class="uppercase font-mono" />
-                    <flux:input wire:model="iso3" :label="__('ISO3 Code')" icon="qr-code" maxlength="3" class="uppercase font-mono" />
+                    <flux:input wire:model="iso2" :label="__('ISO2 Code')" icon="qr-code" required maxlength="2"
+                        class="uppercase font-mono" />
+                    <flux:input wire:model="iso3" :label="__('ISO3 Code')" icon="qr-code" maxlength="3"
+                        class="uppercase font-mono" />
                 </div>
             </div>
 
@@ -343,7 +356,9 @@ new #[Title('Countries')] class extends Component {
                 </flux:link>
             </div>
             <div class="flex justify-end gap-2">
-                <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
+                <flux:modal.close>
+                    <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
                 <flux:button type="submit" variant="primary">{{ __('Import') }}</flux:button>
             </div>
         </form>

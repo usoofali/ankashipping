@@ -33,7 +33,7 @@ new #[Title('Ports')] class extends Component {
     public bool $showDeleteModal = false;
     public bool $showImportModal = false;
 
-    public ?int $portEditingId = null;
+    public ?int $editingPortId = null;
     public ?int $portPendingDeleteId = null;
     public string $portPendingDeleteLabel = '';
 
@@ -54,7 +54,7 @@ new #[Title('Ports')] class extends Component {
     public function openCreateModal(): void
     {
         $this->authorize('ports.create');
-        $this->reset('name', 'type', 'country_id', 'state_id', 'portEditingId');
+        $this->reset(['name', 'type', 'country_id', 'state_id', 'editingPortId']);
         $this->showCreateModal = true;
     }
 
@@ -87,13 +87,13 @@ new #[Title('Ports')] class extends Component {
             $countryIso2 = strtoupper(trim((string) ($row['country_iso2'] ?? '')));
             $stateCode = strtoupper(trim((string) ($row['state_code'] ?? '')));
 
-            if ($name === '' || ! in_array($type, ['origin', 'destination'], true) || $countryIso2 === '' || $stateCode === '') {
+            if ($name === '' || !in_array($type, ['origin', 'destination'], true) || $countryIso2 === '' || $stateCode === '') {
                 $errors++;
                 continue;
             }
 
             $country = Country::query()->where('iso2', $countryIso2)->first();
-            if (! $country) {
+            if (!$country) {
                 $errors++;
                 continue;
             }
@@ -102,7 +102,7 @@ new #[Title('Ports')] class extends Component {
                 ->where('country_id', $country->id)
                 ->where('code', $stateCode)
                 ->first();
-            if (! $state) {
+            if (!$state) {
                 $errors++;
                 continue;
             }
@@ -175,23 +175,23 @@ new #[Title('Ports')] class extends Component {
     {
         $this->authorize('ports.update');
         $port = Port::findOrFail($portId);
-        $this->portEditingId = $port->id;
+        $this->editingPortId = $port->id;
         $this->name = $port->name;
         $this->type = $port->type;
         $this->country_id = $port->country_id;
         $this->state_id = $port->state_id;
-        
+
         $this->showEditModal = true;
     }
 
     public function savePort(): void
     {
         $this->authorize('ports.update');
-        if ($this->portEditingId === null) {
+        if ($this->editingPortId === null) {
             return;
         }
 
-        $port = Port::findOrFail($this->portEditingId);
+        $port = Port::findOrFail($this->editingPortId);
 
         $validator = Validator::make(
             [
@@ -236,7 +236,7 @@ new #[Title('Ports')] class extends Component {
         }
 
         $port = Port::findOrFail($this->portPendingDeleteId);
-        
+
         if ($port->originShipments()->exists() || $port->destinationShipments()->exists()) {
             $this->showDeleteModal = false;
             $this->notification()->warning(__('Cannot delete port because it is associated with one or more shipments.'));
@@ -258,7 +258,7 @@ new #[Title('Ports')] class extends Component {
         return Port::query()
             ->with(['country', 'state'])
             ->withCount(['originShipments', 'destinationShipments'])
-            ->when($this->search, fn ($q) => $q->where('name', 'like', "%{$this->search}%"))
+            ->when($this->search, fn($q) => $q->where('name', 'like', "%{$this->search}%"))
             ->orderBy('name')
             ->paginate(15);
     }
@@ -266,18 +266,22 @@ new #[Title('Ports')] class extends Component {
 
 <div>
     <x-crud.page-shell>
-        <div class="flex items-center justify-between mb-8">
-            <x-crud.page-header :heading="__('Ports')" :subheading="__('Manage origin and destination ports.')" icon="map-pin" class="!mb-0" />
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+            <x-crud.page-header :heading="__('Ports')" :subheading="__('Manage shipping ports.')" icon="map-pin"
+                class="!mb-0" />
             <div class="flex items-center gap-2">
                 @can('ports.create')
-                    <flux:button variant="outline" icon="arrow-down-tray" wire:click="openImportModal">{{ __('Import CSV') }}</flux:button>
-                    <flux:button variant="primary" icon="plus" wire:click="openCreateModal">{{ __('Create Port') }}</flux:button>
+                    <flux:button variant="outline" icon="arrow-down-tray" wire:click="openImportModal">
+                        {{ __('Import CSV') }}</flux:button>
+                    <flux:button variant="primary" icon="plus" wire:click="openCreateModal">{{ __('Create Port') }}
+                    </flux:button>
                 @endcan
             </div>
         </div>
 
-        <div class="mb-4">
-            <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" :placeholder="__('Search by name or code...')" clearable />
+        <div class="mb-1">
+            <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass"
+                :placeholder="__('Search by name or code...')" clearable />
         </div>
 
         <x-crud.panel class="p-6">
@@ -294,28 +298,32 @@ new #[Title('Ports')] class extends Component {
                     @forelse ($this->ports as $port)
                         <flux:table.row :key="$port->id">
                             <flux:table.cell>
-                                <flux:badge :color="$port->type === 'origin' ? 'blue' : 'emerald'" inset="top bottom" class="uppercase tracking-widest text-[10px] font-bold">
+                                <flux:badge :color="$port->type === 'origin' ? 'blue' : 'emerald'" inset="top bottom"
+                                    class="uppercase tracking-widest text-[10px] font-bold">
                                     {{ __($port->type) }}
                                 </flux:badge>
                             </flux:table.cell>
                             <flux:table.cell class="font-medium">
                                 {{ $port->name }}
                             </flux:table.cell>
-                            <flux:table.cell class="text-zinc-500 whitespace-nowrap text-sm">
+                            <flux:table.cell class="text-sm text-zinc-500">
                                 {{ $port->state?->name }}, {{ $port->country?->name }}
                             </flux:table.cell>
-                            <flux:table.cell>
-                                <span class="text-xs text-zinc-500">{{ $port->origin_shipments_count + $port->destination_shipments_count }} {{ __('Total') }}</span>
+                            <flux:table.cell class="text-xs text-zinc-500">
+                                {{ $port->origin_shipments_count + $port->destination_shipments_count }} {{ __('Total') }}
                             </flux:table.cell>
                             <flux:table.cell>
                                 <flux:dropdown align="end" position="bottom">
                                     <flux:button variant="ghost" size="sm" icon="ellipsis-horizontal" inset="top bottom" />
                                     <flux:menu>
                                         @can('ports.update')
-                                            <flux:menu.item icon="pencil-square" wire:click="openEditModal({{ $port->id }})">{{ __('Edit') }}</flux:menu.item>
+                                            <flux:menu.item icon="pencil-square" wire:click="openEditModal({{ $port->id }})">
+                                                {{ __('Edit') }}</flux:menu.item>
                                         @endcan
                                         @can('ports.delete')
-                                            <flux:menu.item icon="trash" variant="danger" wire:click="openDeleteModal({{ $port->id }})">{{ __('Delete') }}</flux:menu.item>
+                                            <flux:menu.item icon="trash" variant="danger"
+                                                wire:click="openDeleteModal({{ $port->id }})">{{ __('Delete') }}
+                                            </flux:menu.item>
                                         @endcan
                                     </flux:menu>
                                 </flux:dropdown>
@@ -354,33 +362,18 @@ new #[Title('Ports')] class extends Component {
                         <flux:select.option value="destination">{{ __('Destination') }}</flux:select.option>
                     </flux:select>
                 </div>
-                
+
                 <div class="sm:col-span-2">
-                    <x-select
-                        wire:model.live="country_id"
-                        :label="__('Country')"
-                        :placeholder="__('Select country')"
-                        option-value="id"
-                        option-label="name"
-                        :async-data="route('register.geo.countries')"
-                        searchable
-                    />
+                    <x-select wire:model.live="country_id" :label="__('Country')" :placeholder="__('Select country')"
+                        option-value="id" option-label="name" :async-data="route('register.geo.countries')"
+                        searchable />
                 </div>
 
                 <div class="sm:col-span-1">
-                    <x-select
-                        wire:model.live="state_id"
-                        :label="__('State / Province')"
-                        :placeholder="__('Select state')"
-                        option-value="id"
-                        option-label="name"
-                        :async-data="[
+                    <x-select wire:model.live="state_id" :label="__('State / Province')" :placeholder="__('Select state')" option-value="id" option-label="name" :async-data="[
                             'api' => route('register.geo.states'),
                             'params' => ['country_id' => $this->country_id],
-                        ]"
-                        searchable
-                        :disabled="!$this->country_id"
-                    />
+                        ]" searchable :disabled="!$this->country_id" />
                 </div>
             </div>
 
@@ -414,33 +407,18 @@ new #[Title('Ports')] class extends Component {
                         <flux:select.option value="destination">{{ __('Destination') }}</flux:select.option>
                     </flux:select>
                 </div>
-                
+
                 <div class="sm:col-span-2">
-                    <x-select
-                        wire:model.live="country_id"
-                        :label="__('Country')"
-                        :placeholder="__('Select country')"
-                        option-value="id"
-                        option-label="name"
-                        :async-data="route('register.geo.countries')"
-                        searchable
-                    />
+                    <x-select wire:model.live="country_id" :label="__('Country')" :placeholder="__('Select country')"
+                        option-value="id" option-label="name" :async-data="route('register.geo.countries')"
+                        searchable />
                 </div>
 
                 <div class="sm:col-span-1">
-                    <x-select
-                        wire:model.live="state_id"
-                        :label="__('State / Province')"
-                        :placeholder="__('Select state')"
-                        option-value="id"
-                        option-label="name"
-                        :async-data="[
+                    <x-select wire:model.live="state_id" :label="__('State / Province')" :placeholder="__('Select state')" option-value="id" option-label="name" :async-data="[
                             'api' => route('register.geo.states'),
                             'params' => ['country_id' => $this->country_id],
-                        ]"
-                        searchable
-                        :disabled="!$this->country_id"
-                    />
+                        ]" searchable :disabled="!$this->country_id" />
                 </div>
             </div>
 
@@ -486,7 +464,9 @@ new #[Title('Ports')] class extends Component {
                 </flux:link>
             </div>
             <div class="flex justify-end gap-2">
-                <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
+                <flux:modal.close>
+                    <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
                 <flux:button type="submit" variant="primary">{{ __('Import') }}</flux:button>
             </div>
         </form>
