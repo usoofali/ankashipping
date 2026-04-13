@@ -32,10 +32,8 @@ class ShipmentFactory extends Factory
 
         return [
             'reference_no' => fake()->unique()->bothify('REF-########'),
-            'gatepass_pin' => fake()->optional()->regexify('[A-Z0-9]{11}'),
             'shipper_id' => $shipper,
             'consignee_id' => Consignee::factory()->for($shipper),
-            'driver_id' => null,
 
             'carrier_id' => Carrier::factory(),
             'origin_port_id' => Port::factory(),
@@ -44,7 +42,7 @@ class ShipmentFactory extends Factory
             'shipping_mode' => ShippingMode::Container->value,
             'shipment_status' => ShipmentStatus::Pending->value,
             'invoice_status' => InvoiceStatus::Draft->value,
-            'payment_status' => PaymentStatus::Pending->value,
+            'payment_status' => PaymentStatus::AwaitingBL->value,
             'payment_method_id' => null,
         ];
     }

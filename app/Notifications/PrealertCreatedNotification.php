@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Enums\ShippingMode;
 use App\Models\Prealert;
 use App\Models\SystemSetting;
 use Illuminate\Bus\Queueable;
@@ -25,7 +26,7 @@ final class PrealertCreatedNotification extends Notification implements ShouldQu
     public function via(object $notifiable): array
     {
         // Shipper receives both mail and database notifications
-        if ($notifiable->hasRole('shipper') && (int) $notifiable->shipper?->id === (int) $this->prealert->shipper_id) {
+        if ($notifiable->shipper && (int) $notifiable->shipper->id === (int) $this->prealert->shipper_id) {
             return ['mail', 'database'];
         }
 
@@ -44,7 +45,11 @@ final class PrealertCreatedNotification extends Notification implements ShouldQu
 
         return (new MailMessage)
             ->mailer($setting->getMailerFor('operations'))
-            ->subject(__('New Prealert Created – VIN :vin', ['vin' => $this->prealert->vin]))
+            ->subject($this->prealert->shipment_id
+                ? __('New Prealert for Container :ref – :count Vehicles', ['ref' => $this->prealert->shipment?->reference_no ?? __('Existing'), 'count' => $this->prealert->vehicles->count()])
+                : ($this->prealert->shipping_mode === ShippingMode::Container
+                    ? __('New Container Prealert Created – :count Vehicles', ['count' => $this->prealert->vehicles->count()])
+                    : __('New RoRo Prealert Created – VIN :vin', ['vin' => $this->prealert->vehicles->first()?->vin])))
             ->markdown('emails.prealert-created', [
                 'notifiable' => $notifiable,
                 'prealert' => $this->prealert,
@@ -61,13 +66,24 @@ final class PrealertCreatedNotification extends Notification implements ShouldQu
     public function toArray(object $notifiable): array
     {
         return [
-            'title' => __('New Prealert Created'),
-            'body' => __('A new prealert has been created for VIN :vin by :shipper.', [
-                'vin' => $this->prealert->vin,
-                'shipper' => $this->prealert->shipper?->company_name ?? $this->prealert->shipper?->user?->name,
-            ]),
+            'title' => $this->prealert->shipment_id ? __('Vehicles Targeting Container') : ($this->prealert->shipping_mode === ShippingMode::Container ? __('New Container Prealert') : __('New RoRo Prealert')),
+            'body' => $this->prealert->shipment_id
+                ? __('A new prealert for :count vehicles targeting container :ref has been created by :shipper.', [
+                    'count' => $this->prealert->vehicles->count(),
+                    'ref' => $this->prealert->shipment?->reference_no ?? __('Existing'),
+                    'shipper' => $this->prealert->shipper?->company_name ?? $this->prealert->shipper?->user?->name,
+                ])
+                : ($this->prealert->shipping_mode === ShippingMode::Container
+                    ? __('A new Container prealert has been created for :count vehicles by :shipper.', [
+                        'count' => $this->prealert->vehicles->count(),
+                        'shipper' => $this->prealert->shipper?->company_name ?? $this->prealert->shipper?->user?->name,
+                    ])
+                    : __('A new RoRo prealert has been created for VIN :vin by :shipper.', [
+                        'vin' => $this->prealert->vehicles->first()?->vin,
+                        'shipper' => $this->prealert->shipper?->company_name ?? $this->prealert->shipper?->user?->name,
+                    ])),
             'prealert_id' => $this->prealert->id,
-            'vin' => $this->prealert->vin,
+            'vin' => $this->prealert->shipping_mode === ShippingMode::Container ? null : $this->prealert->vehicles->first()?->vin,
             'url' => route('prealerts.index', absolute: true), // Link to prealerts list or show if implemented
         ];
     }

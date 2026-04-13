@@ -7,6 +7,7 @@ use App\Models\Shipper;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use App\Models\Vehicle;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -32,7 +33,7 @@ new #[Title('Prealerts')] class extends Component {
     {
         $user = Auth::user();
         $query = Prealert::query()
-            ->with(['shipper.user', 'vehicle', 'carrier', 'destinationPort.state', 'destinationPort.country'])
+            ->with(['shipper.user', 'vehicles', 'shipment', 'carrier', 'destinationPort.state', 'destinationPort.country'])
             ->latest();
 
         if ($user?->staff()->exists() || $user?->hasRole('super_admin')) {
@@ -75,7 +76,7 @@ new #[Title('Prealerts')] class extends Component {
 
     public function updatedShowDeleteModal(bool $value): void
     {
-        if (! $value) {
+        if (!$value) {
             $this->prealertPendingDeleteId = null;
             $this->prealertPendingDeleteLabel = '';
         }
@@ -83,7 +84,7 @@ new #[Title('Prealerts')] class extends Component {
 
     public function openReviewModal(int $id): void
     {
-        $this->selectedPrealert = Prealert::with(['shipper.user', 'vehicle', 'carrier', 'destinationPort.state', 'destinationPort.country'])->findOrFail($id);
+        $this->selectedPrealert = Prealert::with(['shipper.user', 'vehicles.shipment', 'shipment', 'carrier', 'destinationPort.state', 'destinationPort.country'])->findOrFail($id);
         $this->dispatch('modal-show', name: 'review-prealert');
     }
 
@@ -106,6 +107,7 @@ new #[Title('Prealerts')] class extends Component {
         }
 
         $prealert = Prealert::query()->findOrFail($this->prealertPendingDeleteId);
+        Vehicle::where('prealert_id', $prealert->id)->update(['prealert_id' => null]);
         $this->authorize('delete', $prealert);
 
         $prealert->delete();
@@ -182,14 +184,23 @@ new #[Title('Prealerts')] class extends Component {
                     @foreach ($this->prealerts as $prealert)
                         <flux:table.row :key="$prealert->id">
                             <flux:table.cell>
-                                <div class="flex flex-col">
-                                    <span class="font-mono text-xs font-semibold text-zinc-900! dark:text-zinc-100!">
-                                        {{ $prealert->vin }}
-                                    </span>
-                                    <span class="text-[10px] text-zinc-500 font-mono">
-                                        {{ $prealert->vehicle?->lot_number ?: '—' }}
-                                    </span>
-                                </div>
+                                @if($prealert->vehicles->count() > 1)
+                                    <div class="flex flex-col">
+                                        <span class="font-bold text-zinc-900 dark:text-white">{{ $prealert->vehicles->count() }}
+                                            {{ __('Vehicles') }}</span>
+                                        <span
+                                            class="text-[10px] text-zinc-500 uppercase tracking-tighter">{{ $prealert->shipping_mode?->name }}</span>
+                                    </div>
+                                @else
+                                    <div class="flex flex-col">
+                                        <span class="font-mono text-xs font-semibold text-zinc-900! dark:text-zinc-100!">
+                                            {{ $prealert->vehicles->first()?->vin ?: '—' }}
+                                        </span>
+                                        <span class="text-[10px] text-zinc-500 font-mono">
+                                            {{ $prealert->vehicles->first()?->lot_number ?: '—' }}
+                                        </span>
+                                    </div>
+                                @endif
                             </flux:table.cell>
                             <flux:table.cell>
                                 <div class="flex flex-col">
@@ -204,11 +215,15 @@ new #[Title('Prealerts')] class extends Component {
                                 </div>
                             </flux:table.cell>
                             <flux:table.cell>
-                                @if ($prealert->vehicle)
+                                @if ($prealert->vehicles->isNotEmpty())
                                     <span class="text-zinc-600 dark:text-zinc-400">
-                                        {{ $prealert->vehicle->year }} {{ $prealert->vehicle->make }}
-                                        {{ $prealert->vehicle->model }}
-                                        <span class="text-xs text-zinc-400 ml-1">({{ $prealert->vehicle->color }})</span>
+                                        @if($prealert->vehicles->count() === 1)
+                                            {{ $prealert->vehicles->first()->year }} {{ $prealert->vehicles->first()->make }}
+                                            {{ $prealert->vehicles->first()->model }}
+                                            <span class="text-xs text-zinc-400 ml-1">({{ $prealert->vehicles->first()->color }})</span>
+                                        @else
+                                            {{ $prealert->vehicles->first()->make }}... +{{ $prealert->vehicles->count() - 1 }}
+                                        @endif
                                     </span>
                                 @else
                                     <span class="text-zinc-400 italic">{{ __('N/A') }}</span>
@@ -217,11 +232,11 @@ new #[Title('Prealerts')] class extends Component {
                             <flux:table.cell>
                                 <div class="flex flex-col">
                                     <span class="text-xs font-medium text-zinc-900 dark:text-zinc-100">
-                                        {{ $prealert->vehicle?->auction_name ?: '—' }}
+                                        {{ $prealert->vehicles->first()?->auction_name ?: '—' }}
                                     </span>
                                     <span class="text-[10px] text-zinc-500 truncate max-w-[150px]"
-                                        title="{{ $prealert->vehicle?->location }}">
-                                        {{ $prealert->vehicle?->location ?: '—' }}
+                                        title="{{ $prealert->vehicles->first()?->location }}">
+                                        {{ $prealert->vehicles->first()?->location ?: '—' }}
                                     </span>
                                 </div>
                             </flux:table.cell>
@@ -243,12 +258,14 @@ new #[Title('Prealerts')] class extends Component {
                                 <flux:dropdown align="end" variant="ghost">
                                     <flux:button variant="ghost" icon="ellipsis-horizontal" size="sm" />
                                     <flux:menu>
-                                        <flux:menu.item icon="eye" wire:click="openReviewModal({{ $prealert->id }})" wire:key="view-{{ $prealert->id }}">
+                                        <flux:menu.item icon="eye" wire:click="openReviewModal({{ $prealert->id }})"
+                                            wire:key="view-{{ $prealert->id }}">
                                             {{ __('View Details') }}
                                         </flux:menu.item>
 
                                         @if (auth()->user()?->hasRole('super_admin') || auth()->user()?->staff()->exists())
-                                            <flux:menu.item icon="truck" wire:click="convertToShipment({{ $prealert->id }})" wire:key="convert-{{ $prealert->id }}">
+                                            <flux:menu.item icon="truck" wire:click="convertToShipment({{ $prealert->id }})"
+                                                wire:key="convert-{{ $prealert->id }}">
                                                 {{ __('Convert to Shipment') }}
                                             </flux:menu.item>
                                         @endif
@@ -256,7 +273,9 @@ new #[Title('Prealerts')] class extends Component {
                                         @can('delete', $prealert)
                                             <flux:menu.separator />
 
-                                            <flux:menu.item icon="trash" variant="danger" wire:click="openDeleteModal({{ $prealert->id }})" wire:key="delete-{{ $prealert->id }}">
+                                            <flux:menu.item icon="trash" variant="danger"
+                                                wire:click="openDeleteModal({{ $prealert->id }})"
+                                                wire:key="delete-{{ $prealert->id }}">
                                                 {{ __('Delete') }}
                                             </flux:menu.item>
                                         @endcan
@@ -279,121 +298,141 @@ new #[Title('Prealerts')] class extends Component {
                 </flux:subheading>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="space-y-4">
+            <div class="flex flex-col gap-6">
+                {{-- Top: Logistics & Status --}}
+                <div class="space-y-6">
                     <x-crud.panel class="p-4 bg-zinc-50 dark:bg-zinc-800/50">
-                        <flux:heading size="sm" class="mb-2 uppercase tracking-wider text-zinc-500">
-                            {{ __('Vehicle Information') }}</flux:heading>
-                        @if ($selectedPrealert->vehicle)
-                            <div class="font-bold text-lg">{{ $selectedPrealert->vehicle->year }}
-                                {{ $selectedPrealert->vehicle->make }} {{ $selectedPrealert->vehicle->model }}</div>
-                            <div class="text-sm text-zinc-600 dark:text-zinc-400 font-mono mt-1">{{ __('VIN') }}:
-                                {{ $selectedPrealert->vin }}</div>
-                        @else
-                            <div class="text-sm text-zinc-600 dark:text-zinc-400">{{ __('VIN') }}: {{ $selectedPrealert->vin }}
-                            </div>
-                            <div class="text-xs text-red-500 mt-1 italic">{{ __('Vehicle data not fetched.') }}</div>
-                        @endif
-                    </x-crud.panel>
+                        <flux:heading size="sm" class="mb-4 uppercase tracking-wider text-zinc-500">
+                            {{ __('Prealert Logistics') }}
+                        </flux:heading>
 
-                    <div class="space-y-2">
-                        <flux:label size="sm" class="uppercase tracking-wider text-zinc-500">{{ __('Logistics') }}
-                        </flux:label>
-                        <div class="text-sm">
-                            <span class="font-semibold">{{ __('Year/Make/Model') }}:</span>
-                            {{ $selectedPrealert->vehicle?->year }} {{ $selectedPrealert->vehicle?->make }}
-                            {{ $selectedPrealert->vehicle?->model }}
-                        </div>
-                        <div class="text-sm">
-                            <span class="font-semibold">{{ __('Vehicle Status') }}:</span>
-                            @if ($selectedPrealert->vehicle?->vehicle_is)
-                                <flux:badge size="sm" color="zinc" variant="subtle">{{ $selectedPrealert->vehicle->vehicle_is }}</flux:badge>
-                            @else
-                                —
-                            @endif
-                        </div>
-                        <div class="text-sm">
-                            <span class="font-semibold">{{ __('Color') }}:</span>
-                            {{ $selectedPrealert->vehicle?->color ?: '—' }}
-                        </div>
-                        <div class="text-sm">
-                            <span class="font-semibold">{{ __('Lot Number') }}:</span>
-                            {{ $selectedPrealert->vehicle?->lot_number ?: '—' }}
-                        </div>
-                        <div class="text-sm">
-                            <span class="font-semibold">{{ __('Auction') }}:</span>
-                            {{ $selectedPrealert->vehicle?->auction_name ?: '—' }}
-                        </div>
-                        <div class="text-sm">
-                            <span class="font-semibold">{{ __('Pickup Location') }}:</span>
-                            {{ $selectedPrealert->vehicle?->location ?: '—' }}
-                        </div>
-                        <div class="text-sm">
-                            <span class="font-semibold">{{ __('Carrier') }}:</span>
-                            {{ $selectedPrealert->carrier?->name ?: '—' }}
-                        </div>
-                        <div class="text-sm">
-                            <span class="font-semibold">{{ __('Destination') }}:</span>
-                            @if($selectedPrealert->destinationPort)
-                                {{ $selectedPrealert->destinationPort->name }}
-                                ({{ $selectedPrealert->destinationPort->state?->code ?? '—' }} -
-                                {{ $selectedPrealert->destinationPort->country?->iso2 ?? '—' }})
-                            @else
-                                —
-                            @endif
-                        </div>
-                        @if ($selectedPrealert->gatepass_pin)
-                            <div class="text-sm">
-                                <span class="font-semibold">{{ __('Gatepass PIN') }}:</span> <span
-                                    class="font-mono">{{ $selectedPrealert->gatepass_pin }}</span>
-                            </div>
-                        @endif
-                    </div>
-                </div>
-
-                <div class="space-y-4">
-                    <flux:label size="sm" class="uppercase tracking-wider text-zinc-500">{{ __('Action Receipt') }}
-                    </flux:label>
-                    @if ($selectedPrealert->auction_receipt)
-                        @php
-                            $extension = pathinfo($selectedPrealert->auction_receipt, PATHINFO_EXTENSION);
-                            $isPdf = strtolower($extension) === 'pdf';
-                        @endphp
-
-                        <div class="rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700 shadow-sm transition-transform hover:scale-[1.02] bg-white dark:bg-zinc-900">
-                            @if ($isPdf)
-                                <div class="h-48 flex flex-col items-center justify-center bg-zinc-50 dark:bg-zinc-800/50 p-6">
-                                    <flux:icon.document-text class="size-16 text-zinc-400 mb-2" />
-                                    <span class="text-xs font-medium text-zinc-500 uppercase tracking-tighter">{{ __('PDF Receipt') }}</span>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            <div>
+                                <flux:label size="xs" class="uppercase text-zinc-400">{{ __('Shipping Mode') }}</flux:label>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <flux:icon
+                                        :name="$selectedPrealert->shipping_mode === \App\Enums\ShippingMode::Container ? 'archive-box' : 'truck'"
+                                        class="size-4 text-zinc-500" />
+                                    <span
+                                        class="font-bold text-zinc-900 dark:text-white">{{ $selectedPrealert->shipping_mode?->name }}</span>
                                 </div>
-                            @else
-                                <img src="{{ \Illuminate\Support\Facades\Storage::url($selectedPrealert->auction_receipt) }}"
-                                    class="w-full h-auto max-h-64 object-cover" alt="Action Receipt">
+                            </div>
+
+                            @if($selectedPrealert->shipment)
+                                <div>
+                                    <flux:label size="xs" class="uppercase text-zinc-400">{{ __('Target Container') }}
+                                    </flux:label>
+                                    <div class="mt-1">
+                                        <flux:badge color="zinc" variant="solid" size="sm">
+                                            {{ $selectedPrealert->shipment->reference_no }}</flux:badge>
+                                    </div>
+                                </div>
                             @endif
-                            <div
-                                class="p-2 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-700 text-center">
-                                <flux:link :href="\Illuminate\Support\Facades\Storage::url($selectedPrealert->auction_receipt)" target="_blank" size="xs"
-                                    icon="external-link">{{ __('View Full Receipt') }}</flux:link>
+
+                            <div>
+                                <flux:label size="xs" class="uppercase text-zinc-400">{{ __('Carrier') }}</flux:label>
+                                <div class="text-sm font-medium mt-1">{{ $selectedPrealert->carrier?->name ?: '—' }}</div>
+                            </div>
+
+                            <div>
+                                <flux:label size="xs" class="uppercase text-zinc-400">{{ __('Destination') }}</flux:label>
+                                <div class="text-sm font-medium mt-1">
+                                    @if($selectedPrealert->destinationPort)
+                                        {{ $selectedPrealert->destinationPort->name }}
+                                        <span
+                                            class="text-zinc-500">({{ $selectedPrealert->destinationPort->state?->code }})</span>
+                                    @else
+                                        —
+                                    @endif
+                                </div>
                             </div>
                         </div>
-                    @else
-                        <div
-                            class="h-40 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 rounded-xl border-2 border-dashed border-zinc-300 dark:border-zinc-700">
-                            <span class="text-zinc-400 italic text-sm">{{ __('No receipt uploaded') }}</span>
-                        </div>
-                    @endif
+                    </x-crud.panel>
                 </div>
 
-                <div class="md:col-span-2">
-                    <flux:label size="sm" class="uppercase tracking-wider text-zinc-500">{{ __('Shipper Notes') }}
-                    </flux:label>
-                    <div
-                        class="mt-1 p-3 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-700 dark:text-zinc-300 min-h-[60px]">
-                        {{ $selectedPrealert->notes ?: __('No notes provided.') }}
+                {{-- Bottom: Vehicles List --}}
+                <div class="space-y-4">
+                    <flux:heading size="sm" class="uppercase tracking-wider text-zinc-500">
+                        {{ __('Vehicles & Documentation') }}</flux:heading>
+
+                    <div class="space-y-4 overflow-y-auto max-h-[600px] pr-2">
+                        @foreach($selectedPrealert->vehicles as $vehicle)
+                            <div
+                                class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden shadow-sm">
+                                <div class="flex flex-col sm:flex-row">
+                                    {{-- Image or Icon --}}
+                                    <div class="sm:w-40 sm:h-auto h-32 bg-zinc-100 dark:bg-zinc-800 shrink-0">
+                                        @php $photos = $vehicle->copartCarPhotoUrls(); @endphp
+                                        @if(count($photos) > 0)
+                                            <img src="{{ $photos[0] }}" class="w-full h-full object-cover">
+                                        @else
+                                            <div class="w-full h-full flex items-center justify-center text-zinc-400">
+                                                <flux:icon.photo class="size-8" />
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                    {{-- Details --}}
+                                    <div class="flex-1 p-4">
+                                        <div class="flex justify-between items-start mb-2">
+                                            <div>
+                                                <h4 class="font-bold text-zinc-900 dark:text-white">{{ $vehicle->year }}
+                                                    {{ $vehicle->make }} {{ $vehicle->model }}</h4>
+                                                <div class="flex items-center gap-3 mt-1">
+                                                    <span
+                                                        class="font-mono text-xs text-zinc-500 uppercase">{{ $vehicle->vin }}</span>
+                                                    <span class="text-[10px] text-zinc-400">LOT:
+                                                        {{ $vehicle->lot_number ?: '—' }}</span>
+                                                </div>
+                                            </div>
+                                            @if($vehicle->gatepass_pin)
+                                                <div class="text-right">
+                                                    <flux:label size="xs" class="uppercase text-zinc-400">{{ __('Gatepass PIN') }}
+                                                    </flux:label>
+                                                    <div class="font-mono text-xs font-bold text-zinc-900 dark:text-white">
+                                                        {{ $vehicle->gatepass_pin }}</div>
+                                                </div>
+                                            @endif
+                                        </div>
+
+                                        <div class="grid grid-cols-2 gap-4 mt-4 text-xs">
+                                            <div>
+                                                <span
+                                                    class="text-zinc-400 uppercase tracking-tighter">{{ __('Auction') }}:</span>
+                                                <span
+                                                    class="text-zinc-600 dark:text-zinc-300 font-medium">{{ $vehicle->auction_name }}</span>
+                                            </div>
+                                            <div>
+                                                <span
+                                                    class="text-zinc-400 uppercase tracking-tighter">{{ __('Location') }}:</span>
+                                                <span class="text-zinc-600 dark:text-zinc-300 font-medium truncate block"
+                                                    title="{{ $vehicle->location }}">{{ $vehicle->location }}</span>
+                                            </div>
+                                        </div>
+
+                                        {{-- Receipt --}}
+                                        @if($vehicle->auction_receipt)
+                                            <div
+                                                class="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                                                <div class="flex items-center gap-2">
+                                                    <flux:icon.document-text class="size-4 text-zinc-400" />
+                                                    <span
+                                                        class="text-xs font-medium text-zinc-500">{{ __('Auction Receipt Uploaded') }}</span>
+                                                </div>
+                                                <flux:link :href="Storage::url($vehicle->auction_receipt)" target="_blank" size="xs"
+                                                    icon="external-link">
+                                                    {{ __('View') }}
+                                                </flux:link>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
                     </div>
                 </div>
 
-                <div class="md:col-span-2 mt-4 flex justify-end gap-3">
+                <div class="lg:col-span-3 mt-4 flex justify-end gap-3 pt-6 border-t border-zinc-100 dark:border-zinc-800">
                     <flux:button variant="ghost" wire:click="$set('selectedPrealert', null)">
                         {{ __('Close') }}
                     </flux:button>

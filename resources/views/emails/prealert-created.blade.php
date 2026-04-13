@@ -9,10 +9,19 @@
 
 {{ __('A new prealert has been successfully created for your vehicle.') }}
 
-**{{ __('Vehicle Details:') }}**
-- **{{ __('VIN') }}:** {{ $prealert->vin }}
-- **{{ __('Vehicle') }}:** {{ $prealert->vehicle?->year }} {{ $prealert->vehicle?->make }} {{ $prealert->vehicle?->model }}
+@if($prealert->shipping_mode?->value === 'container')
+**{{ __('Container Details:') }}**
+- **{{ __('Vehicles Included') }}:** {{ $prealert->vehicles->count() }}
+@if($prealert->shipment)
+- **{{ __('Target Container') }}:** {{ $prealert->shipment->reference_no }}
+@endif
 - **{{ __('Destination Port') }}:** {{ $prealert->destinationPort?->name }} ({{ $prealert->destinationPort?->state?->name }})
+@else
+**{{ __('Vehicle Details:') }}**
+- **{{ __('VIN') }}:** {{ $prealert->vehicles->first()?->vin }}
+- **{{ __('Vehicle') }}:** {{ $prealert->vehicles->first()?->year }} {{ $prealert->vehicles->first()?->make }} {{ $prealert->vehicles->first()?->model }}
+- **{{ __('Destination Port') }}:** {{ $prealert->destinationPort?->name }} ({{ $prealert->destinationPort?->state?->name }})
+@endif
 
 @if (! empty($setting->address) || ! empty($setting->phone) || $location !== '')
 <br>

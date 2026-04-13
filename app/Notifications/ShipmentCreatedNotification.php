@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Enums\ShippingMode;
 use App\Models\Shipment;
 use App\Models\SystemSetting;
 use Illuminate\Bus\Queueable;
@@ -17,6 +18,8 @@ final class ShipmentCreatedNotification extends Notification implements ShouldQu
 
     public function __construct(
         public readonly Shipment $shipment,
+        public readonly bool $isMerge = false,
+        public readonly int $addedCount = 0,
     ) {}
 
     /**
@@ -24,7 +27,13 @@ final class ShipmentCreatedNotification extends Notification implements ShouldQu
      */
     public function via(object $notifiable): array
     {
-        return ['mail', 'database'];
+        // Shipper receives both mail and database notifications
+        if ($notifiable->shipper && (int) $notifiable->shipper->id === (int) $this->shipment->shipper_id) {
+            return ['mail', 'database'];
+        }
+
+        // Staff/Admins only receive database notifications
+        return ['database'];
     }
 
     public function toMail(object $notifiable): MailMessage
@@ -38,7 +47,11 @@ final class ShipmentCreatedNotification extends Notification implements ShouldQu
 
         return (new MailMessage)
             ->mailer($setting->getMailerFor('operations'))
-            ->subject(__('Shipment Created: :ref', ['ref' => $this->shipment->reference_no]))
+            ->subject($this->isMerge
+                ? __('Vehicles Added to Container :ref – :count New Vehicles', ['ref' => $this->shipment->reference_no, 'count' => $this->addedCount])
+                : ($this->shipment->shipping_mode === ShippingMode::Container
+                    ? __('New Container Shipment Created – :count Vehicles', ['count' => $this->shipment->vehicles->count()])
+                    : __('New RoRo Shipment Created – VIN :vin', ['vin' => $this->shipment->vehicles->first()?->vin])))
             ->markdown('emails.shipment-created', [
                 'notifiable' => $notifiable,
                 'shipment' => $this->shipment,
@@ -55,13 +68,23 @@ final class ShipmentCreatedNotification extends Notification implements ShouldQu
     public function toArray(object $notifiable): array
     {
         return [
-            'title' => __('Shipment created'),
-            'body' => __('Shipment :ref has been created.', [
-                'ref' => $this->shipment->reference_no,
-            ]),
+            'title' => $this->isMerge ? __('Vehicles Added to Container') : ($this->shipment->shipping_mode === ShippingMode::Container ? __('New Container Shipment') : __('New RoRo Shipment')),
+            'body' => $this->isMerge
+                ? __(':count new vehicles were added to existing container shipment :ref.', [
+                    'count' => $this->addedCount,
+                    'ref' => $this->shipment->reference_no,
+                ])
+                : ($this->shipment->shipping_mode === ShippingMode::Container
+                    ? __('A new Container shipment (:ref) has been created for :count vehicles.', [
+                        'ref' => $this->shipment->reference_no,
+                        'count' => $this->shipment->vehicles->count(),
+                    ])
+                    : __('A new RoRo shipment (:ref) has been created for VIN :vin.', [
+                        'ref' => $this->shipment->reference_no,
+                        'vin' => $this->shipment->vehicles->first()?->vin,
+                    ])),
             'shipment_id' => $this->shipment->id,
             'reference_no' => $this->shipment->reference_no,
-            'vin' => $this->shipment->vin,
             'url' => route('shipments.show', $this->shipment, absolute: true),
         ];
     }

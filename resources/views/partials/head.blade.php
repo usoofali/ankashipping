@@ -13,7 +13,7 @@
 <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
 
 @if (file_exists(public_path('build/manifest.json')))
-    <link rel="stylesheet" href="{{ asset('build/assets/app-C1ZJHieR.css') }}">
+    <link rel="stylesheet" href="{{ asset('build/assets/app-BpRwe9hC.css') }}">
     <script type="module" src="{{ asset('build/assets/app-l0sNRNKZ.js') }}"></script>
 @else
     @vite(['resources/css/app.css', 'resources/js/app.js'])

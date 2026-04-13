@@ -6,7 +6,8 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Notifications\DatabaseNotification;
 use Livewire\Component;
 
-new class extends Component {
+new class extends Component
+{
     public string $menuPosition = 'top';
 
     public bool $dropdownOpen = false;
@@ -67,7 +68,7 @@ new class extends Component {
         init() {
             if (! window.__ankaNotifAudio) {
                 window.__ankaNotifAudio = {
-                    soundUrl: '/sounds/notify.mp3',
+                    soundUrl: '{{ asset('sounds/notify.mp3') }}',
                     sound: null,
                     lastPlayedAt: 0,
                     audioPrimed: false,

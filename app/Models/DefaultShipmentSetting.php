@@ -9,6 +9,7 @@ use App\Enums\LogisticsService;
 use App\Enums\PaymentStatus;
 use App\Enums\ShipmentStatus;
 use App\Enums\ShippingMode;
+use App\Enums\VehicleStatus;
 use Database\Factories\DefaultShipmentSettingFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -32,6 +33,7 @@ final class DefaultShipmentSetting extends Model
         'invoice_status',
         'payment_status',
         'payment_method_id',
+        'initial_vehicle_status',
     ];
 
     protected function casts(): array
@@ -42,6 +44,7 @@ final class DefaultShipmentSetting extends Model
             'shipment_status' => ShipmentStatus::class,
             'invoice_status' => InvoiceStatus::class,
             'payment_status' => PaymentStatus::class,
+            'initial_vehicle_status' => VehicleStatus::class,
         ];
     }
 

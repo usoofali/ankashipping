@@ -11,7 +11,12 @@
 
 **{{ __('Shipment Details:') }}**
 - **{{ __('Reference No') }}:** {{ $shipment->reference_no }}
-- **{{ __('Vehicle') }}:** {{ $shipment->vehicle?->year }} {{ $shipment->vehicle?->make }} {{ $shipment->vehicle?->model }}
+@if($shipment->shipping_mode?->value === 'container')
+- **{{ __('Total Vehicles') }}:** {{ $shipment->vehicles->count() }}
+@else
+- **{{ __('VIN') }}:** {{ $shipment->vehicles->first()?->vin }}
+- **{{ __('Vehicle') }}:** {{ $shipment->vehicles->first()?->year }} {{ $shipment->vehicles->first()?->make }} {{ $shipment->vehicles->first()?->model }}
+@endif
 - **{{ __('Origin Port') }}:** {{ $shipment->originPort?->name }} ({{ $shipment->originPort?->state?->name }})
 - **{{ __('Destination Port') }}:** {{ $shipment->destinationPort?->name }} ({{ $shipment->destinationPort?->state?->name }})
 

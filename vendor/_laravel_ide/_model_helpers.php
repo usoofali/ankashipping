@@ -2006,6 +2006,7 @@ namespace App\Models {
      * App\Models\DefaultShipmentSetting
      *
      * @property mixed $payment_method_id
+     * @property \App\Enums\VehicleStatus|null $initial_vehicle_status
      * @property \App\Enums\PaymentStatus|null $payment_status
      * @property \App\Enums\InvoiceStatus|null $invoice_status
      * @property \Illuminate\Support\Carbon|null $updated_at
@@ -2029,6 +2030,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<DefaultShipmentSetting>|DefaultShipmentSetting whereUpdatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<DefaultShipmentSetting>|DefaultShipmentSetting whereInvoiceStatus($value)
      * @method static \Illuminate\Database\Eloquent\Builder<DefaultShipmentSetting>|DefaultShipmentSetting wherePaymentStatus($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<DefaultShipmentSetting>|DefaultShipmentSetting whereInitialVehicleStatus($value)
      * @method static \Illuminate\Database\Eloquent\Builder<DefaultShipmentSetting>|DefaultShipmentSetting wherePaymentMethodId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<DefaultShipmentSetting>|DefaultShipmentSetting newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<DefaultShipmentSetting>|DefaultShipmentSetting newQuery()
@@ -5381,30 +5383,28 @@ namespace App\Models {
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property \App\Enums\PrealertStatus $status
      * @property string|null $notes
-     * @property string|null $auction_receipt
      * @property mixed $destination_port_id
+     * @property mixed $shipment_id
+     * @property \App\Enums\ShippingMode $shipping_mode
      * @property mixed $carrier_id
-     * @property mixed $vehicle_id
-     * @property string|null $gatepass_pin
-     * @property string $vin
      * @property mixed $consignee_id
      * @property mixed $shipper_id
      * @property int $id
      * @property-read \App\Models\Shipper $shipper
      * @property-read \App\Models\Consignee $consignee
-     * @property-read \App\Models\Vehicle $vehicle
+     * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Vehicle> $vehicles
+     * @property-read int|null $vehicles_count
      * @property-read \App\Models\Carrier $carrier
      * @property-read \App\Models\Port $destinationPort
      * @property-read \App\Models\User $reviewer
+     * @property-read \App\Models\Shipment $shipment
      * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert whereId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert whereShipperId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert whereConsigneeId($value)
-     * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert whereVin($value)
-     * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert whereGatepassPin($value)
-     * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert whereVehicleId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert whereCarrierId($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert whereShippingMode($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert whereShipmentId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert whereDestinationPortId($value)
-     * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert whereAuctionReceipt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert whereNotes($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert whereStatus($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert whereCreatedAt($value)
@@ -5727,30 +5727,22 @@ namespace App\Models {
     /**
      * App\Models\Shipment
      *
-     * @property \App\Enums\ShipmentStatus|null $shipment_status_before_workshop
-     * @property mixed $workshop_id
      * @property mixed $payment_method_id
      * @property \App\Enums\PaymentStatus|null $payment_status
      * @property \App\Enums\InvoiceStatus|null $invoice_status
      * @property \Illuminate\Support\Carbon|null $deleted_at
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
+     * @property \Illuminate\Support\Carbon|null $sealed_at
      * @property \App\Enums\ShipmentStatus $shipment_status
-     * @property string|null $sealed_at
-     * @property string|null $seal_number
-     * @property string|null $container_number
+     * @property mixed $capacity
      * @property \App\Enums\ShippingMode $shipping_mode
      * @property \App\Enums\LogisticsService $logistics_service
-     * @property string|null $auction_receipt
-     * @property mixed $vehicle_id
      * @property mixed $destination_port_id
      * @property mixed $origin_port_id
      * @property mixed $carrier_id
-     * @property mixed $driver_id
      * @property mixed $consignee_id
      * @property mixed $shipper_id
-     * @property string|null $gatepass_pin
-     * @property string|null $vin
      * @property string $reference_no
      * @property int $id
      * @property-read \App\Models\Shipper $shipper
@@ -5759,7 +5751,8 @@ namespace App\Models {
      * @property-read \App\Models\Carrier $carrier
      * @property-read \App\Models\Port $originPort
      * @property-read \App\Models\Port $destinationPort
-     * @property-read \App\Models\Vehicle $vehicle
+     * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Vehicle> $vehicles
+     * @property-read int|null $vehicles_count
      * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ShipmentTracking> $trackings
      * @property-read int|null $trackings_count
      * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ShipmentDocument> $documents
@@ -5771,30 +5764,22 @@ namespace App\Models {
      * @property-read \App\Models\Workshop $workshop
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereReferenceNo($value)
-     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereVin($value)
-     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereGatepassPin($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereShipperId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereConsigneeId($value)
-     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereDriverId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereCarrierId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereOriginPortId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereDestinationPortId($value)
-     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereVehicleId($value)
-     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereAuctionReceipt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereLogisticsService($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereShippingMode($value)
-     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereContainerNumber($value)
-     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereSealNumber($value)
-     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereSealedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereCapacity($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereShipmentStatus($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereSealedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereUpdatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereDeletedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereInvoiceStatus($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment wherePaymentStatus($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment wherePaymentMethodId($value)
-     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereWorkshopId($value)
-     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereShipmentStatusBeforeWorkshop($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment query()
@@ -9191,7 +9176,9 @@ namespace App\Models {
     /**
      * App\Models\Vehicle
      *
-     * @property string $tracking_status
+     * @property \App\Enums\ShipmentStatus|null $status_before_workshop
+     * @property mixed $workshop_id
+     * @property mixed $driver_id
      * @property mixed $prealert_id
      * @property mixed $shipment_id
      * @property \Illuminate\Support\Carbon|null $updated_at
@@ -9224,13 +9211,22 @@ namespace App\Models {
      * @property string|null $year
      * @property string|null $model
      * @property string|null $make
+     * @property string|null $gatepass_pin
      * @property string|null $lot_number
+     * @property \App\Enums\VehicleStatus|null $tracking_status
      * @property string|null $vin
      * @property int $id
      * @property-read \App\Models\Shipment $shipment
+     * @property-read \App\Models\Prealert $prealert
+     * @property-read \App\Models\Driver $driver
+     * @property-read \App\Models\Workshop $workshop
+     * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\VehicleTracking> $trackings
+     * @property-read int|null $trackings_count
      * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle whereId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle whereVin($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle whereTrackingStatus($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle whereLotNumber($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle whereGatepassPin($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle whereMake($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle whereModel($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle whereYear($value)
@@ -9263,7 +9259,9 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle whereUpdatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle whereShipmentId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle wherePrealertId($value)
-     * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle whereTrackingStatus($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle whereDriverId($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle whereWorkshopId($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle whereStatusBeforeWorkshop($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle query()
@@ -9575,6 +9573,344 @@ namespace App\Models {
      * @mixin \Illuminate\Database\Query\Builder
      */
     class Vehicle extends \Illuminate\Database\Eloquent\Model
+    {
+        //
+    }
+
+    /**
+     * App\Models\VehicleTracking
+     *
+     * @property \Illuminate\Support\Carbon|null $updated_at
+     * @property \Illuminate\Support\Carbon|null $created_at
+     * @property \Illuminate\Support\Carbon $recorded_at
+     * @property array|null $metadata
+     * @property string|null $note
+     * @property mixed $workshop_id
+     * @property \App\Enums\VehicleStatus $status
+     * @property mixed $vehicle_id
+     * @property int $id
+     * @property-read \App\Models\Vehicle $vehicle
+     * @property-read \App\Models\Workshop $workshop
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereId($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereVehicleId($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereStatus($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereWorkshopId($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereNote($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereMetadata($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereRecordedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereCreatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking newModelQuery()
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking newQuery()
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking query()
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking select(mixed $columns)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking selectSub(\Closure|\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed>|string $query, string $as)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking selectExpression(\Illuminate\Contracts\Database\Query\Expression|string $expression, string $as)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking selectRaw(string $expression)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking fromSub(\Closure|\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed>|string $query, string $as)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking fromRaw(string $expression, mixed $bindings)
+     * @method static array createSub(\Closure|\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed>|string $query)
+     * @method static array parseSub(mixed $query)
+     * @method static mixed prependDatabaseNameIfCrossDatabaseQuery(mixed $query)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking addSelect(mixed $column)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking selectVectorDistance(\Illuminate\Contracts\Database\Query\Expression|string $column, \Illuminate\Support\Collection<int, float>|\Illuminate\Contracts\Support\Arrayable|array<int, float>|string $vector, string|null $as)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking distinct()
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking from(\Closure|\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed>|\Illuminate\Contracts\Database\Query\Expression|string $table, string|null $as)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking useIndex(string $index)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking forceIndex(string $index)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking ignoreIndex(string $index)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking join(\Illuminate\Contracts\Database\Query\Expression|string $table, \Closure|\Illuminate\Contracts\Database\Query\Expression|string $first, string|null $operator, \Illuminate\Contracts\Database\Query\Expression|string|null $second, string $type, bool $where)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking joinWhere(\Illuminate\Contracts\Database\Query\Expression|string $table, \Closure|\Illuminate\Contracts\Database\Query\Expression|string $first, string $operator, \Illuminate\Contracts\Database\Query\Expression|string $second, string $type)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking joinSub(\Closure|\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed>|string $query, string $as, \Closure|\Illuminate\Contracts\Database\Query\Expression|string $first, string|null $operator, \Illuminate\Contracts\Database\Query\Expression|string|null $second, string $type, bool $where)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking joinLateral(\Closure|\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed>|string $query)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking leftJoinLateral(\Closure|\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed>|string $query)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking leftJoin(\Illuminate\Contracts\Database\Query\Expression|string $table, \Closure|\Illuminate\Contracts\Database\Query\Expression|string $first, string|null $operator, \Illuminate\Contracts\Database\Query\Expression|string|null $second)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking leftJoinWhere(\Illuminate\Contracts\Database\Query\Expression|string $table, \Closure|\Illuminate\Contracts\Database\Query\Expression|string $first, string $operator, \Illuminate\Contracts\Database\Query\Expression|string|null $second)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking leftJoinSub(\Closure|\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed>|string $query, string $as, \Closure|\Illuminate\Contracts\Database\Query\Expression|string $first, string|null $operator, \Illuminate\Contracts\Database\Query\Expression|string|null $second)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking rightJoin(\Illuminate\Contracts\Database\Query\Expression|string $table, \Closure|string $first, string|null $operator, \Illuminate\Contracts\Database\Query\Expression|string|null $second)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking rightJoinWhere(\Illuminate\Contracts\Database\Query\Expression|string $table, \Closure|\Illuminate\Contracts\Database\Query\Expression|string $first, string $operator, \Illuminate\Contracts\Database\Query\Expression|string $second)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking rightJoinSub(\Closure|\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed>|string $query, string $as, \Closure|\Illuminate\Contracts\Database\Query\Expression|string $first, string|null $operator, \Illuminate\Contracts\Database\Query\Expression|string|null $second)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking crossJoin(\Illuminate\Contracts\Database\Query\Expression|string $table, \Closure|\Illuminate\Contracts\Database\Query\Expression|string|null $first, string|null $operator, \Illuminate\Contracts\Database\Query\Expression|string|null $second)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking crossJoinSub(\Closure|\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed>|string $query, string $as)
+     * @method static \Illuminate\Database\Query\JoinClause newJoinClause(string $type, \Illuminate\Contracts\Database\Query\Expression|string $table)
+     * @method static \Illuminate\Database\Query\JoinLateralClause newJoinLateralClause(string $type, \Illuminate\Contracts\Database\Query\Expression|string $table)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking mergeWheres(array $wheres, array $bindings)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking where(\Closure|string|array|\Illuminate\Contracts\Database\Query\Expression $column, mixed $operator, mixed $value, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking addArrayOfWheres(array $column, string $boolean, string $method)
+     * @method static array prepareValueAndOperator(string $value, string $operator, bool $useDefault)
+     * @method static bool invalidOperatorAndValue(string $operator, mixed $value)
+     * @method static bool invalidOperator(string $operator)
+     * @method static bool isBitwiseOperator(string $operator)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhere(\Closure|string|array|\Illuminate\Contracts\Database\Query\Expression $column, mixed $operator, mixed $value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereNot(\Closure|string|array|\Illuminate\Contracts\Database\Query\Expression $column, mixed $operator, mixed $value, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereNot(\Closure|string|array|\Illuminate\Contracts\Database\Query\Expression $column, mixed $operator, mixed $value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereColumn(\Illuminate\Contracts\Database\Query\Expression|string|array $first, string|null $operator, string|null $second, string|null $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereColumn(\Illuminate\Contracts\Database\Query\Expression|string|array $first, string|null $operator, string|null $second)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereVectorSimilarTo(\Illuminate\Contracts\Database\Query\Expression|string $column, \Illuminate\Support\Collection<int, float>|\Illuminate\Contracts\Support\Arrayable|array<int, float>|string $vector, float $minSimilarity A value between 0.0 and 1.0, where 1.0 is identical., bool $order)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereVectorDistanceLessThan(\Illuminate\Contracts\Database\Query\Expression|string $column, \Illuminate\Support\Collection<int, float>|\Illuminate\Contracts\Support\Arrayable|array<int, float>|string $vector, float $maxDistance, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereVectorDistanceLessThan(\Illuminate\Contracts\Database\Query\Expression|string $column, \Illuminate\Support\Collection<int, float>|\Illuminate\Contracts\Support\Arrayable|array<int, float>|string $vector, float $maxDistance)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereRaw(\Illuminate\Contracts\Database\Query\Expression|string $sql, mixed $bindings, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereRaw(string $sql, mixed $bindings)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereLike(\Illuminate\Contracts\Database\Query\Expression|string $column, string $value, bool $caseSensitive, string $boolean, bool $not)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereLike(\Illuminate\Contracts\Database\Query\Expression|string $column, string $value, bool $caseSensitive)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereNotLike(\Illuminate\Contracts\Database\Query\Expression|string $column, string $value, bool $caseSensitive, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereNotLike(\Illuminate\Contracts\Database\Query\Expression|string $column, string $value, bool $caseSensitive)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereNullSafeEquals(\Illuminate\Contracts\Database\Query\Expression|string $column, mixed $value, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereNullSafeEquals(\Illuminate\Contracts\Database\Query\Expression|string $column, mixed $value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereIn(\Illuminate\Contracts\Database\Query\Expression|string $column, mixed $values, string $boolean, bool $not)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereIn(\Illuminate\Contracts\Database\Query\Expression|string $column, mixed $values)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereNotIn(\Illuminate\Contracts\Database\Query\Expression|string $column, mixed $values, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereNotIn(\Illuminate\Contracts\Database\Query\Expression|string $column, mixed $values)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereIntegerInRaw(string $column, \Illuminate\Contracts\Support\Arrayable|array $values, string $boolean, bool $not)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereIntegerInRaw(string $column, \Illuminate\Contracts\Support\Arrayable|array $values)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereIntegerNotInRaw(string $column, \Illuminate\Contracts\Support\Arrayable|array $values, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereIntegerNotInRaw(string $column, \Illuminate\Contracts\Support\Arrayable|array $values)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereNull(string|array|\Illuminate\Contracts\Database\Query\Expression $columns, string $boolean, bool $not)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereNull(string|array|\Illuminate\Contracts\Database\Query\Expression $column)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereNotNull(string|array|\Illuminate\Contracts\Database\Query\Expression $columns, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereBetween(\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed>|\Illuminate\Contracts\Database\Query\Expression|string $column, string $boolean, bool $not)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereBetweenColumns(\Illuminate\Contracts\Database\Query\Expression|string $column, string $boolean, bool $not)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereBetween(\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed>|\Illuminate\Contracts\Database\Query\Expression|string $column)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereBetweenColumns(\Illuminate\Contracts\Database\Query\Expression|string $column)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereNotBetween(\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed>|\Illuminate\Contracts\Database\Query\Expression|string $column, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereNotBetweenColumns(\Illuminate\Contracts\Database\Query\Expression|string $column, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereNotBetween(\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed>|\Illuminate\Contracts\Database\Query\Expression|string $column)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereNotBetweenColumns(\Illuminate\Contracts\Database\Query\Expression|string $column)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereValueBetween(mixed $value, array{\Illuminate\Contracts\Database\Query\Expression|string, \Illuminate\Contracts\Database\Query\Expression|string} $columns, string $boolean, bool $not)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereValueBetween(mixed $value, array{\Illuminate\Contracts\Database\Query\Expression|string, \Illuminate\Contracts\Database\Query\Expression|string} $columns)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereValueNotBetween(mixed $value, array{\Illuminate\Contracts\Database\Query\Expression|string, \Illuminate\Contracts\Database\Query\Expression|string} $columns, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereValueNotBetween(mixed $value, array{\Illuminate\Contracts\Database\Query\Expression|string, \Illuminate\Contracts\Database\Query\Expression|string} $columns)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereNotNull(\Illuminate\Contracts\Database\Query\Expression|string $column)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereDate(\Illuminate\Contracts\Database\Query\Expression|string $column, \DateTimeInterface|string|null $operator, \DateTimeInterface|string|null $value, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereDate(\Illuminate\Contracts\Database\Query\Expression|string $column, \DateTimeInterface|string|null $operator, \DateTimeInterface|string|null $value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereTime(\Illuminate\Contracts\Database\Query\Expression|string $column, \DateTimeInterface|string|null $operator, \DateTimeInterface|string|null $value, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereTime(\Illuminate\Contracts\Database\Query\Expression|string $column, \DateTimeInterface|string|null $operator, \DateTimeInterface|string|null $value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereDay(\Illuminate\Contracts\Database\Query\Expression|string $column, \DateTimeInterface|string|int|null $operator, \DateTimeInterface|string|int|null $value, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereDay(\Illuminate\Contracts\Database\Query\Expression|string $column, \DateTimeInterface|string|int|null $operator, \DateTimeInterface|string|int|null $value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereMonth(\Illuminate\Contracts\Database\Query\Expression|string $column, \DateTimeInterface|string|int|null $operator, \DateTimeInterface|string|int|null $value, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereMonth(\Illuminate\Contracts\Database\Query\Expression|string $column, \DateTimeInterface|string|int|null $operator, \DateTimeInterface|string|int|null $value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereYear(\Illuminate\Contracts\Database\Query\Expression|string $column, \DateTimeInterface|string|int|null $operator, \DateTimeInterface|string|int|null $value, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereYear(\Illuminate\Contracts\Database\Query\Expression|string $column, \DateTimeInterface|string|int|null $operator, \DateTimeInterface|string|int|null $value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking addDateBasedWhere(string $type, \Illuminate\Contracts\Database\Query\Expression|string $column, string $operator, mixed $value, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereNested(string $boolean)
+     * @method static \Illuminate\Database\Query\Builder forNestedWhere()
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking addNestedWhereQuery(\Illuminate\Database\Query\Builder $query, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereSub(\Illuminate\Contracts\Database\Query\Expression|string $column, string $operator, \Closure|\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed> $callback, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereExists(\Closure|\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed> $callback, string $boolean, bool $not)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereExists(\Closure|\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed> $callback, bool $not)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereNotExists(\Closure|\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed> $callback, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereNotExists(\Closure|\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed> $callback)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking addWhereExistsQuery(string $boolean, bool $not)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereRowValues(array $columns, string $operator, array $values, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereRowValues(array $columns, string $operator, array $values)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereJsonContains(string $column, mixed $value, string $boolean, bool $not)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereJsonContains(string $column, mixed $value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereJsonDoesntContain(string $column, mixed $value, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereJsonDoesntContain(string $column, mixed $value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereJsonOverlaps(string $column, mixed $value, string $boolean, bool $not)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereJsonOverlaps(string $column, mixed $value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereJsonDoesntOverlap(string $column, mixed $value, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereJsonDoesntOverlap(string $column, mixed $value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereJsonContainsKey(string $column, string $boolean, bool $not)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereJsonContainsKey(string $column)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereJsonDoesntContainKey(string $column, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereJsonDoesntContainKey(string $column)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereJsonLength(string $column, mixed $operator, mixed $value, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereJsonLength(string $column, mixed $operator, mixed $value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking dynamicWhere(string $method, array $parameters)
+     * @method static void addDynamic(string $segment, string $connector, array $parameters, int $index)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereFullText(string|string[] $columns, string $value, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereFullText(string|string[] $columns, string $value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereAll(\Illuminate\Contracts\Database\Query\Expression[]|\Closure[]|string[] $columns, mixed $operator, mixed $value, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereAll(\Illuminate\Contracts\Database\Query\Expression[]|\Closure[]|string[] $columns, mixed $operator, mixed $value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereAny(\Illuminate\Contracts\Database\Query\Expression[]|\Closure[]|string[] $columns, mixed $operator, mixed $value, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereAny(\Illuminate\Contracts\Database\Query\Expression[]|\Closure[]|string[] $columns, mixed $operator, mixed $value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereNone(\Illuminate\Contracts\Database\Query\Expression[]|\Closure[]|string[] $columns, mixed $operator, mixed $value, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereNone(\Illuminate\Contracts\Database\Query\Expression[]|\Closure[]|string[] $columns, mixed $operator, mixed $value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking groupBy(array|\Illuminate\Contracts\Database\Query\Expression|string ...$groups)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking groupByRaw(string $sql)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking having(\Illuminate\Contracts\Database\Query\Expression|\Closure|string $column, \DateTimeInterface|string|int|float|null $operator, \Illuminate\Contracts\Database\Query\Expression|\DateTimeInterface|string|int|float|null $value, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orHaving(\Illuminate\Contracts\Database\Query\Expression|\Closure|string $column, \DateTimeInterface|string|int|float|null $operator, \Illuminate\Contracts\Database\Query\Expression|\DateTimeInterface|string|int|float|null $value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking havingNested(string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking addNestedHavingQuery(\Illuminate\Database\Query\Builder $query, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking havingNull(array|string $columns, string $boolean, bool $not)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orHavingNull(string $column)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking havingNotNull(array|string $columns, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orHavingNotNull(string $column)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking havingBetween(string $column, string $boolean, bool $not)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking havingNotBetween(string $column, iterable $values, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orHavingBetween(string $column, iterable $values)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orHavingNotBetween(string $column, iterable $values)
+     * @method static array{\DateTimeInterface, \DateTimeInterface} resolveDatePeriodBounds(\DatePeriod $period)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking havingRaw(string $sql, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orHavingRaw(string $sql)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orderBy(\Closure|\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed>|\Illuminate\Contracts\Database\Query\Expression|string $column, string $direction)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orderByDesc(\Closure|\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed>|\Illuminate\Contracts\Database\Query\Expression|string $column)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking latest(\Closure|\Illuminate\Database\Query\Builder|\Illuminate\Contracts\Database\Query\Expression|string $column)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking oldest(\Closure|\Illuminate\Database\Query\Builder|\Illuminate\Contracts\Database\Query\Expression|string $column)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orderByVectorDistance(\Illuminate\Contracts\Database\Query\Expression|string $column, \Illuminate\Support\Collection<int, float>|\Illuminate\Contracts\Support\Arrayable|array<int, float> $vector)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking inRandomOrder(string|int $seed)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking inOrderOf(\Illuminate\Contracts\Database\Query\Expression|string $column, \Illuminate\Contracts\Support\Arrayable|array $values)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orderByRaw(string $sql, array $bindings)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking skip(int $value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking offset(int $value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking take(int $value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking limit(int $value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking groupLimit(int $value, string $column)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking forPage(int $page, int $perPage)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking forPageBeforeId(int $perPage, int|null $lastId, string $column)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking forPageAfterId(int $perPage, int|null $lastId, string $column)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking reorder(\Closure|\Illuminate\Database\Query\Builder|\Illuminate\Contracts\Database\Query\Expression|string|null $column, string $direction)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking reorderDesc(\Closure|\Illuminate\Database\Query\Builder|\Illuminate\Contracts\Database\Query\Expression|string|null $column)
+     * @method static array removeExistingOrdersFor(string $column)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking union(\Closure|\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed> $query, bool $all)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking unionAll(\Closure|\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed> $query)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking lock(string|bool $value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking lockForUpdate()
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking sharedLock()
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking timeout(int|null $seconds)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking beforeQuery()
+     * @method static void applyBeforeQueryCallbacks()
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking afterQuery()
+     * @method static mixed applyAfterQueryCallbacks(mixed $result)
+     * @method static string toSql()
+     * @method static string toRawSql()
+     * @method static \stdClass|null find(int|string $id, string|\Illuminate\Contracts\Database\Query\Expression|array<string|\Illuminate\Contracts\Database\Query\Expression> $columns)
+     * @method static mixed findOr(mixed $id, \Closure(): mixed|string|\Illuminate\Contracts\Database\Query\Expression|array<string|\Illuminate\Contracts\Database\Query\Expression> $columns, \Closure(): mixed|null $callback)
+     * @method static mixed value(string $column)
+     * @method static mixed rawValue()
+     * @method static mixed soleValue(string $column)
+     * @method static \Illuminate\Support\Collection<int, \stdClass> get(string|\Illuminate\Contracts\Database\Query\Expression|array<string|\Illuminate\Contracts\Database\Query\Expression> $columns)
+     * @method static array runSelect()
+     * @method static \Illuminate\Support\Collection withoutGroupLimitKeys(\Illuminate\Support\Collection $items)
+     * @method static \Illuminate\Pagination\LengthAwarePaginator paginate(int|\Closure $perPage, string|\Illuminate\Contracts\Database\Query\Expression|array<string|\Illuminate\Contracts\Database\Query\Expression> $columns, string $pageName, int|null $page, \Closure|int|null $total)
+     * @method static \Illuminate\Contracts\Pagination\Paginator simplePaginate(int $perPage, string|\Illuminate\Contracts\Database\Query\Expression|array<string|\Illuminate\Contracts\Database\Query\Expression> $columns, string $pageName, int|null $page)
+     * @method static \Illuminate\Contracts\Pagination\CursorPaginator cursorPaginate(int|null $perPage, string|\Illuminate\Contracts\Database\Query\Expression|array<string|\Illuminate\Contracts\Database\Query\Expression> $columns, string $cursorName, \Illuminate\Pagination\Cursor|string|null $cursor)
+     * @method static \Illuminate\Support\Collection ensureOrderForCursorPagination(bool $shouldReverse)
+     * @method static int<0, max> getCountForPagination(array<string|\Illuminate\Contracts\Database\Query\Expression> $columns)
+     * @method static mixed runPaginationCountQuery(array<string|\Illuminate\Contracts\Database\Query\Expression> $columns)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking cloneForPaginationCount()
+     * @method static array<string|\Illuminate\Contracts\Database\Query\Expression> withoutSelectAliases(array<string|\Illuminate\Contracts\Database\Query\Expression> $columns)
+     * @method static \Illuminate\Support\LazyCollection<int, \stdClass> cursor()
+     * @method static void enforceOrderBy()
+     * @method static mixed pluck(\Illuminate\Contracts\Database\Query\Expression|string $column, string|null $key)
+     * @method static string|null stripTableForPluck(string $column)
+     * @method static \Illuminate\Support\Collection pluckFromObjectColumn(array $queryResult, string $column, string $key)
+     * @method static \Illuminate\Support\Collection pluckFromArrayColumn(array $queryResult, string $column, string $key)
+     * @method static string implode(string $column, string $glue)
+     * @method static bool exists()
+     * @method static bool doesntExist()
+     * @method static mixed existsOr()
+     * @method static mixed doesntExistOr()
+     * @method static int<0, max> count(\Illuminate\Contracts\Database\Query\Expression|string $columns)
+     * @method static mixed min(\Illuminate\Contracts\Database\Query\Expression|string $column)
+     * @method static mixed max(\Illuminate\Contracts\Database\Query\Expression|string $column)
+     * @method static mixed sum(\Illuminate\Contracts\Database\Query\Expression|string $column)
+     * @method static mixed avg(\Illuminate\Contracts\Database\Query\Expression|string $column)
+     * @method static mixed average(\Illuminate\Contracts\Database\Query\Expression|string $column)
+     * @method static mixed aggregate(string $function, array $columns)
+     * @method static float|int numericAggregate(string $function, array $columns)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking setAggregate(string $function, array<\Illuminate\Contracts\Database\Query\Expression|string> $columns)
+     * @method static \TResult onceWithColumns(array<string|\Illuminate\Contracts\Database\Query\Expression> $columns, callable(): \TResult $callback)
+     * @method static bool insert()
+     * @method static int<0, max> insertOrIgnore()
+     * @method static int insertGetId(string|null $sequence)
+     * @method static int insertUsing(\Closure|\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed>|string $query)
+     * @method static int insertOrIgnoreUsing(\Closure|\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed>|string $query)
+     * @method static int<0, max> update()
+     * @method static int updateFrom()
+     * @method static bool updateOrInsert()
+     * @method static int upsert()
+     * @method static int<0, max> increment(string $column, float|int $amount)
+     * @method static int<0, max> incrementEach(array<string, float|int|numeric-string> $columns, array<string, mixed> $extra)
+     * @method static int<0, max> decrement(string $column, float|int $amount)
+     * @method static int<0, max> decrementEach(array<string, float|int|numeric-string> $columns, array<string, mixed> $extra)
+     * @method static int delete(mixed $id)
+     * @method static void truncate()
+     * @method static \Illuminate\Database\Query\Builder newQuery()
+     * @method static \Illuminate\Database\Query\Builder forSubQuery()
+     * @method static list<string> getColumns()
+     * @method static \Illuminate\Contracts\Database\Query\Expression raw(mixed $value)
+     * @method static \Illuminate\Support\Collection getUnionBuilders()
+     * @method static mixed getLimit()
+     * @method static mixed getOffset()
+     * @method static mixed getBindings()
+     * @method static mixed getRawBindings()
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking setBindings(list<mixed> $bindings, "select"|"from"|"join"|"where"|"groupBy"|"having"|"order"|"union"|"unionOrder" $type)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking addBinding(mixed $value, "select"|"from"|"join"|"where"|"groupBy"|"having"|"order"|"union"|"unionOrder" $type)
+     * @method static mixed castBinding(mixed $value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking mergeBindings(self $query)
+     * @method static mixed cleanBindings(mixed[] $bindings)
+     * @method static mixed flattenValue(mixed $value)
+     * @method static string defaultKeyName()
+     * @method static \Illuminate\Database\ConnectionInterface getConnection()
+     * @method static void ensureConnectionSupportsVectors()
+     * @method static \Illuminate\Database\Query\Processors\Processor getProcessor()
+     * @method static \Illuminate\Database\Query\Grammars\Grammar getGrammar()
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking useWritePdo()
+     * @method static bool isQueryable(mixed $value)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking clone()
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking cloneWithout()
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking cloneWithoutBindings()
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking dump(mixed ...$args)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking dumpRawSql()
+     * @method static void dd()
+     * @method static void ddRawSql()
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking wherePast(array|string $columns)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereNowOrPast(array|string $columns)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWherePast(array|string $columns)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereNowOrPast(array|string $columns)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereFuture(array|string $columns)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereNowOrFuture(array|string $columns)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereFuture(array|string $columns)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereNowOrFuture(array|string $columns)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking wherePastOrFuture(array|string $columns, string $operator, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereToday(array|string $columns, string $boolean)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereBeforeToday(array|string $columns)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereTodayOrBefore(array|string $columns)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereAfterToday(array|string $columns)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereTodayOrAfter(array|string $columns)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereToday(array|string $columns)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereBeforeToday(array|string $columns)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereTodayOrBefore(array|string $columns)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereAfterToday(array|string $columns)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking orWhereTodayOrAfter(array|string $columns)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking whereTodayBeforeOrAfter(array|string $columns, string $operator, string $boolean)
+     * @method static bool chunk(int $count, callable(\Illuminate\Support\Collection<int, mixed>, int): mixed $callback)
+     * @method static mixed chunkMap(callable(mixed): \TReturn $callback, int $count)
+     * @method static bool each(callable(mixed, int): mixed $callback, int $count)
+     * @method static bool chunkById(int $count, callable(\Illuminate\Support\Collection<int, mixed>, int): mixed $callback, string|null $column, string|null $alias)
+     * @method static bool chunkByIdDesc(int $count, callable(\Illuminate\Support\Collection<int, mixed>, int): mixed $callback, string|null $column, string|null $alias)
+     * @method static bool orderedChunkById(int $count, callable(\Illuminate\Support\Collection<int, mixed>, int): mixed $callback, string|null $column, string|null $alias, bool $descending)
+     * @method static bool eachById(callable(mixed, int): mixed $callback, int $count, string|null $column, string|null $alias)
+     * @method static mixed lazy(int $chunkSize)
+     * @method static mixed lazyById(int $chunkSize, string|null $column, string|null $alias)
+     * @method static mixed lazyByIdDesc(int $chunkSize, string|null $column, string|null $alias)
+     * @method static \Illuminate\Support\LazyCollection orderedLazyById(int $chunkSize, string|null $column, string|null $alias, bool $descending)
+     * @method static VehicleTracking|null first(array|string $columns)
+     * @method static VehicleTracking firstOrFail(array|string $columns, string|null $message)
+     * @method static VehicleTracking sole(array|string $columns)
+     * @method static \Illuminate\Contracts\Pagination\CursorPaginator paginateUsingCursor(int $perPage, array|string $columns, string $cursorName, \Illuminate\Pagination\Cursor|string|null $cursor)
+     * @method static string getOriginalColumnNameForCursorPagination(\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed> $builder, string $parameter)
+     * @method static \Illuminate\Pagination\LengthAwarePaginator paginator(\Illuminate\Support\Collection $items, int $total, int $perPage, int $currentPage, array $options)
+     * @method static \Illuminate\Pagination\Paginator simplePaginator(\Illuminate\Support\Collection $items, int $perPage, int $currentPage, array $options)
+     * @method static \Illuminate\Pagination\CursorPaginator cursorPaginator(\Illuminate\Support\Collection $items, int $perPage, \Illuminate\Pagination\Cursor $cursor, array $options)
+     * @method static \Illuminate\Database\Eloquent\Builder<VehicleTracking>|VehicleTracking tap(callable($this): mixed $callback)
+     * @method static mixed pipe(callable($this): \TReturn $callback)
+     * @method static mixed when(\Closure($this): \TWhenParameter|\TWhenParameter|null $value, callable($this, \TWhenParameter): \TWhenReturnType|null $callback, callable($this, \TWhenParameter): \TWhenReturnType|null $default)
+     * @method static mixed unless(\Closure($this): \TUnlessParameter|\TUnlessParameter|null $value, callable($this, \TUnlessParameter): \TUnlessReturnType|null $callback, callable($this, \TUnlessParameter): \TUnlessReturnType|null $default)
+     * @method static \Illuminate\Support\Collection explain()
+     * @method static mixed forwardCallTo(mixed $object, string $method, array $parameters)
+     * @method static mixed forwardDecoratedCallTo(mixed $object, string $method, array $parameters)
+     * @method static void throwBadMethodCallException(string $method)
+     * @method static void macro(string $name, object|callable $macro)
+     * @method static void mixin(object $mixin, bool $replace)
+     * @method static bool hasMacro(string $name)
+     * @method static void flushMacros()
+     * @method static mixed macroCall(string $method, array $parameters)
+     * @mixin \Illuminate\Database\Query\Builder
+     */
+    class VehicleTracking extends \Illuminate\Database\Eloquent\Model
     {
         //
     }

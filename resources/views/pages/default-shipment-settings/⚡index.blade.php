@@ -21,6 +21,7 @@ new #[Title('Default Shipment Settings')] class extends Component {
     public ?string $invoice_status = null;
     public ?string $payment_status = null;
     public ?int $payment_method_id = null;
+    public ?string $initial_vehicle_status = null;
 
     public function mount(): void
     {
@@ -35,6 +36,8 @@ new #[Title('Default Shipment Settings')] class extends Component {
         $this->shipment_status = $setting->shipment_status?->value;
         $this->invoice_status = $setting->invoice_status?->value;
         $this->payment_status = $setting->payment_status?->value;
+        $this->payment_method_id = $setting->payment_method_id;
+        $this->initial_vehicle_status = $setting->initial_vehicle_status?->value;
     }
 
     public function save(): void
@@ -50,6 +53,7 @@ new #[Title('Default Shipment Settings')] class extends Component {
             'invoice_status' => 'nullable|string',
             'payment_status' => 'nullable|string',
             'payment_method_id' => 'nullable|exists:payment_methods,id',
+            'initial_vehicle_status' => 'nullable|string',
         ]);
 
         $setting = DefaultShipmentSetting::current();
@@ -143,6 +147,16 @@ new #[Title('Default Shipment Settings')] class extends Component {
                     </flux:field>
 
                     <flux:field>
+                        <flux:label icon="truck">{{ __('Vehicle Status') }}</flux:label>
+                        <flux:select wire:model="initial_vehicle_status" placeholder="Choose an initial vehicle status...">
+                            <flux:select.option value="">{{ __('None') }}</flux:select.option>
+                            @foreach (App\Enums\VehicleStatus::cases() as $case)
+                                <flux:select.option value="{{ $case->value }}">{{ str($case->name)->headline() }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+                    </flux:field>
+
+                    <flux:field>
                         <flux:label icon="document-text">{{ __('Invoice Status') }}</flux:label>
                         <flux:select wire:model="invoice_status" placeholder="Choose an initial invoice status...">
                             <flux:select.option value="">{{ __('None') }}</flux:select.option>
@@ -179,6 +193,4 @@ new #[Title('Default Shipment Settings')] class extends Component {
             </form>
         </x-crud.panel>
     </x-crud.page-shell>
-</div>
-d.page-shell>
 </div>

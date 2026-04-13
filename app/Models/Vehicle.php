@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\ShipmentStatus;
 use App\Enums\VehicleIs;
+use App\Enums\VehicleStatus;
 use Database\Factories\VehicleFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Belongs to at most one {@see Shipment}. A unique vehicle_id enforces at most one vehicle per shipment
@@ -53,6 +56,13 @@ final class Vehicle extends Model
         'currency_code_id',
         'api_snapshot',
         'api_fetched_at',
+        'shipment_id',
+        'prealert_id',
+        'driver_id',
+        'workshop_id',
+        'tracking_status',
+        'status_before_workshop',
+        'gatepass_pin',
     ];
 
     protected function casts(): array
@@ -62,6 +72,8 @@ final class Vehicle extends Model
             'is_insurance' => 'boolean',
             'api_snapshot' => 'array',
             'api_fetched_at' => 'datetime',
+            'tracking_status' => VehicleStatus::class,
+            'status_before_workshop' => ShipmentStatus::class,
         ];
     }
 
@@ -111,10 +123,42 @@ final class Vehicle extends Model
     }
 
     /**
-     * @return HasOne<Shipment, $this>
+     * @return BelongsTo<Shipment, $this>
      */
-    public function shipment(): HasOne
+    public function shipment(): BelongsTo
     {
-        return $this->hasOne(Shipment::class);
+        return $this->belongsTo(Shipment::class);
+    }
+
+    /**
+     * @return BelongsTo<Prealert, $this>
+     */
+    public function prealert(): BelongsTo
+    {
+        return $this->belongsTo(Prealert::class);
+    }
+
+    /**
+     * @return BelongsTo<Driver, $this>
+     */
+    public function driver(): BelongsTo
+    {
+        return $this->belongsTo(Driver::class);
+    }
+
+    /**
+     * @return BelongsTo<Workshop, $this>
+     */
+    public function workshop(): BelongsTo
+    {
+        return $this->belongsTo(Workshop::class);
+    }
+
+    /**
+     * @return HasMany<VehicleTracking, $this>
+     */
+    public function trackings(): HasMany
+    {
+        return $this->hasMany(VehicleTracking::class);
     }
 }

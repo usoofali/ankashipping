@@ -4,23 +4,32 @@ declare(strict_types=1);
 
 use App\Actions\Financial\RequestWalletTopUpAction;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Models\WalletTopUp;
+use App\Notifications\WalletTopUpRequestedNotification;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
+use Spatie\Permission\Models\Role;
 use WireUi\Traits\WireUiActions;
 
-new #[Title('My Wallet')] class extends Component {
-    use WithPagination;
-    use WithFileUploads;
+new #[Title('My Wallet')] class extends Component
+{
     use WireUiActions;
+    use WithFileUploads;
+    use WithPagination;
 
     public bool $showTopUpModal = false;
+
     public $amount = '';
+
     public $reference = '';
+
     public $receipt;
 
     public function getShipperProperty()
@@ -49,6 +58,21 @@ new #[Title('My Wallet')] class extends Component {
             ->paginate(10, ['*'], 'transactionsPage');
     }
 
+    protected function staffAndAdminNotificationRecipientIds(): Collection
+    {
+        $adminRoleNames = Role::query()
+            ->where('name', '!=', 'shipper')
+            ->pluck('name');
+
+        return User::query()
+            ->role($adminRoleNames)
+            ->pluck('id')
+            ->merge(User::query()->whereHas('staff')->pluck('id'))
+            ->merge(User::query()->whereHas('roles', fn ($q) => $q->where('name', 'super_admin'))->pluck('id'))
+            ->unique()
+            ->values();
+    }
+
     public function requestTopUp(RequestWalletTopUpAction $action)
     {
         $this->validate([
@@ -58,17 +82,28 @@ new #[Title('My Wallet')] class extends Component {
         ]);
 
         try {
-            $action->execute(
+            $topUp = $action->execute(
                 shipper: $this->shipper,
                 amount: (float) $this->amount,
                 receipt: $this->receipt,
                 reference: $this->reference
             );
 
+            $recipientIds = $this->staffAndAdminNotificationRecipientIds();
+            $recipientIds->push(Auth::id());
+
+            $recipients = User::query()
+                ->whereIn('id', $recipientIds->unique()->values())
+                ->get();
+
+            if ($recipients->isNotEmpty()) {
+                Notification::send($recipients, new WalletTopUpRequestedNotification($topUp));
+            }
+
             $this->notification()->success('Top-Up requested successfully! Awaiting verification.');
             $this->reset(['amount', 'reference', 'receipt', 'showTopUpModal']);
             unset($this->topUps);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->notification()->error('Error', $e->getMessage());
         }
     }
@@ -119,7 +154,7 @@ new #[Title('My Wallet')] class extends Component {
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
         <!-- Pending / Past Top-Ups -->
-        <div>
+        <x-crud.panel class="p-6">
             <h2 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Funding Requests</h2>
             <flux:table :paginate="$this->topUps">
                 <flux:table.columns sticky class="bg-white dark:bg-zinc-900">
@@ -150,10 +185,10 @@ new #[Title('My Wallet')] class extends Component {
                     @endforelse
                 </flux:table.rows>
             </flux:table>
-        </div>
+        </x-crud.panel>
 
         <!-- Ledger Transactions -->
-        <div>
+        <x-crud.panel class="p-6">
             <h2 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Transaction Ledger</h2>
             <flux:table :paginate="$this->transactions">
                 <flux:table.columns sticky class="bg-white dark:bg-zinc-900">
@@ -186,7 +221,7 @@ new #[Title('My Wallet')] class extends Component {
                     @endforelse
                 </flux:table.rows>
             </flux:table>
-        </div>
+        </x-crud.panel>
 
     </div>
 

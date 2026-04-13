@@ -24,24 +24,19 @@ final class Shipment extends Model
 
     protected $fillable = [
         'reference_no',
-        'vin',
-        'gatepass_pin',
         'shipper_id',
         'consignee_id',
-        'driver_id',
-        'vehicle_id',
         'carrier_id',
         'origin_port_id',
         'destination_port_id',
-        'auction_receipt',
         'logistics_service',
         'shipping_mode',
         'shipment_status',
         'invoice_status',
         'payment_status',
         'payment_method_id',
-        'workshop_id',
-        'shipment_status_before_workshop',
+        'capacity',
+        'sealed_at',
     ];
 
     protected function casts(): array
@@ -53,6 +48,7 @@ final class Shipment extends Model
             'invoice_status' => InvoiceStatus::class,
             'payment_status' => PaymentStatus::class,
             'shipment_status_before_workshop' => ShipmentStatus::class,
+            'sealed_at' => 'datetime',
         ];
     }
 
@@ -87,13 +83,19 @@ final class Shipment extends Model
     }
 
     /**
-     * Shipment belongs to a specific Vehicle.
-     *
-     * @return BelongsTo<Vehicle, $this>
+     * @return HasMany<Vehicle, $this>
      */
-    public function vehicle(): BelongsTo
+    public function vehicles(): HasMany
     {
-        return $this->belongsTo(Vehicle::class);
+        return $this->hasMany(Vehicle::class);
+    }
+
+    /**
+     * Legacy/Helper for RoRo shipments which have exactly one vehicle.
+     */
+    public function vehicle(): ?Vehicle
+    {
+        return $this->vehicles->first();
     }
 
     public function trackings(): HasMany
@@ -143,9 +145,21 @@ final class Shipment extends Model
 
     /**
      * @return BelongsTo<Workshop, $this>
+     *
+     * @deprecated Logistics moved to Vehicle level
      */
     public function workshop(): BelongsTo
     {
         return $this->belongsTo(Workshop::class);
+    }
+
+    public function isContainer(): bool
+    {
+        return $this->shipping_mode === ShippingMode::Container;
+    }
+
+    public function isSealed(): bool
+    {
+        return $this->sealed_at !== null;
     }
 }

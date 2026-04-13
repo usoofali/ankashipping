@@ -85,13 +85,17 @@ new #[Title('Shipment Details')] class extends Component {
 
     public ?int $pendingDeleteShipmentDocumentFileId = null;
 
+    /** Multi-vehicle selection for documents/tracking */
+    public ?int $selectedVehicleId = null;
+    public bool $applyToAllVehicles = false;
+
     public function mount(Shipment $shipment): void
     {
         $this->shipment = $shipment->load([
             'shipper',
             'shipper.user',
             'consignee',
-            'vehicle',
+            'vehicles.trackings' => static fn($query) => $query->orderByDesc('recorded_at'),
             'originPort.state',
             'originPort.country',
             'destinationPort.state',
@@ -455,10 +459,18 @@ new #[Title('Shipment Details')] class extends Component {
         $this->item_amount = '0.00';
     }
 
-    public function openAssignDriverModal(): void
+    public function openAssignDriverModal(?int $vehicleId = null): void
     {
         $this->authorize('shipments.update');
-        $this->driver_id = $this->shipment->driver_id;
+        $this->selectedVehicleId = $vehicleId;
+        
+        if ($vehicleId) {
+            $vehicle = \App\Models\Vehicle::query()->findOrFail($vehicleId);
+            $this->driver_id = $vehicle->driver_id;
+        } else {
+            $this->driver_id = $this->shipment->driver_id;
+        }
+        
         $this->showAssignDriverModal = true;
     }
 
@@ -468,35 +480,48 @@ new #[Title('Shipment Details')] class extends Component {
 
         $validated = $this->validate([
             'driver_id' => ['required', 'integer', 'exists:drivers,id'],
+            'selectedVehicleId' => ['nullable', 'integer', 'exists:vehicles,id'],
         ]);
 
         $driverId = (int) $validated['driver_id'];
+        $vehicleId = $validated['selectedVehicleId'];
         $driver = Driver::query()->findOrFail($driverId);
 
         $this->shipment->loadMissing('shipper');
 
-        DB::transaction(function () use ($driverId, $driver): void {
+        DB::transaction(function () use ($driverId, $driver, $vehicleId): void {
             $driverLabel = filled($driver->company)
                 ? (string) $driver->company
                 : (filled($driver->phone) ? (string) $driver->phone : (string) $driver->id);
 
-            $this->shipment->update([
-                'driver_id' => $driverId,
-                'shipment_status' => ShipmentStatus::Dispatched,
-            ]);
-
-            ShipmentTracking::query()->create([
-                'shipment_id' => $this->shipment->id,
-                'status' => ShipmentStatus::Dispatched,
-                'note' => __('Driver assigned; shipment dispatched.'),
-                'metadata' => [
-                    'source' => 'shipment_show_assign_driver',
+            if ($vehicleId) {
+                $vehicle = \App\Models\Vehicle::query()->findOrFail($vehicleId);
+                $vehicle->update([
                     'driver_id' => $driverId,
-                    'driver_label' => $driverLabel,
-                    'created_by' => Auth::id(),
-                ],
-                'recorded_at' => now(),
-            ]);
+                ]);
+
+                \App\Models\VehicleTracking::create([
+                    'vehicle_id' => $vehicleId,
+                    'status' => ShipmentStatus::Dispatched, // Or another relevant status
+                    'note' => __('Driver assigned to vehicle: :d', ['d' => $driverLabel]),
+                    'recorded_at' => now(),
+                ]);
+            } else {
+                // If no vehicle selected, assign to ALL vehicles in shipment
+                $this->shipment->vehicles()->update(['driver_id' => $driverId]);
+                
+                $this->shipment->update([
+                    'driver_id' => $driverId,
+                    'shipment_status' => ShipmentStatus::Dispatched,
+                ]);
+                
+                ShipmentTracking::query()->create([
+                    'shipment_id' => $this->shipment->id,
+                    'status' => ShipmentStatus::Dispatched,
+                    'note' => __('Driver assigned to shipment; all vehicles dispatched.'),
+                    'recorded_at' => now(),
+                ]);
+            }
 
             ActivityLog::query()->create([
                 'shipment_id' => $this->shipment->id,
@@ -505,38 +530,16 @@ new #[Title('Shipment Details')] class extends Component {
                 'properties' => [
                     'driver_id' => $driverId,
                     'driver_label' => $driverLabel,
+                    'vehicle_id' => $vehicleId,
                     'reference_no' => $this->shipment->reference_no,
                     'source' => 'shipment_show',
                 ],
             ]);
-
-            $adminRoleNames = Role::query()
-                ->where('name', '!=', 'shipper')
-                ->pluck('name');
-
-            $recipientIds = User::query()
-                ->role($adminRoleNames)
-                ->pluck('id')
-                ->merge(User::query()->whereHas('staff')->pluck('id'))
-                ->merge(User::query()->whereHas('roles', fn($q) => $q->where('name', 'super_admin'))->pluck('id'))
-                ->when($this->shipment->shipper?->user_id, fn($q) => $q->push($this->shipment->shipper->user_id))
-                ->unique()
-                ->values();
-
-            $recipients = User::query()
-                ->whereIn('id', $recipientIds)
-                ->get();
-
-            if ($recipients->isNotEmpty()) {
-                Notification::send($recipients, new ShipmentDispatchedNotification($this->shipment));
-            }
         });
 
         $this->reloadShipmentPageData();
-
         $this->showAssignDriverModal = false;
-
-        $this->notification()->success(__('Driver assigned successfully.'));
+        $this->notification()->success(__('Action successful.'));
     }
 
     public function openCreateDriverModal(): void
@@ -584,11 +587,9 @@ new #[Title('Shipment Details')] class extends Component {
             return;
         }
 
-        $this->shipment->loadMissing('vehicle');
-        $v = $this->shipment->vehicle?->vehicle_is;
-        if ($v instanceof VehicleIs) {
-            $this->attachTitleVehicleIs = $v->value;
-        }
+        $this->shipment->loadMissing('vehicles');
+        // Logic to pre-select a vehicle if only one exists or based on some context
+        // For now, we might need a public property to track which vehicle is being documented
     }
 
     public function openAttachDocumentModal(): void
@@ -598,6 +599,7 @@ new #[Title('Shipment Details')] class extends Component {
         $this->attachDocumentNotes = '';
         $this->attachFiles = [];
         $this->attachTitleVehicleIs = '';
+        $this->selectedVehicleId = $this->shipment->vehicles->first()?->id;
         $this->showAttachDocumentModal = true;
     }
 
@@ -610,6 +612,7 @@ new #[Title('Shipment Details')] class extends Component {
             'attachDocumentNotes' => ['nullable', 'string', 'max:2000'],
             'attachFiles' => ['required', 'array', 'min:1'],
             'attachFiles.*' => ['file', 'max:20480'],
+            'selectedVehicleId' => ['nullable', 'integer', 'exists:vehicles,id'],
             'attachTitleVehicleIs' => [
                 Rule::requiredIf(fn() => $this->attachDocumentType === ShipmentDocumentType::TitleDocument->value),
                 'nullable',
@@ -622,11 +625,8 @@ new #[Title('Shipment Details')] class extends Component {
 
         $documentType = ShipmentDocumentType::from($this->attachDocumentType);
 
-        if ($documentType === ShipmentDocumentType::TitleDocument && $this->shipment->vehicle_id === null) {
-            $this->addError('attachDocumentType', __('A vehicle must be linked to attach a title document.'));
-
-            return;
-        }
+        // For multi-vehicle, we might need a vehicle_id in the form state
+        // if ($documentType === ShipmentDocumentType::TitleDocument && ...)
 
         $fromShipmentStatus = $this->shipment->shipment_status;
         $document = null;
@@ -634,12 +634,11 @@ new #[Title('Shipment Details')] class extends Component {
 
         DB::transaction(function () use ($documentType, &$document, &$fileCount, $fromShipmentStatus): void {
             if ($documentType === ShipmentDocumentType::TitleDocument) {
-                $this->shipment->loadMissing('vehicle');
-                $vehicle = $this->shipment->vehicle;
-                if ($vehicle === null) {
-                    throw new \RuntimeException('Vehicle required for title document.');
+                if ($this->selectedVehicleId === null) {
+                    throw new \RuntimeException('Vehicle selection required for title document.');
                 }
-
+                
+                $vehicle = \App\Models\Vehicle::query()->findOrFail($this->selectedVehicleId);
                 $vehicle->vehicle_is = VehicleIs::from($this->attachTitleVehicleIs);
                 $vehicle->save();
             }
@@ -765,16 +764,20 @@ new #[Title('Shipment Details')] class extends Component {
         $this->notification()->success(__('Document(s) attached.'));
     }
 
-    public function openToWorkshopModal(): void
+    public function openToWorkshopModal(?int $vehicleId = null): void
     {
         $this->authorize('shipments.update');
         $this->authorizeStaffOrSuperAdmin();
 
-        if ($this->shipment->shipment_status === ShipmentStatus::AtWorkshop) {
-            return;
+        $this->selectedVehicleId = $vehicleId;
+        
+        if ($vehicleId) {
+            $vehicle = \App\Models\Vehicle::query()->findOrFail($vehicleId);
+            $this->toWorkshopWorkshopId = $vehicle->workshop_id;
+        } else {
+            $this->toWorkshopWorkshopId = null;
         }
 
-        $this->toWorkshopWorkshopId = $this->shipment->workshop_id;
         $this->showToWorkshopModal = true;
     }
 
@@ -785,51 +788,48 @@ new #[Title('Shipment Details')] class extends Component {
 
         $validated = $this->validate([
             'toWorkshopWorkshopId' => ['required', 'integer', 'exists:workshops,id'],
+            'selectedVehicleId' => ['nullable', 'integer', 'exists:vehicles,id'],
         ]);
 
         $workshopId = (int) $validated['toWorkshopWorkshopId'];
+        $vehicleId = $validated['selectedVehicleId'];
 
-        DB::transaction(function () use ($workshopId): void {
+        DB::transaction(function () use ($workshopId, $vehicleId): void {
             $workshop = Workshop::query()->findOrFail($workshopId);
-            $before = $this->shipment->shipment_status;
-            $this->shipment->shipment_status_before_workshop = $before;
-            $this->shipment->workshop_id = $workshopId;
-            $this->shipment->shipment_status = ShipmentStatus::AtWorkshop;
-            $this->shipment->save();
+            
+            if ($vehicleId) {
+                $vehicle = \App\Models\Vehicle::query()->findOrFail($vehicleId);
+                $vehicle->update([
+                    'workshop_id' => $workshopId,
+                    'is_at_workshop' => true,
+                ]);
+
+                \App\Models\VehicleTracking::create([
+                    'vehicle_id' => $vehicleId,
+                    'status' => ShipmentStatus::AtWorkshop,
+                    'workshop_id' => $workshopId,
+                    'note' => __('Vehicle sent to workshop: :w', ['w' => $workshop->name]),
+                    'recorded_at' => now(),
+                ]);
+            }
 
             ActivityLog::query()->create([
                 'shipment_id' => $this->shipment->id,
                 'user_id' => Auth::id(),
-                'action' => 'shipment_sent_to_workshop',
+                'action' => 'vehicle_sent_to_workshop',
                 'properties' => [
                     'workshop_id' => $workshopId,
                     'workshop_name' => $workshop->name,
-                    'from_shipment_status' => $before?->value,
-                    'from_shipment_status_label' => $before?->name,
+                    'vehicle_id' => $vehicleId,
                     'reference_no' => $this->shipment->reference_no,
                     'source' => 'shipment_show',
                 ],
-            ]);
-
-            ShipmentTracking::query()->create([
-                'shipment_id' => $this->shipment->id,
-                'status' => ShipmentStatus::AtWorkshop,
-                'workshop_id' => $workshopId,
-                'note' => __('Shipment sent to workshop.'),
-                'metadata' => [
-                    'source' => 'shipment_show_to_workshop',
-                    'workshop_name' => $workshop->name,
-                    'from_shipment_status' => $before?->value,
-                    'from_shipment_status_label' => $before?->name,
-                    'created_by' => Auth::id(),
-                ],
-                'recorded_at' => now(),
             ]);
         });
 
         $this->reloadShipmentPageData();
         $this->showToWorkshopModal = false;
-        $this->notification()->success(__('Shipment marked at workshop.'));
+        $this->notification()->success(__('Action successful.'));
     }
 
     public function openFromWorkshopConfirmModal(): void
@@ -849,51 +849,47 @@ new #[Title('Shipment Details')] class extends Component {
         $this->authorize('shipments.update');
         $this->authorizeStaffOrSuperAdmin();
 
-        $stored = $this->shipment->shipment_status_before_workshop;
-        if ($stored === null) {
-            $this->notification()->error(__('Cannot restore status'), __('Previous status was not recorded.'));
+        $vehicleId = $this->selectedVehicleId;
 
-            $this->showFromWorkshopConfirmModal = false;
+        DB::transaction(function () use ($vehicleId): void {
+            if ($vehicleId) {
+                $vehicle = \App\Models\Vehicle::query()->findOrFail($vehicleId);
+                $stored = $vehicle->status_before_workshop ?? ShipmentStatus::Pending;
+                
+                $vehicle->update([
+                    'is_at_workshop' => false,
+                    'workshop_id' => null,
+                ]);
 
-            return;
-        }
-
-        DB::transaction(function () use ($stored): void {
-            $this->shipment->shipment_status = $stored;
-            $this->shipment->workshop_id = null;
-            $this->shipment->shipment_status_before_workshop = null;
-            $this->shipment->save();
+                \App\Models\VehicleTracking::create([
+                    'vehicle_id' => $vehicleId,
+                    'status' => $stored,
+                    'note' => __('Vehicle returned from workshop.'),
+                    'recorded_at' => now(),
+                ]);
+            } else {
+                // If no vehicle selected, restore all vehicles in shipment
+                $this->shipment->vehicles()->update([
+                    'is_at_workshop' => false,
+                    'workshop_id' => null,
+                ]);
+            }
 
             ActivityLog::query()->create([
                 'shipment_id' => $this->shipment->id,
                 'user_id' => Auth::id(),
-                'action' => 'shipment_returned_from_workshop',
+                'action' => 'vehicle_returned_from_workshop',
                 'properties' => [
-                    'to_shipment_status' => $stored->value,
-                    'to_shipment_status_label' => $stored->name,
+                    'vehicle_id' => $vehicleId,
                     'reference_no' => $this->shipment->reference_no,
                     'source' => 'shipment_show',
                 ],
-            ]);
-
-            ShipmentTracking::query()->create([
-                'shipment_id' => $this->shipment->id,
-                'status' => $stored,
-                'workshop_id' => null,
-                'note' => __('Shipment returned from workshop.'),
-                'metadata' => [
-                    'source' => 'shipment_show_from_workshop',
-                    'to_shipment_status' => $stored->value,
-                    'to_shipment_status_label' => $stored->name,
-                    'created_by' => Auth::id(),
-                ],
-                'recorded_at' => now(),
             ]);
         });
 
         $this->reloadShipmentPageData();
         $this->showFromWorkshopConfirmModal = false;
-        $this->notification()->success(__('Workshop hold cleared; status restored.'));
+        $this->notification()->success(__('Action successful.'));
     }
 
     public function openDeleteDocumentConfirm(int $shipmentDocumentId): void
@@ -1079,9 +1075,6 @@ new #[Title('Shipment Details')] class extends Component {
         {{-- Header & Summary --}}
         <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div class="flex items-start gap-3 sm:items-center">
-                {{-- <div class="shrink-0 rounded-lg bg-zinc-100 p-2 dark:bg-zinc-800">
-                    <flux:icon.document-text class="size-6 text-zinc-600 dark:text-zinc-400" />
-                </div> --}}
                 <div class="min-w-0 flex-1">
                     <x-crud.page-header :heading="__('SHIPMENT #') . $shipment->reference_no" :subheading="__('View full shipment, tracking, and financial details.')" />
                     <div class="mt-2 flex flex-wrap gap-2">
@@ -1113,6 +1106,14 @@ new #[Title('Shipment Details')] class extends Component {
                         @if($shipment->shipping_mode)
                             <flux:badge color="zinc" variant="outline" size="sm" icon="cube">
                                 {{ $shipment->shipping_mode->name ?? $shipment->shipping_mode }}
+                            </flux:badge>
+                        @endif
+                        @if($shipment->isContainer())
+                            <flux:badge color="{{ $shipment->isSealed() ? 'emerald' : 'amber' }}" variant="subtle" size="sm" icon="lock-closed">
+                                {{ $shipment->isSealed() ? __('Container Sealed') : __('Container Open') }}
+                            </flux:badge>
+                            <flux:badge color="zinc" variant="outline" size="sm" icon="users">
+                                {{ __('Capacity: :c/:m', ['c' => $shipment->vehicles->count(), 'm' => $shipment->capacity]) }}
                             </flux:badge>
                         @endif
                     </div>
@@ -1191,34 +1192,41 @@ new #[Title('Shipment Details')] class extends Component {
             <div class="grid grid-cols-1 gap-6 md:grid-cols-12">
                 <div class="md:col-span-3">
                     <div class="space-y-3">
-                        <div>
-                            <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
-                                {{ __('VIN') }}
-                            </flux:text>
-                            <flux:text class="font-mono">
-                                {{ $shipment->vin ?? '—' }}
-                            </flux:text>
-                        </div>
-                        <div>
-                            <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
-                                {{ __('Lot number') }}
-                            </flux:text>
-                            <flux:text class="font-mono">
-                                {{ $shipment->vehicle?->lot_number ?? '—' }}
-                            </flux:text>
-                        </div>
-                        <div>
-                            <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
-                                {{ __('Auction') }}
-                            </flux:text>
-                            <flux:text>
-                                @if(filled($shipment->vehicle?->auction_name))
-                                    {{ \Illuminate\Support\Str::upper($shipment->vehicle->auction_name) }}
-                                @else
-                                    —
-                                @endif
-                            </flux:text>
-                        </div>
+                        @if(!$shipment->isContainer())
+                            <div>
+                                <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
+                                    {{ __('VIN') }}
+                                </flux:text>
+                                <flux:text class="font-mono">
+                                    {{ $shipment->vehicles->first()?->vin ?? '—' }}
+                                </flux:text>
+                            </div>
+                            <div>
+                                <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
+                                    {{ __('Lot number') }}
+                                </flux:text>
+                                <flux:text class="font-mono">
+                                    {{ $shipment->vehicles->first()?->lot_number ?? '—' }}
+                                </flux:text>
+                            </div>
+                        @else
+                            <div>
+                                <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
+                                    {{ __('Container Mode') }}
+                                </flux:text>
+                                <flux:text>
+                                    {{ __('Multi-Vehicle Logistics') }}
+                                </flux:text>
+                            </div>
+                            <div>
+                                <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
+                                    {{ __('Sealing Date') }}
+                                </flux:text>
+                                <flux:text>
+                                    {{ $shipment->sealed_at?->format('M d, Y') ?: '—' }}
+                                </flux:text>
+                            </div>
+                        @endif
                     </div>
                 </div>
                 <div class="md:col-span-9">
@@ -1403,81 +1411,85 @@ new #[Title('Shipment Details')] class extends Component {
                                             </div>
                                         @endif
                                     </div>
-                                @else
-                                    <div
-                                        class="h-full flex flex-col items-center justify-center p-12 text-zinc-400 bg-zinc-50 dark:bg-zinc-900">
-                                        <flux:icon.camera class="size-16 mb-4 opacity-20" />
-                                        <flux:text>{{ __('No photos available for this vehicle.') }}</flux:text>
-                                    </div>
-                                @endif
-                            </x-crud.panel>
-                        </div>
+                {{-- Vehicles Section --}}
+                <div class="space-y-6">
+                    <div class="flex items-center justify-between">
+                        <flux:heading size="lg" class="flex items-center gap-2">
+                            <flux:icon.truck class="size-5 text-indigo-500" />
+                            {{ __('Vehicles in Shipment') }} ({{ count($shipment->vehicles) }})
+                        </flux:heading>
+                    </div>
 
-                        <div class="space-y-6">
-                            <x-crud.panel class="p-6 h-full">
-                                <flux:heading size="lg" class="mb-4 flex items-center gap-2">
-                                    <flux:icon.document-magnifying-glass class="size-5 text-indigo-500" />
-                                    {{ __('Vehicle Details') }}
-                                </flux:heading>
+                    <div class="grid grid-cols-1 gap-6">
+                        @foreach($shipment->vehicles as $vehicle)
+                            <x-crud.panel wire:key="v-{{ $vehicle->id }}" class="p-0 overflow-hidden">
+                                <div class="flex flex-col lg:flex-row">
+                                    {{-- Photo Thumb --}}
+                                    <div class="lg:w-48 lg:h-auto h-40 bg-zinc-100 dark:bg-zinc-900 shrink-0">
+                                        @php $photos = $vehicle->copartCarPhotoUrls(); @endphp
+                                        @if(count($photos) > 0)
+                                            <img src="{{ $photos[0] }}" class="w-full h-full object-cover">
+                                        @else
+                                            <div class="w-full h-full flex items-center justify-center text-zinc-400">
+                                                <flux:icon.photo class="size-8" />
+                                            </div>
+                                        @endif
+                                    </div>
 
-                                <div class="grid grid-cols-1 gap-y-4 gap-x-4">
-                                    <div>
-                                        <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
-                                            {{ __('Body') }}
-                                        </flux:text>
-                                        <flux:text class="font-medium">
-                                            {{ $shipment->vehicle->body_style ?? '—' }}
-                                        </flux:text>
-                                    </div>
-                                    <div>
-                                        <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
-                                            {{ __('Type') }}
-                                        </flux:text>
-                                        <flux:text class="font-medium">
-                                            {{ $shipment->vehicle->vehicle_type ?? '—' }}
-                                        </flux:text>
-                                    </div>
-                                    <div>
-                                        <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
-                                            {{ __('Vehicle is?') }}
-                                        </flux:text>
-                                        <flux:text class="font-medium">
-                                            {{ $shipment->vehicle->vehicle_is?->label() ?? '—' }}
-                                        </flux:text>
-                                    </div>
-                                    <div>
-                                        <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
-                                            {{ __('Damage') }}
-                                        </flux:text>
-                                        <flux:badge color="rose" variant="subtle" size="sm">
-                                            {{ $shipment->vehicle->primary_damage ?? 'None' }}
-                                        </flux:badge>
-                                    </div>
-                                    <div>
-                                        <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
-                                            {{ __('Key') }}
-                                        </flux:text>
-                                        <flux:text class="font-medium">
-                                            @if($shipment->vehicle->car_keys === '1' || $shipment->vehicle->car_keys === 1)
-                                                {{ __('Yes') }}
-                                            @else
-                                                {{ __('No') }}
-                                            @endif
-                                        </flux:text>
-                                    </div>
-                                    <div>
-                                        <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
-                                            {{ __('Location') }}
-                                        </flux:text>
-                                        <flux:text class="font-medium">
-                                            {{ $shipment->vehicle->location ?? '—' }}
-                                        </flux:text>
+                                    {{-- Details --}}
+                                    <div class="flex-1 p-6">
+                                        <div class="flex flex-col md:flex-row justify-between gap-4">
+                                            <div>
+                                                <h4 class="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                                                    {{ $vehicle->year }} {{ $vehicle->make }} {{ $vehicle->model }}
+                                                    @if($vehicle->atWorkshop())
+                                                        <flux:badge color="amber" size="sm" variant="subtle">{{ __('At Workshop') }}</flux:badge>
+                                                    @endif
+                                                </h4>
+                                                <flux:text size="sm" class="font-mono text-zinc-500 uppercase mt-1">{{ $vehicle->vin }}</flux:text>
+                                            </div>
+                                            <div class="flex items-start gap-2">
+                                                <flux:button :href="route('vehicles.show', $vehicle)" icon="eye" size="sm" variant="ghost" wire:navigate />
+                                                @can('shipments.update')
+                                                    <flux:dropdown>
+                                                        <flux:button icon="ellipsis-vertical" size="sm" variant="ghost" />
+                                                        <flux:menu>
+                                                            <flux:menu.item icon="wrench" wire:click="openToWorkshopModal({{ $vehicle->id }})">{{ __('Send to Workshop') }}</flux:menu.item>
+                                                            <flux:menu.item icon="truck" wire:click="openAssignDriverModal({{ $vehicle->id }})">{{ __('Assign Driver') }}</flux:menu.item>
+                                                        </flux:menu>
+                                                    </flux:dropdown>
+                                                @endcan
+                                            </div>
+                                        </div>
+
+                                        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mt-6">
+                                            <div>
+                                                <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">{{ __('Lot #') }}</flux:text>
+                                                <flux:text size="sm" class="font-semibold">{{ $vehicle->lot_number ?: '—' }}</flux:text>
+                                            </div>
+                                            <div>
+                                                <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">{{ __('Condition') }}</flux:text>
+                                                <flux:badge color="indigo" size="sm">{{ $vehicle->vehicle_is?->label() ?: '—' }}</flux:badge>
+                                            </div>
+                                            <div>
+                                                <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">{{ __('Workshop') }}</flux:text>
+                                                <flux:text size="sm">{{ $vehicle->workshop?->name ?: '—' }}</flux:text>
+                                            </div>
+                                            <div>
+                                                <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">{{ __('Driver') }}</flux:text>
+                                                <flux:text size="sm">{{ $vehicle->driver?->company ?: $vehicle->driver?->phone ?: '—' }}</flux:text>
+                                            </div>
+                                            <div>
+                                                <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">{{ __('Gatepass PIN') }}</flux:text>
+                                                <flux:text size="sm" class="font-mono font-bold">{{ $vehicle->gatepass_pin ?: '—' }}</flux:text>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </x-crud.panel>
-                        </div>
+                        @endforeach
                     </div>
-                @endif
+                </div>
 
                 {{-- Invoice & Items --}}
                 <x-crud.panel class="p-6 bg-zinc-50 dark:bg-zinc-800/60 border-zinc-200 dark:border-zinc-700">
@@ -1592,83 +1604,67 @@ new #[Title('Shipment Details')] class extends Component {
                     </form>
                 </x-crud.panel>
 
-                {{-- Tracking Timeline --}}
-                <x-crud.panel class="p-6">
-                    <flux:heading size="lg" class="mb-4 flex items-center gap-2">
-                        <flux:icon.clock class="size-5 text-indigo-500" />
-                        {{ __('Tracking History') }}
-                    </flux:heading>
+                {{-- Tracking Dual-Timeline --}}
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {{-- Left Track: Shipment Journey --}}
+                    <x-crud.panel class="p-6">
+                        <flux:heading size="lg" class="mb-6 flex items-center gap-2">
+                            <flux:icon.globe-americas class="size-5 text-indigo-500" />
+                            {{ __('Shipment Journey') }}
+                        </flux:heading>
 
-                    @if($shipment->trackings->isEmpty())
-                        <flux:text class="text-zinc-500">
-                            {{ __('No tracking events have been recorded for this shipment yet.') }}
-                        </flux:text>
-                    @else
+                        @if($shipment->trackings->isEmpty())
+                            <flux:text class="text-zinc-500">{{ __('No tracking recorded for this shipment.') }}</flux:text>
+                        @else
+                            <div class="space-y-6 relative before:absolute before:inset-y-0 before:left-3 before:w-px before:bg-zinc-200 dark:before:bg-zinc-800">
+                                @foreach($shipment->trackings as $tracking)
+                                    <div class="pl-8 relative">
+                                        <div class="absolute left-1.5 top-1.5 size-3 rounded-full bg-indigo-500 border-2 border-white dark:border-zinc-900 shadow-sm"></div>
+                                        <div class="flex items-center justify-between gap-4 mb-2">
+                                            <flux:badge color="indigo" size="sm" variant="subtle">{{ $tracking->status->name }}</flux:badge>
+                                            <flux:text size="xs" class="text-zinc-400 font-mono">{{ $tracking->recorded_at?->format('M d, Y H:i') }}</flux:text>
+                                        </div>
+                                        <flux:text size="sm">{{ $tracking->note }}</flux:text>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </x-crud.panel>
+
+                    {{-- Right Track: Vehicle-Specific Trackings --}}
+                    <x-crud.panel class="p-6">
+                        <flux:heading size="lg" class="mb-6 flex items-center gap-2">
+                            <flux:icon.truck class="size-5 text-emerald-500" />
+                            {{ __('Vehicle-Specific Events') }}
+                        </flux:heading>
+
                         @php
-                            $trackingPresenter = app(ShipmentTrackingPresenter::class);
+                            $allVehicleTrackings = $shipment->vehicles->flatMap->trackings->sortByDesc('recorded_at');
                         @endphp
-                        <div class="space-y-4">
-                            @foreach($shipment->trackings as $index => $tracking)
-                                <div class="flex gap-3">
-                                    <div class="flex flex-col items-center">
-                                        <div
-                                            class="size-3 rounded-full {{ $index === 0 ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-600' }}">
-                                        </div>
-                                        @if(!$loop->last)
-                                            <div class="flex-1 w-px bg-zinc-200 dark:bg-zinc-800 mt-1"></div>
-                                        @endif
-                                    </div>
-                                    <div class="flex-1 pb-4">
-                                        <div class="flex items-center justify-between gap-2">
-                                            <div class="flex items-center gap-2">
-                                                <flux:badge :color="$index === 0 ? 'indigo' : 'zinc'" variant="subtle"
-                                                    size="sm">
-                                                    @if($tracking->status === \App\Enums\ShipmentStatus::AtWorkshop && filled($tracking->workshop?->name))
-                                                        {{ $tracking->workshop->name }}
-                                                    @else
-                                                        {{ $tracking->status->name ?? $tracking->status }}
-                                                    @endif
-                                                </flux:badge>
-                                                @if($tracking->workshop && $tracking->status !== \App\Enums\ShipmentStatus::AtWorkshop)
-                                                    <flux:text size="xs" class="text-zinc-500">
-                                                        {{ $tracking->workshop->name }}
-                                                    </flux:text>
-                                                @endif
-                                            </div>
-                                            <flux:text size="xs" class="text-zinc-500">
-                                                {{ $tracking->recorded_at?->toDayDateTimeString() ?? $tracking->created_at->toDayDateTimeString() }}
+
+                        @if($allVehicleTrackings->isEmpty())
+                            <flux:text class="text-zinc-500">{{ __('No vehicle-specific events recorded.') }}</flux:text>
+                        @else
+                            <div class="space-y-6 relative before:absolute before:inset-y-0 before:left-3 before:w-px before:bg-zinc-200 dark:before:bg-zinc-800">
+                                @foreach($allVehicleTrackings as $vTracking)
+                                    <div class="pl-8 relative">
+                                        <div class="absolute left-1.5 top-1.5 size-3 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-900 shadow-sm"></div>
+                                        <div class="flex items-center justify-between gap-4 mb-1">
+                                            <flux:text size="sm" class="font-bold">
+                                                {{ $vTracking->vehicle->year }} {{ $vTracking->vehicle->make }} ({{ $vTracking->vehicle->lot_number }})
                                             </flux:text>
+                                            <flux:text size="xs" class="text-zinc-400 font-mono">{{ $vTracking->recorded_at?->format('M d, Y H:i') }}</flux:text>
                                         </div>
-                                        @if($tracking->note)
-                                            <flux:text size="sm" class="mt-1">
-                                                {{ $tracking->note }}
-                                            </flux:text>
-                                        @endif
-                                        @php
-                                            $trackingDetailBadges = $trackingPresenter->badges($tracking, $shipment);
-                                        @endphp
-                                        @if(count($trackingDetailBadges) > 0)
-                                            <div class="mt-2 flex flex-wrap items-center gap-2">
-                                                @foreach($trackingDetailBadges as $tb)
-                                                    @if(!empty($tb['href']))
-                                                        <a href="{{ $tb['href'] }}"
-                                                            class="inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-800 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-200 dark:hover:bg-indigo-900/40">
-                                                            {{ $tb['text'] }}
-                                                        </a>
-                                                    @else
-                                                        <flux:badge size="sm" color="zinc" variant="{{ $tb['variant'] ?? 'subtle' }}">
-                                                            {{ $tb['text'] }}
-                                                        </flux:badge>
-                                                    @endif
-                                                @endforeach
-                                            </div>
-                                        @endif
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <flux:badge color="emerald" size="xs" variant="subtle">{{ $vTracking->status->name }}</flux:badge>
+                                        </div>
+                                        <flux:text size="xs" class="text-zinc-600 dark:text-zinc-400 italic">"{{ $vTracking->note }}"</flux:text>
                                     </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @endif
-                </x-crud.panel>
+                                @endforeach
+                            </div>
+                        @endif
+                    </x-crud.panel>
+                </div>
 
                 {{-- Activity Log --}}
                 <x-crud.panel class="p-6">
@@ -1876,7 +1872,13 @@ new #[Title('Shipment Details')] class extends Component {
         <form wire:submit="assignDriver" class="space-auto-y">
             <div class="mb-1">
                 <flux:heading size="lg">{{ __('Assign Driver') }}</flux:heading>
-                <flux:subheading>{{ __('Select an existing driver or add a new one, then assign to this shipment.') }}
+                <flux:subheading>
+                    @if($selectedVehicleId)
+                        @php $v = \App\Models\Vehicle::find($selectedVehicleId); @endphp
+                        {{ __('Assign driver specifically for :v (VIN: :vin)', ['v' => ($v?->year . ' ' . $v?->make), 'vin' => $v?->vin]) }}
+                    @else
+                        {{ __('Select an existing driver or add a new one, then assign to this shipment.') }}
+                    @endif
                 </flux:subheading>
             </div>
             @can('drivers.create')
@@ -1943,6 +1945,13 @@ new #[Title('Shipment Details')] class extends Component {
                 </flux:select>
                 <flux:error name="attachDocumentType" />
 
+                <flux:select wire:model.live="selectedVehicleId" :label="__('Relates to vehicle…')">
+                    @foreach($shipment->vehicles as $v)
+                        <flux:select.option value="{{ $v->id }}">{{ $v->year }} {{ $v->make }} {{ $v->model }} ({{ $v->vin }})</flux:select.option>
+                    @endforeach
+                </flux:select>
+                <flux:error name="selectedVehicleId" />
+
                 @if($attachDocumentType === \App\Enums\ShipmentDocumentType::TitleDocument->value)
                     <flux:select wire:model="attachTitleVehicleIs" :label="__('Vehicle condition')" required>
                         <flux:select.option value="">{{ __('Select…') }}</flux:select.option>
@@ -1985,7 +1994,12 @@ new #[Title('Shipment Details')] class extends Component {
                     <div>
                         <flux:heading size="lg">{{ __('Send to workshop') }}</flux:heading>
                         <flux:subheading>
-                            {{ __('Choose the workshop. Current status will be saved and restored when you use “From workshop”.') }}
+                            @if($selectedVehicleId)
+                                @php $v = \App\Models\Vehicle::find($selectedVehicleId); @endphp
+                                {{ __('Send :v (VIN: :vin) to workshop.', ['v' => ($v?->year . ' ' . $v?->make), 'vin' => $v?->vin]) }}
+                            @else
+                                {{ __('Choose the workshop. Current status will be saved and restored when you use “From workshop”.') }}
+                            @endif
                         </flux:subheading>
                     </div>
                     <flux:select wire:model="toWorkshopWorkshopId" :label="__('Workshop')" required>

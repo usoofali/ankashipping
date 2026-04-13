@@ -5,25 +5,23 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\PrealertStatus;
-use Database\Factories\PrealertFactory;
+use App\Enums\ShippingMode;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 final class Prealert extends Model
 {
-    /** @use HasFactory<PrealertFactory> */
     use HasFactory;
 
     protected $fillable = [
         'shipper_id',
         'consignee_id',
-        'vehicle_id',
         'carrier_id',
         'destination_port_id',
-        'vin',
-        'gatepass_pin',
-        'auction_receipt',
+        'shipping_mode',
+        'shipment_id',
         'notes',
         'status',
     ];
@@ -32,6 +30,7 @@ final class Prealert extends Model
     {
         return [
             'status' => PrealertStatus::class,
+            'shipping_mode' => ShippingMode::class,
         ];
     }
 
@@ -45,9 +44,20 @@ final class Prealert extends Model
         return $this->belongsTo(Consignee::class);
     }
 
-    public function vehicle(): BelongsTo
+    /**
+     * @return HasMany<Vehicle, $this>
+     */
+    public function vehicles(): HasMany
     {
-        return $this->belongsTo(Vehicle::class);
+        return $this->hasMany(Vehicle::class);
+    }
+
+    /**
+     * Legacy/Helper for RoRo prealerts which have exactly one vehicle.
+     */
+    public function vehicle(): ?Vehicle
+    {
+        return $this->vehicles->first();
     }
 
     public function carrier(): BelongsTo
@@ -63,5 +73,10 @@ final class Prealert extends Model
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function shipment(): BelongsTo
+    {
+        return $this->belongsTo(Shipment::class);
     }
 }

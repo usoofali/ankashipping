@@ -9,6 +9,7 @@ use App\Enums\LogisticsService;
 use App\Enums\PaymentStatus;
 use App\Enums\ShipmentStatus;
 use App\Enums\ShippingMode;
+use App\Enums\VehicleStatus;
 use App\Models\DefaultShipmentSetting;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -33,6 +34,7 @@ class DefaultShipmentSettingFactory extends Factory
             'invoice_status' => null,
             'payment_status' => null,
             'payment_method_id' => null,
+            'initial_vehicle_status' => null,
         ];
     }
 
@@ -43,7 +45,8 @@ class DefaultShipmentSettingFactory extends Factory
             'shipping_mode' => ShippingMode::Roro,
             'shipment_status' => ShipmentStatus::Pending,
             'invoice_status' => InvoiceStatus::Draft,
-            'payment_status' => PaymentStatus::Pending,
+            'payment_status' => PaymentStatus::AwaitingBL,
+            'initial_vehicle_status' => VehicleStatus::Pending,
         ]);
     }
 }

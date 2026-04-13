@@ -27,8 +27,6 @@ new #[Title('Edit Shipment')] class extends Component {
     public string $reference_no = '';
     public ?int $shipper_id = null;
     public ?int $consignee_id = null;
-    public string $vin = '';
-    public ?string $gatepass_pin = '';
     public ?int $carrier_id = null;
     public ?int $origin_port_id = null;
     public ?int $destination_port_id = null;
@@ -38,7 +36,10 @@ new #[Title('Edit Shipment')] class extends Component {
     public string $invoice_status = '';
     public string $payment_status = '';
     public ?int $payment_method_id = null;
-    public ?string $auction_receipt = '';
+    public int $capacity = 1;
+    public ?string $sealed_at = null;
+
+    public array $vehicles = [];
 
     public function mount(Shipment $shipment): void
     {
@@ -58,18 +59,23 @@ new #[Title('Edit Shipment')] class extends Component {
         $this->reference_no = (string) $shipment->reference_no;
         $this->shipper_id = $shipment->shipper_id;
         $this->consignee_id = $shipment->consignee_id;
-        $this->vin = (string) ($shipment->vin ?? '');
-        $this->gatepass_pin = $shipment->gatepass_pin;
         $this->carrier_id = $shipment->carrier_id;
         $this->origin_port_id = $shipment->origin_port_id;
         $this->destination_port_id = $shipment->destination_port_id;
-        $this->auction_receipt = $shipment->auction_receipt;
         $this->logistics_service = (string) ($shipment->logistics_service?->value ?? $shipment->logistics_service ?? '');
         $this->shipping_mode = (string) ($shipment->shipping_mode?->value ?? $shipment->shipping_mode ?? '');
         $this->shipment_status = (string) ($shipment->shipment_status?->value ?? $shipment->shipment_status ?? '');
         $this->invoice_status = (string) ($shipment->invoice_status?->value ?? $shipment->invoice_status ?? '');
         $this->payment_status = (string) ($shipment->payment_status?->value ?? $shipment->payment_status ?? '');
         $this->payment_method_id = $shipment->payment_method_id;
+        $this->capacity = $shipment->capacity ?? 1;
+        $this->sealed_at = $shipment->sealed_at ? $shipment->sealed_at->toDateTimeString() : null;
+
+        $this->vehicles = $shipment->vehicles->map(fn($v) => [
+            'id' => $v->id,
+            'vin' => $v->vin,
+            'details' => $v,
+        ])->toArray();
     }
 
     public function updatedShipperId(): void
@@ -85,8 +91,6 @@ new #[Title('Edit Shipment')] class extends Component {
             'reference_no' => ['required', 'string', 'max:255', 'unique:shipments,reference_no,'.$this->shipment->id],
             'shipper_id' => ['required', 'exists:shippers,id'],
             'consignee_id' => ['required', 'exists:consignees,id'],
-            'vin' => ['required', 'string', 'size:17', 'unique:shipments,vin,'.$this->shipment->id],
-            'gatepass_pin' => ['nullable', 'string', 'max:11'],
             'carrier_id' => ['nullable', 'exists:carriers,id'],
             'origin_port_id' => ['nullable', 'exists:ports,id'],
             'destination_port_id' => ['nullable', 'exists:ports,id'],
@@ -96,9 +100,14 @@ new #[Title('Edit Shipment')] class extends Component {
             'invoice_status' => ['required', 'string'],
             'payment_status' => ['required', 'string'],
             'payment_method_id' => ['nullable', 'integer', 'exists:payment_methods,id'],
+            'capacity' => ['required', 'integer', 'min:1'],
         ]);
 
-        $this->shipment->update($validated);
+        $updateData = array_merge($validated, [
+            'sealed_at' => $this->sealed_at,
+        ]);
+
+        $this->shipment->update($updateData);
 
         if ($this->shipment->invoice) {
             $this->shipment->invoice->update([
@@ -218,8 +227,7 @@ new #[Title('Edit Shipment')] class extends Component {
             <x-crud.panel class="p-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <flux:input wire:model="reference_no" :label="__('Reference Number')" icon="qr-code" disabled />
-                    <flux:input wire:model="vin" :label="__('VIN')" maxlength="17" icon="identification" class="font-mono uppercase" disabled />
-
+                    
                     <x-select
                         wire:model.live="shipper_id"
                         :label="__('Shipper')"
@@ -240,14 +248,44 @@ new #[Title('Edit Shipment')] class extends Component {
                         @endforeach
                     </flux:select>
 
-                    <flux:input wire:model="gatepass_pin" :label="__('Gatepass PIN')" maxlength="11" icon="key" />
-
                     <flux:select wire:model="carrier_id" :label="__('Carrier')" :placeholder="__('Select carrier')">
                         <flux:select.option value="">{{ __('Select carrier') }}</flux:select.option>
                         @foreach($this->carriers as $carrier)
                             <flux:select.option :value="$carrier->id">{{ $carrier->name }}</flux:select.option>
                         @endforeach
                     </flux:select>
+                </div>
+            </x-crud.panel>
+
+            {{-- Linked Vehicles --}}
+            <x-crud.panel class="p-6">
+                <flux:heading size="lg" class="mb-4 flex items-center gap-2">
+                    <flux:icon.truck class="size-5 text-indigo-500" />
+                    {{ __('Linked Vehicles') }} ({{ count($vehicles) }})
+                </flux:heading>
+
+                <div class="space-y-3">
+                    @foreach($vehicles as $v)
+                        <div wire:key="ev-{{ $v['id'] }}" class="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl">
+                            <div class="flex items-center gap-3">
+                                <div class="size-10 bg-zinc-200 dark:bg-zinc-700 rounded-lg shrink-0 overflow-hidden">
+                                    @php $photos = $v['details']->copartCarPhotoUrls(); @endphp
+                                    @if(count($photos) > 0)
+                                        <img src="{{ $photos[0] }}" class="w-full h-full object-cover">
+                                    @else
+                                        <div class="w-full h-full flex items-center justify-center text-zinc-400">
+                                            <flux:icon.photo class="size-4" />
+                                        </div>
+                                    @endif
+                                </div>
+                                <div>
+                                    <flux:text size="sm" class="font-bold">{{ $v['details']->year }} {{ $v['details']->make }} {{ $v['details']->model }}</flux:text>
+                                    <flux:text size="xs" class="font-mono text-zinc-500 uppercase">{{ $v['vin'] }}</flux:text>
+                                </div>
+                            </div>
+                            <flux:button variant="ghost" size="sm" :href="route('vehicles.show', $v['id'])" icon="eye" wire:navigate />
+                        </div>
+                    @endforeach
                 </div>
             </x-crud.panel>
 
@@ -274,11 +312,22 @@ new #[Title('Edit Shipment')] class extends Component {
                         @endforeach
                     </flux:select>
 
-                    <flux:select wire:model="shipping_mode" :label="__('Shipping Mode')">
+                    <flux:select wire:model.live="shipping_mode" :label="__('Shipping Mode')">
                         @foreach(ShippingMode::cases() as $mode)
                             <flux:select.option value="{{ $mode->value }}">{{ $mode->name }}</flux:select.option>
                         @endforeach
                     </flux:select>
+
+                    @if($shipping_mode === \App\Enums\ShippingMode::Container->value)
+                         <flux:input wire:model="capacity" label="{{ __('Container Capacity') }}" type="number" icon="hashtag" />
+                                
+                        <div class="flex items-center gap-4 pt-6">
+                            <flux:text size="sm" class="font-bold">{{ __('Seal Container') }}</flux:text>
+                            <flux:button type="button" wire:click="$toggle('sealed_at')" :variant="$sealed_at ? 'primary' : 'ghost'" size="sm">
+                                {{ $sealed_at ? __('Sealed') : __('Mark as Sealed') }}
+                            </flux:button>
+                        </div>
+                    @endif
                 </div>
             </x-crud.panel>
 

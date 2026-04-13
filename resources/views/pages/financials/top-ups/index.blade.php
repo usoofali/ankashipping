@@ -4,32 +4,41 @@ declare(strict_types=1);
 
 use App\Actions\Financial\ApproveWalletTopUpAction;
 use App\Actions\Financial\RejectWalletTopUpAction;
+use App\Models\User;
 use App\Models\WalletTopUp;
+use App\Notifications\WalletTopUpApprovedNotification;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Spatie\Permission\Models\Role;
 use WireUi\Traits\WireUiActions;
 
-new #[Title('Wallet Funding Approvals')] class extends Component {
-    use WithPagination;
+new #[Title('Wallet Funding Approvals')] class extends Component
+{
     use WireUiActions;
+    use WithPagination;
 
     public $statusFilter = 'pending';
 
     public bool $showRejectModal = false;
+
     public ?int $rejectingId = null;
+
     public string $rejectionReason = '';
 
     public bool $showApproveModal = false;
+
     public ?int $approvingId = null;
 
     #[Computed]
     public function topUps()
     {
         return WalletTopUp::with(['shipper', 'approver'])
-            ->when($this->statusFilter, fn($q) => $q->where('status', $this->statusFilter))
+            ->when($this->statusFilter, fn ($q) => $q->where('status', $this->statusFilter))
             ->latest()
             ->paginate(15);
     }
@@ -41,6 +50,21 @@ new #[Title('Wallet Funding Approvals')] class extends Component {
         $this->showApproveModal = true;
     }
 
+    protected function staffAndAdminNotificationRecipientIds(): Collection
+    {
+        $adminRoleNames = Role::query()
+            ->where('name', '!=', 'shipper')
+            ->pluck('name');
+
+        return User::query()
+            ->role($adminRoleNames)
+            ->pluck('id')
+            ->merge(User::query()->whereHas('staff')->pluck('id'))
+            ->merge(User::query()->whereHas('roles', fn ($q) => $q->where('name', 'super_admin'))->pluck('id'))
+            ->unique()
+            ->values();
+    }
+
     public function approve(ApproveWalletTopUpAction $action)
     {
         $this->authorize('wallet_top_ups.approve');
@@ -49,12 +73,25 @@ new #[Title('Wallet Funding Approvals')] class extends Component {
 
         try {
             $action->execute(Auth::user(), $topUp);
+
+            // Notify the shipper
+            if ($topUp->shipper?->user) {
+                $topUp->shipper->user->notify(new WalletTopUpApprovedNotification($topUp));
+            }
+
+            // Notify staff/admin
+            $recipientIds = $this->staffAndAdminNotificationRecipientIds();
+            if ($recipientIds->isNotEmpty()) {
+                $staffUsers = User::query()->whereIn('id', $recipientIds)->get();
+                Notification::send($staffUsers, new WalletTopUpApprovedNotification($topUp));
+            }
+
             $this->notification()->success('Top-Up Approved', 'The wallet has been successfully funded.');
 
             $this->showApproveModal = false;
             $this->approvingId = null;
             unset($this->topUps);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->notification()->error('Approval Failed', $e->getMessage());
         }
     }
@@ -73,7 +110,7 @@ new #[Title('Wallet Funding Approvals')] class extends Component {
         $this->authorize('wallet_top_ups.reject');
 
         $this->validate([
-            'rejectionReason' => ['required', 'string', 'min:3', 'max:1000']
+            'rejectionReason' => ['required', 'string', 'min:3', 'max:1000'],
         ]);
 
         $topUp = WalletTopUp::findOrFail($this->rejectingId);
@@ -85,7 +122,7 @@ new #[Title('Wallet Funding Approvals')] class extends Component {
             $this->rejectingId = null;
             $this->rejectionReason = '';
             unset($this->topUps);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->notification()->error('Rejection Failed', $e->getMessage());
         }
     }

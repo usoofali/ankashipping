@@ -6,6 +6,7 @@ namespace App\Enums;
 
 enum ShipmentStatus: string
 {
+    case Open = 'open';
     case Pending = 'pending';
     case Dispatched = 'dispatched';
     case Inland = 'inland';
