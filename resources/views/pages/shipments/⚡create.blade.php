@@ -738,14 +738,10 @@ new #[Title('Create Shipment')] class extends Component {
                             <flux:field>
                                 <flux:label class="mb-2">{{ __('Shipping Mode') }}</flux:label>
                                 @if(count($vehicles) <= 1)
-                                    <flux:button.group class="w-full">
-                                        <flux:button wire:click="$set('shipping_mode', 'roro')" :variant="$shipping_mode === 'roro' ? 'primary' : 'ghost'" class="flex-1" icon="car" :disabled="(bool) $targetShipment">
-                                            {{ __('RoRo') }}
-                                        </flux:button>
-                                        <flux:button wire:click="$set('shipping_mode', 'container')" :variant="$shipping_mode === 'container' ? 'primary' : 'ghost'" class="flex-1" icon="container" :disabled="(bool) $targetShipment">
-                                            {{ __('Container') }}
-                                        </flux:button>
-                                    </flux:button.group>
+                                    <flux:radio.group wire:model.live="shipping_mode" variant="segmented" :disabled="(bool) $targetShipment" class="w-full!">
+                                        <flux:radio :label="__('RoRo')" value="roro" icon="car" />
+                                        <flux:radio :label="__('Container')" value="container" icon="container" />
+                                    </flux:radio.group>
                                 @else
                                     <div class="flex items-center gap-2 p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-xl">
                                         <flux:icon.container class="size-5 text-indigo-500" />

@@ -463,14 +463,14 @@ new #[Title('Shipment Details')] class extends Component {
     {
         $this->authorize('shipments.update');
         $this->selectedVehicleId = $vehicleId;
-        
+
         if ($vehicleId) {
             $vehicle = \App\Models\Vehicle::query()->findOrFail($vehicleId);
             $this->driver_id = $vehicle->driver_id;
         } else {
             $this->driver_id = $this->shipment->driver_id;
         }
-        
+
         $this->showAssignDriverModal = true;
     }
 
@@ -509,12 +509,12 @@ new #[Title('Shipment Details')] class extends Component {
             } else {
                 // If no vehicle selected, assign to ALL vehicles in shipment
                 $this->shipment->vehicles()->update(['driver_id' => $driverId]);
-                
+
                 $this->shipment->update([
                     'driver_id' => $driverId,
                     'shipment_status' => ShipmentStatus::Dispatched,
                 ]);
-                
+
                 ShipmentTracking::query()->create([
                     'shipment_id' => $this->shipment->id,
                     'status' => ShipmentStatus::Dispatched,
@@ -637,7 +637,7 @@ new #[Title('Shipment Details')] class extends Component {
                 if ($this->selectedVehicleId === null) {
                     throw new \RuntimeException('Vehicle selection required for title document.');
                 }
-                
+
                 $vehicle = \App\Models\Vehicle::query()->findOrFail($this->selectedVehicleId);
                 $vehicle->vehicle_is = VehicleIs::from($this->attachTitleVehicleIs);
                 $vehicle->save();
@@ -770,7 +770,7 @@ new #[Title('Shipment Details')] class extends Component {
         $this->authorizeStaffOrSuperAdmin();
 
         $this->selectedVehicleId = $vehicleId;
-        
+
         if ($vehicleId) {
             $vehicle = \App\Models\Vehicle::query()->findOrFail($vehicleId);
             $this->toWorkshopWorkshopId = $vehicle->workshop_id;
@@ -796,7 +796,7 @@ new #[Title('Shipment Details')] class extends Component {
 
         DB::transaction(function () use ($workshopId, $vehicleId): void {
             $workshop = Workshop::query()->findOrFail($workshopId);
-            
+
             if ($vehicleId) {
                 $vehicle = \App\Models\Vehicle::query()->findOrFail($vehicleId);
                 $vehicle->update([
@@ -855,7 +855,7 @@ new #[Title('Shipment Details')] class extends Component {
             if ($vehicleId) {
                 $vehicle = \App\Models\Vehicle::query()->findOrFail($vehicleId);
                 $stored = $vehicle->status_before_workshop ?? ShipmentStatus::Pending;
-                
+
                 $vehicle->update([
                     'is_at_workshop' => false,
                     'workshop_id' => null,
@@ -1010,7 +1010,7 @@ new #[Title('Shipment Details')] class extends Component {
         $this->shipment->refresh()->load([
             'shipper.user',
             'consignee',
-            'vehicle',
+            'vehicles',
             'originPort.state',
             'originPort.country',
             'destinationPort.state',
@@ -1109,7 +1109,8 @@ new #[Title('Shipment Details')] class extends Component {
                             </flux:badge>
                         @endif
                         @if($shipment->isContainer())
-                            <flux:badge color="{{ $shipment->isSealed() ? 'emerald' : 'amber' }}" variant="subtle" size="sm" icon="lock-closed">
+                            <flux:badge color="{{ $shipment->isSealed() ? 'emerald' : 'amber' }}" variant="subtle" size="sm"
+                                icon="lock-closed">
                                 {{ $shipment->isSealed() ? __('Container Sealed') : __('Container Open') }}
                             </flux:badge>
                             <flux:badge color="zinc" variant="outline" size="sm" icon="users">
@@ -1353,64 +1354,13 @@ new #[Title('Shipment Details')] class extends Component {
                                 {{ __('Location') }}
                             </flux:text>
                             <flux:text class="font-medium">
-                                {{ \Illuminate\Support\Str::upper($shipment->vehicle?->location ?? '—') }}
+                                {{ \Illuminate\Support\Str::upper($shipment->vehicles->first()?->location ?? '—') }}
                             </flux:text>
                         </div>
                     </div>
                 </x-crud.panel>
 
-                {{-- Vehicle & Photos --}}
-                @if($shipment->vehicle)
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div class="lg:col-span-2">
-                            <x-crud.panel class="overflow-hidden p-0 h-full min-h-[360px]">
-                                @php $photos = $shipment->vehicle->copartCarPhotoUrls(); @endphp
-                                @if(count($photos) > 0)
-                                    <div x-data="{ 
-                                                    active: 0, 
-                                                    photos: {{ json_encode($photos) }},
-                                                    next() { this.active = (this.active + 1) % this.photos.length },
-                                                    prev() { this.active = (this.active - 1 + this.photos.length) % this.photos.length }
-                                                }" class="relative h-full w-full group">
-                                        <img :src="photos[active]"
-                                            class="h-full w-full object-cover transition-all duration-500 ease-in-out" />
 
-                                        <div
-                                            class="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent p-6">
-                                            <flux:heading class="text-white! text-2xl!">
-                                                {{ $shipment->vehicle->year }} {{ $shipment->vehicle->make }}
-                                                {{ $shipment->vehicle->model }}
-                                            </flux:heading>
-                                            <div class="flex items-center gap-4 mt-2">
-                                                <flux:badge color="white" variant="solid" size="sm" icon="finger-print"
-                                                    class="text-zinc-900!">
-                                                    {{ $shipment->vehicle->vin }}
-                                                </flux:badge>
-                                                <flux:badge color="indigo" variant="solid" size="sm" icon="ticket">
-                                                    {{ $shipment->vehicle->lot_number ?? 'N/A' }}
-                                                </flux:badge>
-                                            </div>
-                                        </div>
-
-                                        @if(count($photos) > 1)
-                                            <button type="button" @click="prev()"
-                                                class="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-black/30 hover:bg-black/50 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-subtle">
-                                                <flux:icon.chevron-left class="size-6" />
-                                            </button>
-                                            <button type="button" @click="next()"
-                                                class="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-black/30 hover:bg-black/50 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-subtle">
-                                                <flux:icon.chevron-right class="size-6" />
-                                            </button>
-
-                                            <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
-                                                <template x-for="(photo, index) in photos" :key="index">
-                                                    <div @click="active = index"
-                                                        :class="active === index ? 'bg-white w-6' : 'bg-white/30 hover:bg-white/50 w-2'"
-                                                        class="h-1.5 rounded-full transition-all duration-300 cursor-pointer"></div>
-                                                </template>
-                                            </div>
-                                        @endif
-                                    </div>
                 {{-- Vehicles Section --}}
                 <div class="space-y-6">
                     <div class="flex items-center justify-between">
@@ -1440,22 +1390,31 @@ new #[Title('Shipment Details')] class extends Component {
                                     <div class="flex-1 p-6">
                                         <div class="flex flex-col md:flex-row justify-between gap-4">
                                             <div>
-                                                <h4 class="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                                                <h4
+                                                    class="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                                                     {{ $vehicle->year }} {{ $vehicle->make }} {{ $vehicle->model }}
-                                                    @if($vehicle->atWorkshop())
-                                                        <flux:badge color="amber" size="sm" variant="subtle">{{ __('At Workshop') }}</flux:badge>
+                                                    @if($vehicle->workshop_id)
+                                                        <flux:badge color="amber" size="sm" variant="subtle">
+                                                            {{ __('At Workshop') }}</flux:badge>
                                                     @endif
                                                 </h4>
-                                                <flux:text size="sm" class="font-mono text-zinc-500 uppercase mt-1">{{ $vehicle->vin }}</flux:text>
+                                                <flux:text size="sm" class="font-mono text-zinc-500 uppercase mt-1">
+                                                    {{ $vehicle->vin }}</flux:text>
                                             </div>
                                             <div class="flex items-start gap-2">
-                                                <flux:button :href="route('vehicles.show', $vehicle)" icon="eye" size="sm" variant="ghost" wire:navigate />
+                                                {{--
+                                                <flux:button :href="route('vehicles.show', $vehicle)" icon="eye" size="sm"
+                                                    variant="ghost" wire:navigate /> --}}
                                                 @can('shipments.update')
                                                     <flux:dropdown>
                                                         <flux:button icon="ellipsis-vertical" size="sm" variant="ghost" />
                                                         <flux:menu>
-                                                            <flux:menu.item icon="wrench" wire:click="openToWorkshopModal({{ $vehicle->id }})">{{ __('Send to Workshop') }}</flux:menu.item>
-                                                            <flux:menu.item icon="truck" wire:click="openAssignDriverModal({{ $vehicle->id }})">{{ __('Assign Driver') }}</flux:menu.item>
+                                                            <flux:menu.item icon="wrench"
+                                                                wire:click="openToWorkshopModal({{ $vehicle->id }})">
+                                                                {{ __('Send to Workshop') }}</flux:menu.item>
+                                                            <flux:menu.item icon="truck"
+                                                                wire:click="openAssignDriverModal({{ $vehicle->id }})">
+                                                                {{ __('Assign Driver') }}</flux:menu.item>
                                                         </flux:menu>
                                                     </flux:dropdown>
                                                 @endcan
@@ -1464,24 +1423,39 @@ new #[Title('Shipment Details')] class extends Component {
 
                                         <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mt-6">
                                             <div>
-                                                <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">{{ __('Lot #') }}</flux:text>
-                                                <flux:text size="sm" class="font-semibold">{{ $vehicle->lot_number ?: '—' }}</flux:text>
+                                                <flux:text size="xs"
+                                                    class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
+                                                    {{ __('Lot #') }}</flux:text>
+                                                <flux:text size="sm" class="font-semibold">{{ $vehicle->lot_number ?: '—' }}
+                                                </flux:text>
                                             </div>
                                             <div>
-                                                <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">{{ __('Condition') }}</flux:text>
-                                                <flux:badge color="indigo" size="sm">{{ $vehicle->vehicle_is?->label() ?: '—' }}</flux:badge>
+                                                <flux:text size="xs"
+                                                    class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
+                                                    {{ __('Condition') }}</flux:text>
+                                                <flux:badge color="indigo" size="sm">
+                                                    {{ $vehicle->vehicle_is?->label() ?: '—' }}</flux:badge>
                                             </div>
                                             <div>
-                                                <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">{{ __('Workshop') }}</flux:text>
+                                                <flux:text size="xs"
+                                                    class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
+                                                    {{ __('Workshop') }}</flux:text>
                                                 <flux:text size="sm">{{ $vehicle->workshop?->name ?: '—' }}</flux:text>
                                             </div>
                                             <div>
-                                                <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">{{ __('Driver') }}</flux:text>
-                                                <flux:text size="sm">{{ $vehicle->driver?->company ?: $vehicle->driver?->phone ?: '—' }}</flux:text>
+                                                <flux:text size="xs"
+                                                    class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
+                                                    {{ __('Driver') }}</flux:text>
+                                                <flux:text size="sm">
+                                                    {{ $vehicle->driver?->company ?: $vehicle->driver?->phone ?: '—' }}
+                                                </flux:text>
                                             </div>
                                             <div>
-                                                <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">{{ __('Gatepass PIN') }}</flux:text>
-                                                <flux:text size="sm" class="font-mono font-bold">{{ $vehicle->gatepass_pin ?: '—' }}</flux:text>
+                                                <flux:text size="xs"
+                                                    class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
+                                                    {{ __('Gatepass PIN') }}</flux:text>
+                                                <flux:text size="sm" class="font-mono font-bold">
+                                                    {{ $vehicle->gatepass_pin ?: '—' }}</flux:text>
                                             </div>
                                         </div>
                                     </div>
@@ -1616,13 +1590,18 @@ new #[Title('Shipment Details')] class extends Component {
                         @if($shipment->trackings->isEmpty())
                             <flux:text class="text-zinc-500">{{ __('No tracking recorded for this shipment.') }}</flux:text>
                         @else
-                            <div class="space-y-6 relative before:absolute before:inset-y-0 before:left-3 before:w-px before:bg-zinc-200 dark:before:bg-zinc-800">
+                            <div
+                                class="space-y-6 relative before:absolute before:inset-y-0 before:left-3 before:w-px before:bg-zinc-200 dark:before:bg-zinc-800">
                                 @foreach($shipment->trackings as $tracking)
                                     <div class="pl-8 relative">
-                                        <div class="absolute left-1.5 top-1.5 size-3 rounded-full bg-indigo-500 border-2 border-white dark:border-zinc-900 shadow-sm"></div>
+                                        <div
+                                            class="absolute left-1.5 top-1.5 size-3 rounded-full bg-indigo-500 border-2 border-white dark:border-zinc-900 shadow-sm">
+                                        </div>
                                         <div class="flex items-center justify-between gap-4 mb-2">
-                                            <flux:badge color="indigo" size="sm" variant="subtle">{{ $tracking->status->name }}</flux:badge>
-                                            <flux:text size="xs" class="text-zinc-400 font-mono">{{ $tracking->recorded_at?->format('M d, Y H:i') }}</flux:text>
+                                            <flux:badge color="indigo" size="sm" variant="subtle">{{ $tracking->status->name }}
+                                            </flux:badge>
+                                            <flux:text size="xs" class="text-zinc-400 font-mono">
+                                                {{ $tracking->recorded_at?->format('M d, Y H:i') }}</flux:text>
                                         </div>
                                         <flux:text size="sm">{{ $tracking->note }}</flux:text>
                                     </div>
@@ -1645,20 +1624,27 @@ new #[Title('Shipment Details')] class extends Component {
                         @if($allVehicleTrackings->isEmpty())
                             <flux:text class="text-zinc-500">{{ __('No vehicle-specific events recorded.') }}</flux:text>
                         @else
-                            <div class="space-y-6 relative before:absolute before:inset-y-0 before:left-3 before:w-px before:bg-zinc-200 dark:before:bg-zinc-800">
+                            <div
+                                class="space-y-6 relative before:absolute before:inset-y-0 before:left-3 before:w-px before:bg-zinc-200 dark:before:bg-zinc-800">
                                 @foreach($allVehicleTrackings as $vTracking)
                                     <div class="pl-8 relative">
-                                        <div class="absolute left-1.5 top-1.5 size-3 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-900 shadow-sm"></div>
+                                        <div
+                                            class="absolute left-1.5 top-1.5 size-3 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-900 shadow-sm">
+                                        </div>
                                         <div class="flex items-center justify-between gap-4 mb-1">
                                             <flux:text size="sm" class="font-bold">
-                                                {{ $vTracking->vehicle->year }} {{ $vTracking->vehicle->make }} ({{ $vTracking->vehicle->lot_number }})
+                                                {{ $vTracking->vehicle->year }} {{ $vTracking->vehicle->make }}
+                                                ({{ $vTracking->vehicle->lot_number }})
                                             </flux:text>
-                                            <flux:text size="xs" class="text-zinc-400 font-mono">{{ $vTracking->recorded_at?->format('M d, Y H:i') }}</flux:text>
+                                            <flux:text size="xs" class="text-zinc-400 font-mono">
+                                                {{ $vTracking->recorded_at?->format('M d, Y H:i') }}</flux:text>
                                         </div>
                                         <div class="flex items-center gap-2 mb-2">
-                                            <flux:badge color="emerald" size="xs" variant="subtle">{{ $vTracking->status->name }}</flux:badge>
+                                            <flux:badge color="emerald" size="xs" variant="subtle">
+                                                {{ $vTracking->status->name }}</flux:badge>
                                         </div>
-                                        <flux:text size="xs" class="text-zinc-600 dark:text-zinc-400 italic">"{{ $vTracking->note }}"</flux:text>
+                                        <flux:text size="xs" class="text-zinc-600 dark:text-zinc-400 italic">
+                                            "{{ $vTracking->note }}"</flux:text>
                                     </div>
                                 @endforeach
                             </div>
@@ -1829,7 +1815,8 @@ new #[Title('Shipment Details')] class extends Component {
                                 </flux:button>
                             @else
                                 <flux:text size="sm" class="text-zinc-500">
-                                    {{ __('You do not have permission to attach documents.') }}</flux:text>
+                                    {{ __('You do not have permission to attach documents.') }}
+                                </flux:text>
                             @endcan
                         </div>
                     </div>
@@ -1947,7 +1934,8 @@ new #[Title('Shipment Details')] class extends Component {
 
                 <flux:select wire:model.live="selectedVehicleId" :label="__('Relates to vehicle…')">
                     @foreach($shipment->vehicles as $v)
-                        <flux:select.option value="{{ $v->id }}">{{ $v->year }} {{ $v->make }} {{ $v->model }} ({{ $v->vin }})</flux:select.option>
+                        <flux:select.option value="{{ $v->id }}">{{ $v->year }} {{ $v->make }} {{ $v->model }} ({{ $v->vin }})
+                        </flux:select.option>
                     @endforeach
                 </flux:select>
                 <flux:error name="selectedVehicleId" />

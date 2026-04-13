@@ -167,7 +167,7 @@ new #[Title('Submit Prealert')] class extends Component {
     public function removeVehicle(int $id): void
     {
         unset($this->vehicles[$id]);
-        
+
         // Dynamic mode revert
         if (count($this->vehicles) > 1) {
             $this->shipping_mode = 'container';
@@ -177,6 +177,23 @@ new #[Title('Submit Prealert')] class extends Component {
         }
 
         $this->notification()->info(__('Vehicle removed from list.'));
+    }
+
+    public function updatedShipmentId(): void
+    {
+        if (! $this->shipment_id) {
+            return;
+        }
+
+        $target = Shipment::withCount('vehicles')->find($this->shipment_id);
+        if (! $target) {
+            return;
+        }
+
+        $total = count($this->vehicles) + $target->vehicles_count;
+        if ($total > 5) {
+            $this->notification()->warning(__('Warning: Adding these :count vehicles to this container will exceed the 5-vehicle capacity limit. Please select a different container or reduce your vehicle list.', ['count' => count($this->vehicles)]));
+        }
     }
 
     public function save(): void
@@ -192,6 +209,16 @@ new #[Title('Submit Prealert')] class extends Component {
             'destination_port_id' => ['nullable', 'exists:ports,id'],
             'notes' => ['nullable', 'string'],
         ]);
+
+        // Capacity constraint when linking to an existing container
+        if ($this->shipment_id) {
+            $target = Shipment::withCount('vehicles')->find($this->shipment_id);
+            if ($target && (count($this->vehicles) + $target->vehicles_count) > 5) {
+                $this->notification()->error(__('Action impossible: Adding these vehicles to the selected container would exceed the 5-vehicle capacity limit.'));
+
+                return;
+            }
+        }
 
         // Process file uploads for each vehicle
         foreach ($this->vehicles as $index => &$v) {
@@ -382,14 +409,10 @@ new #[Title('Submit Prealert')] class extends Component {
                                     </flux:heading>
                                     <div class="flex items-center gap-2 mt-1">
                                         @if(count($vehicles) <= 1)
-                                            <flux:button.group>
-                                                <flux:button wire:click="$set('shipping_mode', 'roro')" :variant="$shipping_mode === 'roro' ? 'primary' : 'ghost'" size="xs" class="px-3">
-                                                    {{ __('RoRo') }}
-                                                </flux:button>
-                                                <flux:button wire:click="$set('shipping_mode', 'container')" :variant="$shipping_mode === 'container' ? 'primary' : 'ghost'" size="xs" class="px-3">
-                                                    {{ __('Container') }}
-                                                </flux:button>
-                                            </flux:button.group>
+                                            <flux:radio.group wire:model.live="shipping_mode" variant="segmented" size="xs">
+                                                <flux:radio :label="__('RoRo')" value="roro" icon="car" />
+                                                <flux:radio :label="__('Container')" value="container" icon="container" />
+                                            </flux:radio.group>
                                         @else
                                             <flux:badge color="rose" variant="subtle" size="sm" icon="container">
                                                 {{ __('Container Mode (Auto)') }}
@@ -408,7 +431,7 @@ new #[Title('Submit Prealert')] class extends Component {
                                 <flux:label size="lg" class="mb-3 font-bold text-zinc-800 dark:text-zinc-200">{{ __('Add Vehicle VIN') }}</flux:label>
                                 <flux:input wire:model.live.debounce.500ms="vin"
                                     icon="identification"
-                                    placeholder="{{ __('Enter 17-character VIN...') }}" 
+                                    placeholder="{{ __('Enter VIN...') }}" 
                                     maxlength="17"
                                     class="font-mono uppercase text-xl"></flux:input>
                                 @if($vinError)
@@ -630,7 +653,7 @@ new #[Title('Submit Prealert')] class extends Component {
                             @if($shipping_mode === 'container' && $shipper_id)
                                 <flux:field>
                                     <flux:label class="text-xs font-bold uppercase tracking-wider text-zinc-400">{{ __('Link to Container') }}</flux:label>
-                                    <flux:select wire:model="shipment_id" :placeholder="__('Select open container...')">
+                                    <flux:select wire:model.live="shipment_id" :placeholder="__('Select open container...')">
                                         <flux:select.option value="">{{ __('Start New Container') }}</flux:select.option>
                                         @foreach($this->openContainers as $s)
                                             <flux:select.option :value="$s->id">
@@ -638,6 +661,22 @@ new #[Title('Submit Prealert')] class extends Component {
                                             </flux:select.option>
                                         @endforeach
                                     </flux:select>
+                                    @if($shipment_id)
+                                        @php
+                                            $selectedContainer = $this->openContainers->firstWhere('id', $shipment_id);
+                                            $totalIfMerged = $selectedContainer ? count($vehicles) + $selectedContainer->vehicles_count : 0;
+                                        @endphp
+                                        @if($totalIfMerged > 5)
+                                            <flux:callout color="rose" icon="exclamation-triangle" class="mt-2">
+                                                <flux:callout.heading>{{ __('Capacity Exceeded') }}</flux:callout.heading>
+                                                <flux:callout.text>{{ __('Adding :count vehicles to this container would result in :total/5 — exceeding the limit.', ['count' => count($vehicles), 'total' => $totalIfMerged]) }}</flux:callout.text>
+                                            </flux:callout>
+                                        @elseif($totalIfMerged > 0)
+                                            <flux:badge color="emerald" variant="subtle" size="sm" icon="check-circle" class="mt-1">
+                                                {{ __(':total/5 vehicles after merge', ['total' => $totalIfMerged]) }}
+                                            </flux:badge>
+                                        @endif
+                                    @endif
                                 </flux:field>
                             @endif
 
