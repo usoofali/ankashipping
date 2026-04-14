@@ -32,8 +32,7 @@ new #[Title('Shipments')] class extends Component {
             ->when($this->search !== '', function ($query): void {
                 $query->where(function ($searchQuery): void {
                     $term = '%' . trim($this->search) . '%';
-                    $searchQuery->where('vin', 'like', $term)
-                        ->orWhere('reference_no', 'like', $term)
+                    $searchQuery->where('reference_no', 'like', $term)
                         ->orWhereHas('vehicles', function ($vehicleQuery) use ($term): void {
                             $vehicleQuery->where('make', 'like', $term)
                                 ->orWhere('model', 'like', $term)
@@ -78,7 +77,7 @@ new #[Title('Shipments')] class extends Component {
             ->whereNotNull('created_at')
             ->latest('created_at')
             ->get(['created_at'])
-            ->map(fn (Shipment $shipment): ?string => $shipment->created_at?->format('Y'))
+            ->map(fn(Shipment $shipment): ?string => $shipment->created_at?->format('Y'))
             ->filter()
             ->unique()
             ->values();
@@ -91,18 +90,13 @@ new #[Title('Shipments')] class extends Component {
             <div class="rounded-lg bg-zinc-100 p-2 dark:bg-zinc-800">
                 <flux:icon.truck class="size-6 text-zinc-600 dark:text-zinc-400" />
             </div>
-            <x-crud.page-header :heading="__('Shipments')" :subheading="__('Manage all active shipments and their status.')"
-                class="mb-0!" />
+            <x-crud.page-header :heading="__('Shipments')" :subheading="__('Manage all active shipments and their status.')" class="mb-0!" />
         </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
-        <flux:input
-            wire:model.live.debounce.300ms="search"
-            label="{{ __('Search') }}"
-            icon="magnifying-glass"
-            placeholder="{{ __('VIN, Ref, Vehicle, Shipper') }}"
-        />
+        <flux:input wire:model.live.debounce.300ms="search" label="{{ __('Search') }}" icon="magnifying-glass"
+            placeholder="{{ __('VIN, Ref, Vehicle, Shipper') }}" />
 
         <flux:select wire:model.live="filterMonth" label="{{ __('Month') }}" icon="calendar-days">
             <flux:select.option value="">{{ __('All Months') }}</flux:select.option>
@@ -145,7 +139,6 @@ new #[Title('Shipments')] class extends Component {
                 <flux:table.column>{{ __('Vehicle') }}</flux:table.column>
                 <flux:table.column>{{ __('Shipper') }}</flux:table.column>
                 <flux:table.column>{{ __('Origin Port') }}</flux:table.column>
-                <flux:table.column>{{ __('Driver') }}</flux:table.column>
                 <flux:table.column>{{ __('Invoice Total') }}</flux:table.column>
                 <flux:table.column>{{ __('Payment Status') }}</flux:table.column>
                 <flux:table.column>{{ __('Shipment Status') }}</flux:table.column>
@@ -157,11 +150,8 @@ new #[Title('Shipments')] class extends Component {
                     <flux:table.row :key="$shipment->id">
                         <flux:table.cell>
                             <div class="flex flex-col">
-                                <a
-                                    href="{{ route('shipments.show', $shipment) }}"
-                                    wire:navigate
-                                    class="font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
-                                >
+                                <a href="{{ route('shipments.show', $shipment) }}" wire:navigate
+                                    class="font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
                                     {{ $shipment->reference_no }}
                                 </a>
                                 <span class="text-xs text-zinc-500 font-mono">
@@ -218,7 +208,6 @@ new #[Title('Shipments')] class extends Component {
                                             'platinum' => 'text-zinc-600 dark:text-zinc-400',
                                             'polished' => 'text-zinc-600 dark:text-zinc-400',
                                             'rubber' => 'text-zinc-600 dark:text-zinc-400',
-                                            'silver' => 'text-zinc-600 dark:text-zinc-400',
                                             'steel' => 'text-zinc-600 dark:text-zinc-400',
                                             'titanium' => 'text-zinc-600 dark:text-zinc-400',
                                             'nickel' => 'text-zinc-600 dark:text-zinc-400',
@@ -236,20 +225,11 @@ new #[Title('Shipments')] class extends Component {
                             @if($shipment->originPort)
                                 {{ $shipment->originPort->name }}
                                 <span class="text-xs text-zinc-500">
-                                    ({{ $shipment->originPort->state?->code ?? '—' }} - {{ $shipment->originPort->country?->iso2 ?? '—' }})
+                                    ({{ $shipment->originPort->state?->code ?? '—' }} -
+                                    {{ $shipment->originPort->country?->iso2 ?? '—' }})
                                 </span>
                             @else
                                 —
-                            @endif
-                        </flux:table.cell>
-                        <flux:table.cell>
-                            @if($shipment->driver_id && $shipment->driver)
-                                <div class="flex flex-col">
-                                    <span class="font-semibold">{{ $shipment->driver->company ?: '—' }}</span>
-                                    <span class="text-xs text-zinc-500">{{ $shipment->driver->phone ?: '—' }}</span>
-                                </div>
-                            @else
-                                <span class="text-zinc-500">{{ __('Driver Not assigned') }}</span>
                             @endif
                         </flux:table.cell>
                         <flux:table.cell class="font-mono">
