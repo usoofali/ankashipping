@@ -424,14 +424,26 @@
                     <span class="sub">ETA: {{ $shipment->arrival_date?->format('d M Y') ?: 'TBD' }}</span>
                 </td>
             </tr>
-            @if($shipment->domestic_routing)
-                <tr>
-                    <td colspan="4">
-                        <span class="lbl">Domestic Routing / Export Instructions</span>
-                        <div style="font-size:7.5pt;color:#333;">{{ $shipment->domestic_routing }}</div>
-                    </td>
-                </tr>
-            @endif
+            <tr>
+                <td colspan="3">
+                    <span class="lbl">Domestic Routing / Export Instructions</span>
+                    <div style="font-size:7.5pt;color:#333;min-height:14px;">{{ $shipment->domestic_routing }}</div>
+                </td>
+                <td style="text-align:center; vertical-align:middle;">
+                    <span class="lbl" style="text-align:left;">CONTAINERIZED (Vessel only)</span>
+                    <div style="margin-top:4px; font-size:9.5pt; color:#001f3f;">
+                        @if($shipment->isContainer())
+                            <span style="font-family:'DejaVu Sans', sans-serif; font-size:11pt;">&#9746;</span> Yes
+                            &nbsp;&nbsp;&nbsp;&nbsp;
+                            <span style="font-family:'DejaVu Sans', sans-serif; font-size:11pt;">&#9744;</span> No
+                        @else
+                            <span style="font-family:'DejaVu Sans', sans-serif; font-size:11pt;">&#9744;</span> Yes
+                            &nbsp;&nbsp;&nbsp;&nbsp;
+                            <span style="font-family:'DejaVu Sans', sans-serif; font-size:11pt;">&#9746;</span> No
+                        @endif
+                    </div>
+                </td>
+            </tr>
         </table>
 
         {{-- ── CARGO TABLE ── --}}
@@ -472,8 +484,8 @@
                             $m = (float) $vehicle->measurement;
                             // Given 457.97 is already in CFT, we treat it as such without multiplying
                             // (or auto-convert if it's genuinely a CBM value < 100)
-                            $mFt3 = ($m < 100 && strtoupper($vehicle->measurement_unit ?? '') === 'CBM') 
-                                ? $m * 35.3146667 
+                            $mFt3 = ($m < 100 && strtoupper($vehicle->measurement_unit ?? '') === 'CBM')
+                                ? $m * 35.3146667
                                 : $m;
                             $mVlb = $mFt3 * (1728 / 166);
                         @endphp
@@ -501,8 +513,8 @@
                         $sumKg += in_array($wu, ['LB', 'LBS']) ? $w / 2.20462262 : $w;
 
                         $m = (float) $v->measurement;
-                        $mFt3 = ($m < 100 && strtoupper($v->measurement_unit ?? '') === 'CBM') 
-                            ? $m * 35.3146667 
+                        $mFt3 = ($m < 100 && strtoupper($v->measurement_unit ?? '') === 'CBM')
+                            ? $m * 35.3146667
                             : $m;
                         $sumFt3 += $mFt3;
                         $sumVlb += $mFt3 * (1728 / 166);
@@ -512,13 +524,15 @@
                     <td colspan="2" style="text-align:right;font-size:8pt;color:#555;padding:5px 6px;">Total Cargo:</td>
                     <td style="text-align:center;color:#001f3f;">
                         <div style="font-family:'Helvetica-Bold',sans-serif;font-size:8.5pt;">
-                            {{ number_format($sumKg, 2) }} Kg</div>
+                            {{ number_format($sumKg, 2) }} Kg
+                        </div>
                         <div style="font-size:7.5pt;font-weight:normal;color:#333;">"{{ number_format($sumLb, 2) }} Lb"
                         </div>
                     </td>
                     <td style="text-align:center;color:#001f3f;">
                         <div style="font-family:'Helvetica-Bold',sans-serif;font-size:8.5pt;">
-                            {{ number_format($sumFt3, 2) }} ft&sup3;</div>
+                            {{ number_format($sumFt3, 2) }} ft&sup3;
+                        </div>
                         <div style="font-size:7.5pt;font-weight:normal;color:#333;">"{{ number_format($sumVlb, 2) }}
                             Vlb"</div>
                     </td>
