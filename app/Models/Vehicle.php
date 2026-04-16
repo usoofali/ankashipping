@@ -63,6 +63,11 @@ final class Vehicle extends Model
         'tracking_status',
         'status_before_workshop',
         'gatepass_pin',
+        'value',
+        'weight',
+        'weight_unit',
+        'measurement',
+        'measurement_unit',
     ];
 
     protected function casts(): array
@@ -160,5 +165,26 @@ final class Vehicle extends Model
     public function trackings(): HasMany
     {
         return $this->hasMany(VehicleTracking::class);
+    }
+
+    /**
+     * Vehicle-level documents (decoupled from shipment documents).
+     *
+     * @return HasMany<VehicleDocument, $this>
+     */
+    public function vehicleDocuments(): HasMany
+    {
+        return $this->hasMany(VehicleDocument::class);
+    }
+
+    public function updateStatus(VehicleStatus $status, ?string $note = null): void
+    {
+        $this->update(['tracking_status' => $status]);
+
+        $this->trackings()->create([
+            'status' => $status,
+            'note' => $note,
+            'recorded_at' => now(),
+        ]);
     }
 }

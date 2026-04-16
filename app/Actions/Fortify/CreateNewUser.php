@@ -89,6 +89,8 @@ class CreateNewUser implements CreatesNewUsers
                 'shipper_id' => $shipper->id,
                 'name' => $user->name ?? $companyName,
                 'address' => $shipper->address,
+                'country_id' => $shipper->country_id,
+                'state_id' => $shipper->state_id,
                 'is_default' => true,
             ]);
 

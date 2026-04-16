@@ -1,0 +1,573 @@
+
+   PASS  Tests\Unit\ExampleTest
+  ✓ that true is true                                                    0.01s  
+
+   FAIL  Tests\Feature\Auth\AuthenticationTest
+  ⨯ login screen can be rendered                                         0.93s  
+  ⨯ users can authenticate using the login screen                        4.30s  
+  ✓ users can not authenticate with invalid password                     0.03s  
+  ⨯ users can logout                                                     0.04s  
+
+   FAIL  Tests\Feature\Auth\EmailVerificationTest
+  ⨯ email verification screen can be rendered                            0.04s  
+  ⨯ email can be verified                                                0.06s  
+  ✓ email is not verified with invalid hash                              0.03s  
+
+   FAIL  Tests\Feature\Auth\PasswordConfirmationTest
+  ⨯ confirm password screen can be rendered                              0.03s  
+  ⨯ password can be confirmed                                            0.04s  
+  ⨯ password is not confirmed with invalid password                      0.04s  
+
+   FAIL  Tests\Feature\Auth\PasswordResetTest
+  ⨯ reset password link screen can be rendered                           0.05s  
+  ⨯ reset password link can be requested                                 0.04s  
+  ⨯ reset password screen can be rendered                                0.04s  
+  ⨯ password can be reset with valid token                               0.04s  
+
+   FAIL  Tests\Feature\Auth\RegistrationTest
+  ⨯ registration screen can be rendered                                  0.06s  
+  ⨯ new users can register                                               0.04s  
+
+   PASS  Tests\Feature\DashboardTest
+  ✓ guests are redirected to the login page                              0.05s  
+  ✓ authenticated users can visit the dashboard                          0.24s  
+
+   FAIL  Tests\Feature\ExampleTest
+  ⨯ returns a successful response                                        0.05s  
+
+   PASS  Tests\Feature\ModeAwareNotificationTest
+  ✓ ShipmentCreatedNotification content is mode aware                    0.12s  
+  ✓ PrealertCreatedNotification content is mode aware                    0.08s  
+
+   PASS  Tests\Feature\Settings\DefaultShipmentSettingTest
+  ✓ default shipment settings can be updated and are loaded correctly    0.39s  
+
+   FAIL  Tests\Feature\Settings\PasswordUpdateTest
+  ⨯ password can be updated                                              0.03s  
+  ⨯ correct password must be provided to update password                 0.03s  
+
+   FAIL  Tests\Feature\Settings\ProfileUpdateTest
+  ✓ profile page is displayed                                            0.29s  
+  ⨯ profile information can be updated                                   0.03s  
+  ⨯ email verification status is unchanged when email address is unchan… 0.04s  
+  ⨯ user can delete their account                                        0.04s  
+  ⨯ correct password must be provided to delete account                  0.04s  
+
+   PASS  Tests\Feature\ShipmentCreatePrealertTest
+  ✓ prealert_id is nullified on vehicles when shipment is created from…  3.74s  
+  ✓ single vehicle can be converted to container shipment                3.27s  
+
+   PASS  Tests\Feature\ShipmentMergeTest
+  ✓ can merge prealert vehicles into existing container shipment         0.30s  
+  ✓ cannot merge into existing shipment if capacity exceeds 5            0.29s  
+
+   FAIL  Tests\Feature\VehicleIndexTest
+  ⨯ only shows vehicles without shipment or prealert                     0.07s  
+  ⨯ can search vehicles                                                  0.04s  
+  ⨯ can create a vehicle manually                                        0.03s  
+  ⨯ can edit a vehicle                                                   0.03s  
+  ⨯ can delete a vehicle                                                 0.03s  
+  ⨯ cannot delete vehicle linked to shipment                             0.04s  
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Auth\AuthenticationTest > login screen can be rende…   
+  Expected response status code [200] but received 302.
+Failed asserting that 302 is identical to 200.
+
+  at tests/Feature/Auth/AuthenticationTest.php:9
+      5▕ 
+      6▕ test('login screen can be rendered', function () {
+      7▕     $response = $this->get('/login');
+      8▕ 
+  ➜   9▕     $response->assertStatus(200);
+     10▕ });
+     11▕ 
+     12▕ test('users can authenticate using the login screen', function () {
+     13▕     $user = User::factory()->create();
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Auth\AuthenticationTest…  ComponentNotFoundException   
+  Unable to find component: [auth.login]
+
+  at vendor/livewire/livewire/src/Factory/Factory.php:76
+     72▕             }
+     73▕         }
+     74▕ 
+     75▕         if (! $class || ! class_exists($class) || ! is_subclass_of($class, Component::class)) {
+  ➜  76▕             throw new ComponentNotFoundException(
+     77▕                 "Unable to find component: [{$name}]"
+     78▕             );
+     79▕         }
+     80▕
+
+      [2m+6 vendor frames [22m
+  7   storage/framework/views/b5a52cf10e686f4a5902a63b8b5ebaef.php:14
+      [2m+38 vendor frames [22m
+  46  tests/Feature/Auth/AuthenticationTest.php:15
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Auth\AuthenticationTest > users can logout             
+  The user is authenticated
+Failed asserting that true is false.
+
+  at tests/Feature/Auth/AuthenticationTest.php:43
+     39▕     $user = User::factory()->create();
+     40▕ 
+     41▕     $response = $this->actingAs($user)->post('/logout');
+     42▕ 
+  ➜  43▕     $this->assertGuest();
+     44▕     $response->assertRedirect('/');
+     45▕ });
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Auth\EmailVerificationTest > email verification scr…   
+  Expected response status code [200] but received 404.
+Failed asserting that 404 is identical to 200.
+
+  at tests/Feature/Auth/EmailVerificationTest.php:13
+      9▕     $user = User::factory()->unverified()->create();
+     10▕ 
+     11▕     $response = $this->actingAs($user)->get('/verify-email');
+     12▕ 
+  ➜  13▕     $response->assertStatus(200);
+     14▕ });
+     15▕ 
+     16▕ test('email can be verified', function () {
+     17▕     $user = User::factory()->unverified()->create();
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Auth\EmailVerificationTest > email can be verified     
+  The expected [Illuminate\Auth\Events\Verified] event was not dispatched.
+Failed asserting that false is true.
+
+  at vendor/laravel/framework/src/Illuminate/Support/Testing/Fakes/EventFake.php:144
+    140▕         if (is_int($callback)) {
+    141▕             return $this->assertDispatchedTimes($event, $callback);
+    142▕         }
+    143▕ 
+  ➜ 144▕         PHPUnit::assertTrue(
+    145▕             $this->dispatched($event, $callback)->count() > 0,
+    146▕             "The expected [{$event}] event was not dispatched."
+    147▕         );
+    148▕     }
+
+      [2m+2 vendor frames [22m
+  3   tests/Feature/Auth/EmailVerificationTest.php:29
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Auth\PasswordConfirmationTest > confirm password sc…   
+  Expected response status code [200] but received 404.
+Failed asserting that 404 is identical to 200.
+
+  at tests/Feature/Auth/PasswordConfirmationTest.php:11
+      7▕     $user = User::factory()->create();
+      8▕ 
+      9▕     $response = $this->actingAs($user)->get('/confirm-password');
+     10▕ 
+  ➜  11▕     $response->assertStatus(200);
+     12▕ });
+     13▕ 
+     14▕ test('password can be confirmed', function () {
+     15▕     $user = User::factory()->create();
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Auth\PasswordConfirmati…  ComponentNotFoundException   
+  Unable to find component: [auth.confirm-password]
+
+  at vendor/livewire/livewire/src/Factory/Factory.php:76
+     72▕             }
+     73▕         }
+     74▕ 
+     75▕         if (! $class || ! class_exists($class) || ! is_subclass_of($class, Component::class)) {
+  ➜  76▕             throw new ComponentNotFoundException(
+     77▕                 "Unable to find component: [{$name}]"
+     78▕             );
+     79▕         }
+     80▕
+
+      [2m+6 vendor frames [22m
+  7   storage/framework/views/b5a52cf10e686f4a5902a63b8b5ebaef.php:14
+      [2m+38 vendor frames [22m
+  46  tests/Feature/Auth/PasswordConfirmationTest.php:19
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Auth\PasswordConfirmati…  ComponentNotFoundException   
+  Unable to find component: [auth.confirm-password]
+
+  at vendor/livewire/livewire/src/Factory/Factory.php:76
+     72▕             }
+     73▕         }
+     74▕ 
+     75▕         if (! $class || ! class_exists($class) || ! is_subclass_of($class, Component::class)) {
+  ➜  76▕             throw new ComponentNotFoundException(
+     77▕                 "Unable to find component: [{$name}]"
+     78▕             );
+     79▕         }
+     80▕
+
+      [2m+6 vendor frames [22m
+  7   storage/framework/views/b5a52cf10e686f4a5902a63b8b5ebaef.php:14
+      [2m+38 vendor frames [22m
+  46  tests/Feature/Auth/PasswordConfirmationTest.php:33
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Auth\PasswordResetTest > reset password link screen…   
+  Expected response status code [200] but received 302.
+Failed asserting that 302 is identical to 200.
+
+  at tests/Feature/Auth/PasswordResetTest.php:11
+      7▕ 
+      8▕ test('reset password link screen can be rendered', function () {
+      9▕     $response = $this->get('/forgot-password');
+     10▕ 
+  ➜  11▕     $response->assertStatus(200);
+     12▕ });
+     13▕ 
+     14▕ test('reset password link can be requested', function () {
+     15▕     Notification::fake();
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Auth\PasswordResetTest…   ComponentNotFoundException   
+  Unable to find component: [auth.forgot-password]
+
+  at vendor/livewire/livewire/src/Factory/Factory.php:76
+     72▕             }
+     73▕         }
+     74▕ 
+     75▕         if (! $class || ! class_exists($class) || ! is_subclass_of($class, Component::class)) {
+  ➜  76▕             throw new ComponentNotFoundException(
+     77▕                 "Unable to find component: [{$name}]"
+     78▕             );
+     79▕         }
+     80▕
+
+      [2m+6 vendor frames [22m
+  7   storage/framework/views/b5a52cf10e686f4a5902a63b8b5ebaef.php:14
+      [2m+38 vendor frames [22m
+  46  tests/Feature/Auth/PasswordResetTest.php:19
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Auth\PasswordResetTest…   ComponentNotFoundException   
+  Unable to find component: [auth.forgot-password]
+
+  at vendor/livewire/livewire/src/Factory/Factory.php:76
+     72▕             }
+     73▕         }
+     74▕ 
+     75▕         if (! $class || ! class_exists($class) || ! is_subclass_of($class, Component::class)) {
+  ➜  76▕             throw new ComponentNotFoundException(
+     77▕                 "Unable to find component: [{$name}]"
+     78▕             );
+     79▕         }
+     80▕
+
+      [2m+6 vendor frames [22m
+  7   storage/framework/views/b5a52cf10e686f4a5902a63b8b5ebaef.php:14
+      [2m+38 vendor frames [22m
+  46  tests/Feature/Auth/PasswordResetTest.php:31
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Auth\PasswordResetTest…   ComponentNotFoundException   
+  Unable to find component: [auth.forgot-password]
+
+  at vendor/livewire/livewire/src/Factory/Factory.php:76
+     72▕             }
+     73▕         }
+     74▕ 
+     75▕         if (! $class || ! class_exists($class) || ! is_subclass_of($class, Component::class)) {
+  ➜  76▕             throw new ComponentNotFoundException(
+     77▕                 "Unable to find component: [{$name}]"
+     78▕             );
+     79▕         }
+     80▕
+
+      [2m+6 vendor frames [22m
+  7   storage/framework/views/b5a52cf10e686f4a5902a63b8b5ebaef.php:14
+      [2m+38 vendor frames [22m
+  46  tests/Feature/Auth/PasswordResetTest.php:49
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Auth\RegistrationTest > registration screen can be…    
+  Expected response status code [200] but received 302.
+Failed asserting that 302 is identical to 200.
+
+  at tests/Feature/Auth/RegistrationTest.php:8
+      4▕ 
+      5▕ test('registration screen can be rendered', function () {
+      6▕     $response = $this->get('/register');
+      7▕ 
+  ➜   8▕     $response->assertStatus(200);
+      9▕ });
+     10▕ 
+     11▕ test('new users can register', function () {
+     12▕     $response = Volt::test('auth.register')
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Auth\RegistrationTest >…  ComponentNotFoundException   
+  Unable to find component: [auth.register]
+
+  at vendor/livewire/livewire/src/Factory/Factory.php:76
+     72▕             }
+     73▕         }
+     74▕ 
+     75▕         if (! $class || ! class_exists($class) || ! is_subclass_of($class, Component::class)) {
+  ➜  76▕             throw new ComponentNotFoundException(
+     77▕                 "Unable to find component: [{$name}]"
+     78▕             );
+     79▕         }
+     80▕
+
+      [2m+6 vendor frames [22m
+  7   storage/framework/views/b5a52cf10e686f4a5902a63b8b5ebaef.php:14
+      [2m+38 vendor frames [22m
+  46  tests/Feature/Auth/RegistrationTest.php:12
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\ExampleTest > returns a successful response            
+  Expected response status code [200] but received 302.
+Failed asserting that 302 is identical to 200.
+
+  at tests/Feature/ExampleTest.php:6
+      2▕ 
+      3▕ test('returns a successful response', function () {
+      4▕     $response = $this->get('/');
+      5▕ 
+  ➜   6▕     $response->assertStatus(200);
+      7▕ });
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Settings\PasswordUpdate…  ComponentNotFoundException   
+  Unable to find component: [settings.password]
+
+  at vendor/livewire/livewire/src/Factory/Factory.php:76
+     72▕             }
+     73▕         }
+     74▕ 
+     75▕         if (! $class || ! class_exists($class) || ! is_subclass_of($class, Component::class)) {
+  ➜  76▕             throw new ComponentNotFoundException(
+     77▕                 "Unable to find component: [{$name}]"
+     78▕             );
+     79▕         }
+     80▕
+
+      [2m+6 vendor frames [22m
+  7   storage/framework/views/b5a52cf10e686f4a5902a63b8b5ebaef.php:14
+      [2m+38 vendor frames [22m
+  46  tests/Feature/Settings/PasswordUpdateTest.php:14
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Settings\PasswordUpdate…  ComponentNotFoundException   
+  Unable to find component: [settings.password]
+
+  at vendor/livewire/livewire/src/Factory/Factory.php:76
+     72▕             }
+     73▕         }
+     74▕ 
+     75▕         if (! $class || ! class_exists($class) || ! is_subclass_of($class, Component::class)) {
+  ➜  76▕             throw new ComponentNotFoundException(
+     77▕                 "Unable to find component: [{$name}]"
+     78▕             );
+     79▕         }
+     80▕
+
+      [2m+6 vendor frames [22m
+  7   storage/framework/views/b5a52cf10e686f4a5902a63b8b5ebaef.php:14
+      [2m+38 vendor frames [22m
+  46  tests/Feature/Settings/PasswordUpdateTest.php:32
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Settings\ProfileUpdateT…  ComponentNotFoundException   
+  Unable to find component: [settings.profile]
+
+  at vendor/livewire/livewire/src/Factory/Factory.php:76
+     72▕             }
+     73▕         }
+     74▕ 
+     75▕         if (! $class || ! class_exists($class) || ! is_subclass_of($class, Component::class)) {
+  ➜  76▕             throw new ComponentNotFoundException(
+     77▕                 "Unable to find component: [{$name}]"
+     78▕             );
+     79▕         }
+     80▕
+
+      [2m+6 vendor frames [22m
+  7   storage/framework/views/b5a52cf10e686f4a5902a63b8b5ebaef.php:14
+      [2m+38 vendor frames [22m
+  46  tests/Feature/Settings/ProfileUpdateTest.php:17
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Settings\ProfileUpdateT…  ComponentNotFoundException   
+  Unable to find component: [settings.profile]
+
+  at vendor/livewire/livewire/src/Factory/Factory.php:76
+     72▕             }
+     73▕         }
+     74▕ 
+     75▕         if (! $class || ! class_exists($class) || ! is_subclass_of($class, Component::class)) {
+  ➜  76▕             throw new ComponentNotFoundException(
+     77▕                 "Unable to find component: [{$name}]"
+     78▕             );
+     79▕         }
+     80▕
+
+      [2m+6 vendor frames [22m
+  7   storage/framework/views/b5a52cf10e686f4a5902a63b8b5ebaef.php:14
+      [2m+38 vendor frames [22m
+  46  tests/Feature/Settings/ProfileUpdateTest.php:36
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Settings\ProfileUpdateT…  ComponentNotFoundException   
+  Unable to find component: [settings.delete-user-form]
+
+  at vendor/livewire/livewire/src/Factory/Factory.php:76
+     72▕             }
+     73▕         }
+     74▕ 
+     75▕         if (! $class || ! class_exists($class) || ! is_subclass_of($class, Component::class)) {
+  ➜  76▕             throw new ComponentNotFoundException(
+     77▕                 "Unable to find component: [{$name}]"
+     78▕             );
+     79▕         }
+     80▕
+
+      [2m+6 vendor frames [22m
+  7   storage/framework/views/b5a52cf10e686f4a5902a63b8b5ebaef.php:14
+      [2m+38 vendor frames [22m
+  46  tests/Feature/Settings/ProfileUpdateTest.php:51
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Settings\ProfileUpdateT…  ComponentNotFoundException   
+  Unable to find component: [settings.delete-user-form]
+
+  at vendor/livewire/livewire/src/Factory/Factory.php:76
+     72▕             }
+     73▕         }
+     74▕ 
+     75▕         if (! $class || ! class_exists($class) || ! is_subclass_of($class, Component::class)) {
+  ➜  76▕             throw new ComponentNotFoundException(
+     77▕                 "Unable to find component: [{$name}]"
+     78▕             );
+     79▕         }
+     80▕
+
+      [2m+6 vendor frames [22m
+  7   storage/framework/views/b5a52cf10e686f4a5902a63b8b5ebaef.php:14
+      [2m+38 vendor frames [22m
+  46  tests/Feature/Settings/ProfileUpdateTest.php:68
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\VehicleIndexTest > only shows vehicles without ship…   
+  Expected: "en">\n
+      <head>\n
+          <meta charset="utf-8">\n
+  ... (29 more lines)
+
+  To contain: VISIBLE789
+
+  at vendor/livewire/livewire/src/Features/SupportTesting/MakesAssertions.php:14
+     10▕ {
+     11▕     function assertSee($values, $escape = true, $stripInitialData = true)
+     12▕     {
+     13▕         foreach (Arr::wrap($values) as $value) {
+  ➜  14▕             PHPUnit::assertStringContainsString(
+     15▕                 $escape ? e($value): $value,
+     16▕                 $this->html($stripInitialData)
+     17▕             );
+     18▕         }
+
+      [2m+1 vendor frames [22m
+  2   tests/Feature/VehicleIndexTest.php:25
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\VehicleIndexTest > can se…  InvalidArgumentException   
+  Invalid Livewire snapshot structure: expected [data], [memo], [checksum], [memo.id], and [memo.name].
+
+  at vendor/livewire/livewire/src/Mechanisms/HandleComponents/HandleComponents.php:210
+    206▕             || ! is_string($snapshot['checksum'] ?? null)
+    207▕             || ! is_string($snapshot['memo']['id'] ?? null)
+    208▕             || ! is_string($snapshot['memo']['name'] ?? null)
+    209▕         ) {
+  ➜ 210▕             if (config('app.debug')) throw new \InvalidArgumentException('Invalid Livewire snapshot structure: expected [data], [memo], [checksum], [memo.id], and [memo.name].');
+    211▕ 
+    212▕             abort(404);
+    213▕         }
+    214▕
+
+      [2m+28 vendor frames [22m
+  29  tests/Feature/VehicleIndexTest.php:36
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\VehicleIndexTest > can cr…  InvalidArgumentException   
+  Invalid Livewire snapshot structure: expected [data], [memo], [checksum], [memo.id], and [memo.name].
+
+  at vendor/livewire/livewire/src/Mechanisms/HandleComponents/HandleComponents.php:210
+    206▕             || ! is_string($snapshot['checksum'] ?? null)
+    207▕             || ! is_string($snapshot['memo']['id'] ?? null)
+    208▕             || ! is_string($snapshot['memo']['name'] ?? null)
+    209▕         ) {
+  ➜ 210▕             if (config('app.debug')) throw new \InvalidArgumentException('Invalid Livewire snapshot structure: expected [data], [memo], [checksum], [memo.id], and [memo.name].');
+    211▕ 
+    212▕             abort(404);
+    213▕         }
+    214▕
+
+      [2m+28 vendor frames [22m
+  29  tests/Feature/VehicleIndexTest.php:45
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\VehicleIndexTest > can ed…  InvalidArgumentException   
+  Invalid Livewire snapshot structure: expected [data], [memo], [checksum], [memo.id], and [memo.name].
+
+  at vendor/livewire/livewire/src/Mechanisms/HandleComponents/HandleComponents.php:210
+    206▕             || ! is_string($snapshot['checksum'] ?? null)
+    207▕             || ! is_string($snapshot['memo']['id'] ?? null)
+    208▕             || ! is_string($snapshot['memo']['name'] ?? null)
+    209▕         ) {
+  ➜ 210▕             if (config('app.debug')) throw new \InvalidArgumentException('Invalid Livewire snapshot structure: expected [data], [memo], [checksum], [memo.id], and [memo.name].');
+    211▕ 
+    212▕             abort(404);
+    213▕         }
+    214▕
+
+      [2m+27 vendor frames [22m
+  28  tests/Feature/VehicleIndexTest.php:63
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\VehicleIndexTest > can de…  InvalidArgumentException   
+  Invalid Livewire snapshot structure: expected [data], [memo], [checksum], [memo.id], and [memo.name].
+
+  at vendor/livewire/livewire/src/Mechanisms/HandleComponents/HandleComponents.php:210
+    206▕             || ! is_string($snapshot['checksum'] ?? null)
+    207▕             || ! is_string($snapshot['memo']['id'] ?? null)
+    208▕             || ! is_string($snapshot['memo']['name'] ?? null)
+    209▕         ) {
+  ➜ 210▕             if (config('app.debug')) throw new \InvalidArgumentException('Invalid Livewire snapshot structure: expected [data], [memo], [checksum], [memo.id], and [memo.name].');
+    211▕ 
+    212▕             abort(404);
+    213▕         }
+    214▕
+
+      [2m+27 vendor frames [22m
+  28  tests/Feature/VehicleIndexTest.php:77
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\VehicleIndexTest > cannot…  InvalidArgumentException   
+  Invalid Livewire snapshot structure: expected [data], [memo], [checksum], [memo.id], and [memo.name].
+
+  at vendor/livewire/livewire/src/Mechanisms/HandleComponents/HandleComponents.php:210
+    206▕             || ! is_string($snapshot['checksum'] ?? null)
+    207▕             || ! is_string($snapshot['memo']['id'] ?? null)
+    208▕             || ! is_string($snapshot['memo']['name'] ?? null)
+    209▕         ) {
+  ➜ 210▕             if (config('app.debug')) throw new \InvalidArgumentException('Invalid Livewire snapshot structure: expected [data], [memo], [checksum], [memo.id], and [memo.name].');
+    211▕ 
+    212▕             abort(404);
+    213▕         }
+    214▕
+
+      [2m+27 vendor frames [22m
+  28  tests/Feature/VehicleIndexTest.php:91
+
+
+  Tests:    27 failed, 13 passed (47 assertions)
+  Duration: 15.34s
+

@@ -42,7 +42,7 @@ new #[Title('Workshops')] class extends Component {
     public function workshops()
     {
         return Workshop::query()
-            ->withCount('shipmentTrackings')
+            ->withCount(['shipmentTrackings', 'vehicleTrackings'])
             ->when($this->search, fn($q) => $q->where('name', 'like', "%{$this->search}%")
                 ->orWhere('phone', 'like', "%{$this->search}%")
                 ->orWhere('address', 'like', "%{$this->search}%"))
@@ -118,9 +118,9 @@ new #[Title('Workshops')] class extends Component {
         if ($this->workshopPendingDeleteId) {
             $workshop = Workshop::findOrFail($this->workshopPendingDeleteId);
 
-            if ($workshop->shipmentTrackings()->exists()) {
+            if ($workshop->shipmentTrackings()->exists() || $workshop->vehicleTrackings()->exists()) {
                 $this->showDeleteModal = false;
-                $this->notification()->warning(__('Cannot delete ":name" because it has associated shipment tracking events.', ['name' => $workshop->name]));
+                $this->notification()->warning(__('Cannot delete ":name" because it has associated tracking events.', ['name' => $workshop->name]));
             } else {
                 $workshop->delete();
                 $this->showDeleteModal = false;
@@ -164,10 +164,10 @@ new #[Title('Workshops')] class extends Component {
                         <flux:table.row :key="$workshop->id">
                             <flux:table.cell class="font-medium">{{ $workshop->name }}</flux:table.cell>
                             <flux:table.cell>{{ $workshop->phone ?: '—' }}</flux:table.cell>
-                            <flux:table.cell class="max-w-xs truncate text-sm text-zinc-500">{{ $workshop->address ?: '—' }}
+                            <flux:table.cell class="whitespace-normal break-words text-sm text-zinc-500">{{ $workshop->address ?: '—' }}
                             </flux:table.cell>
                             <flux:table.cell>
-                                <flux:badge color="zinc" size="sm">{{ $workshop->shipment_trackings_count }}</flux:badge>
+                                <flux:badge color="zinc" size="sm">{{ $workshop->shipment_trackings_count + $workshop->vehicle_trackings_count }}</flux:badge>
                             </flux:table.cell>
                             <flux:table.cell align="right">
                                 <flux:dropdown align="end" variant="ghost">

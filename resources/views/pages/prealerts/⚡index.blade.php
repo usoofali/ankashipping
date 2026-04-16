@@ -188,8 +188,7 @@ new #[Title('Prealerts')] class extends Component {
                                     <div class="flex flex-col">
                                         <span class="font-bold text-zinc-900 dark:text-white">{{ $prealert->vehicles->count() }}
                                             {{ __('Vehicles') }}</span>
-                                        <span
-                                            class="text-[10px] text-zinc-500 uppercase tracking-tighter">{{ $prealert->shipping_mode?->name }}</span>
+                                        <p class="text-[13px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider whitespace-normal">{{ $prealert->shipping_mode?->name }}</p>
                                     </div>
                                 @else
                                     <div class="flex flex-col">
@@ -234,7 +233,7 @@ new #[Title('Prealerts')] class extends Component {
                                     <span class="text-xs font-medium text-zinc-900 dark:text-zinc-100">
                                         {{ $prealert->vehicles->first()?->auction_name ?: '—' }}
                                     </span>
-                                    <span class="text-[10px] text-zinc-500 truncate max-w-[150px]"
+                                    <span class="text-[10px] text-zinc-500 whitespace-normal break-words"
                                         title="{{ $prealert->vehicles->first()?->location }}">
                                         {{ $prealert->vehicles->first()?->location ?: '—' }}
                                     </span>
@@ -405,7 +404,7 @@ new #[Title('Prealerts')] class extends Component {
                                             <div>
                                                 <span
                                                     class="text-zinc-400 uppercase tracking-tighter">{{ __('Location') }}:</span>
-                                                <span class="text-zinc-600 dark:text-zinc-300 font-medium truncate block"
+                                                <span class="text-zinc-600 dark:text-zinc-300 font-medium whitespace-normal break-words block"
                                                     title="{{ $vehicle->location }}">{{ $vehicle->location }}</span>
                                             </div>
                                         </div>

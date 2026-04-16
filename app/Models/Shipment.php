@@ -22,6 +22,15 @@ final class Shipment extends Model
     /** @use HasFactory<ShipmentFactory> */
     use HasFactory, SoftDeletes;
 
+    protected static function booted(): void
+    {
+        self::updated(static function (Shipment $shipment) {
+            if ($shipment->wasChanged('shipment_status') && $shipment->shipment_status === ShipmentStatus::Cancelled) {
+                $shipment->vehicles()->update(['shipment_id' => null]);
+            }
+        });
+    }
+
     protected $fillable = [
         'reference_no',
         'shipper_id',
@@ -37,6 +46,21 @@ final class Shipment extends Model
         'payment_method_id',
         'capacity',
         'sealed_at',
+        'completed_at',
+        'seal_closed_at',
+        'bill_of_lading_number',
+        'booking_number',
+        'itn_number',
+        'container_no',
+        'seal_no',
+        'container_type',
+        'vessel_name',
+        'voyage_no',
+        'cut_off_date',
+        'departure_date',
+        'arrival_date',
+        'domestic_routing',
+        'loading_pier',
     ];
 
     protected function casts(): array
@@ -49,6 +73,11 @@ final class Shipment extends Model
             'payment_status' => PaymentStatus::class,
             'shipment_status_before_workshop' => ShipmentStatus::class,
             'sealed_at' => 'datetime',
+            'completed_at' => 'datetime',
+            'seal_closed_at' => 'datetime',
+            'cut_off_date' => 'date',
+            'departure_date' => 'date',
+            'arrival_date' => 'date',
         ];
     }
 
@@ -93,9 +122,9 @@ final class Shipment extends Model
     /**
      * Legacy/Helper for RoRo shipments which have exactly one vehicle.
      */
-    public function vehicle(): ?Vehicle
+    public function vehicle(): HasOne
     {
-        return $this->vehicles->first();
+        return $this->hasOne(Vehicle::class)->oldestOfMany();
     }
 
     public function trackings(): HasMany
@@ -132,15 +161,20 @@ final class Shipment extends Model
             return '—';
         }
 
-        if ($this->shipment_status === ShipmentStatus::AtWorkshop) {
-            $this->loadMissing('workshop');
-            $workshopName = $this->workshop?->name;
-            if ($workshopName !== null && $workshopName !== '') {
-                return $workshopName;
-            }
-        }
-
         return $this->shipment_status->name;
+    }
+
+    public function isLocked(): bool
+    {
+        return in_array($this->shipment_status, [
+            ShipmentStatus::Completed,
+            ShipmentStatus::Cancelled,
+        ], true);
+    }
+
+    public function isRoRo(): bool
+    {
+        return $this->shipping_mode === ShippingMode::Roro;
     }
 
     /**

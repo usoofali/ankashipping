@@ -5,7 +5,10 @@ declare(strict_types=1);
 use App\Enums\InvoiceStatus;
 use App\Enums\ShipmentDocumentType;
 use App\Enums\ShipmentStatus;
+use App\Enums\ShippingMode;
+use App\Enums\VehicleDocumentType;
 use App\Enums\VehicleIs;
+use App\Enums\VehicleStatus;
 use App\Models\ActivityLog;
 use App\Models\ChargeItem;
 use App\Models\Driver;
@@ -14,6 +17,8 @@ use App\Models\InvoiceItem;
 use App\Models\Shipment;
 use App\Models\ShipmentDocument;
 use App\Models\ShipmentDocumentFile;
+use App\Models\VehicleDocument;
+use App\Models\VehicleDocumentFile;
 use App\Services\Invoice\InvoiceLineAmountResolver;
 use App\Models\ShipmentTracking;
 use App\Models\User;
@@ -40,12 +45,18 @@ new #[Title('Shipment Details')] class extends Component {
     use WireUiActions;
     use WithFileUploads;
 
+    public function workflow(): \App\ShippingWorkflow\ShippingWorkflow
+    {
+        return app(\App\ShippingWorkflow\ShippingWorkflow::class);
+    }
+
     public Shipment $shipment;
 
     /** Invoice item form state */
     public ?int $invoiceItemId = null;
     public string $item_description = '';
     public string $item_amount = '0.00';
+    public ?int $invoice_vehicle_id = null;
 
     public bool $showInvoiceStatusConfirmModal = false;
 
@@ -59,7 +70,7 @@ new #[Title('Shipment Details')] class extends Component {
     public string $new_driver_phone = '';
     public string $new_driver_email = '';
 
-    /** Shipment documents */
+    /** Shipment-level documents */
     public bool $showAttachDocumentModal = false;
 
     public string $attachDocumentType = '';
@@ -69,7 +80,19 @@ new #[Title('Shipment Details')] class extends Component {
     /** @var array<int, \Livewire\Features\SupportFileUploads\TemporaryUploadedFile> */
     public array $attachFiles = [];
 
-    public string $attachTitleVehicleIs = '';
+    public string $attachTitleVehicleIs = 'runner';
+
+    /** Vehicle-level documents */
+    public bool $showAttachVehicleDocumentModal = false;
+
+    public string $attachVehicleDocumentType = '';
+
+    public string $attachVehicleDocumentNotes = '';
+
+    /** @var array<int, \Livewire\Features\SupportFileUploads\TemporaryUploadedFile> */
+    public array $attachVehicleFiles = [];
+
+    public string $attachVehicleTitleVehicleIs = 'runner';
 
     public bool $showToWorkshopModal = false;
 
@@ -81,6 +104,23 @@ new #[Title('Shipment Details')] class extends Component {
 
     public ?int $pendingDeleteShipmentDocumentId = null;
 
+    public bool $showVehicleDocumentsModal = false;
+
+    public ?int $selectedVehicleIdForDocs = null;
+
+    public bool $showShipmentDocumentsModal = false;
+
+    public function openShipmentDocumentsModal(): void
+    {
+        $this->showShipmentDocumentsModal = true;
+    }
+
+    public function openVehicleDocumentsModal(int $vehicleId): void
+    {
+        $this->selectedVehicleIdForDocs = $vehicleId;
+        $this->showVehicleDocumentsModal = true;
+    }
+
     public bool $showDeleteFileConfirmModal = false;
 
     public ?int $pendingDeleteShipmentDocumentFileId = null;
@@ -88,6 +128,13 @@ new #[Title('Shipment Details')] class extends Component {
     /** Multi-vehicle selection for documents/tracking */
     public ?int $selectedVehicleId = null;
     public bool $applyToAllVehicles = false;
+
+    /** Logistics Modal state */
+    public bool $showLogisticsModal = false;
+    public array $logisticsForm = [
+        'shipment' => [],
+        'vehicles' => [],
+    ];
 
     public function mount(Shipment $shipment): void
     {
@@ -179,6 +226,12 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function addOrUpdateItem(): void
     {
+        if (!$this->workflow()->canEditInvoice($this->shipment, auth()->user())) {
+            $this->notification()->error(__('Access Denied'), __('You do not have permission to edit this invoice.'));
+
+            return;
+        }
+
         $invoice = $this->getInvoice();
 
         $validated = $this->validate([
@@ -205,6 +258,16 @@ new #[Title('Shipment Details')] class extends Component {
         $gross = (float) $resolved['gross'];
         $discount = (float) $resolved['discount'];
 
+        $finalDescription = $validated['item_description'];
+        if ($this->invoice_vehicle_id && $this->shipment->isContainer()) {
+            $vehicle = $this->shipment->vehicles()->find($this->invoice_vehicle_id);
+            if ($vehicle) {
+                $yearMake = trim(($vehicle->year ?? '') . ' ' . ($vehicle->make ?? ''));
+                $vinSuffix = $vehicle->vin ? substr($vehicle->vin, -6) : '—';
+                $finalDescription .= " ({$yearMake} - {$vinSuffix})";
+            }
+        }
+
         $wasUpdating = (bool) $this->invoiceItemId;
 
         if ($wasUpdating) {
@@ -213,7 +276,7 @@ new #[Title('Shipment Details')] class extends Component {
             $fromDescription = (string) $item->description;
             $fromAmount = (float) $item->amount;
             $item->fill([
-                'description' => $validated['item_description'],
+                'description' => $finalDescription,
                 'gross_amount' => $gross,
                 'discount_amount' => $discount,
                 'amount' => $net,
@@ -229,7 +292,7 @@ new #[Title('Shipment Details')] class extends Component {
                     'reference_no' => $this->shipment->reference_no,
                     'source' => 'shipment_show',
                     'from_description' => $fromDescription,
-                    'to_description' => $validated['item_description'],
+                    'to_description' => $finalDescription,
                     'from_amount' => $fromAmount,
                     'to_amount' => $net,
                     'gross_amount' => $gross !== 0.0 ? $gross : null,
@@ -239,7 +302,7 @@ new #[Title('Shipment Details')] class extends Component {
         } else {
             /** @var InvoiceItem $item */
             $item = $invoice->items()->create([
-                'description' => $validated['item_description'],
+                'description' => $finalDescription,
                 'gross_amount' => $gross,
                 'discount_amount' => $discount,
                 'amount' => $net,
@@ -254,7 +317,7 @@ new #[Title('Shipment Details')] class extends Component {
                     'invoice_item_id' => $item->id,
                     'reference_no' => $this->shipment->reference_no,
                     'source' => 'shipment_show',
-                    'description' => $validated['item_description'],
+                    'description' => $finalDescription,
                     'amount' => $net,
                     'gross_amount' => $gross !== 0.0 ? $gross : null,
                     'discount_amount' => $discount !== 0.0 ? $discount : null,
@@ -262,6 +325,7 @@ new #[Title('Shipment Details')] class extends Component {
             ]);
         }
 
+        $this->invoice_vehicle_id = null;
         $this->refreshInvoiceTotals($invoice);
 
         $this->shipment->load('activityLogs.user');
@@ -275,13 +339,38 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function editItem(int $itemId): void
     {
+        if (!$this->workflow()->canEditInvoice($this->shipment, auth()->user())) {
+            $this->notification()->error(__('Access Denied'), __('You do not have permission to edit this invoice.'));
+
+            return;
+        }
+
         $invoice = $this->getInvoice();
 
         /** @var InvoiceItem $item */
         $item = $invoice->items()->whereKey($itemId)->firstOrFail();
 
+        $description = (string) $item->description;
+        $this->invoice_vehicle_id = null;
+
+        // Auto-detect suffix for Container shipments (Detecting Year Make - VIN)
+        if ($this->shipment->isContainer()) {
+            foreach ($this->shipment->vehicles as $vehicle) {
+                $yearMake = trim(($vehicle->year ?? '') . ' ' . ($vehicle->make ?? ''));
+                $vinSuffix = $vehicle->vin ? substr($vehicle->vin, -6) : '—';
+                $suffix = " ({$yearMake} - {$vinSuffix})";
+
+                if (str_ends_with($description, $suffix)) {
+                    $this->invoice_vehicle_id = $vehicle->id;
+                    $description = substr($description, 0, -strlen($suffix));
+                    break;
+                }
+            }
+        }
+
         $this->invoiceItemId = $item->id;
-        $this->item_description = (string) $item->description;
+        $this->item_description = $description;
+        $this->item_amount = number_format((float) $item->amount, 2, '.', '');
 
         $chargeItem = ChargeItem::query()->where('item', $item->description)->first();
         $this->shipment->loadMissing('shipper');
@@ -306,6 +395,12 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function deleteItem(int $itemId): void
     {
+        if (!$this->workflow()->canEditInvoice($this->shipment, auth()->user())) {
+            $this->notification()->error(__('Access Denied'), __('You do not have permission to edit this invoice.'));
+
+            return;
+        }
+
         $invoice = $this->getInvoice();
 
         /** @var InvoiceItem|null $item */
@@ -345,7 +440,24 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function openInvoiceStatusConfirm(string $value): void
     {
-        $this->authorize('invoices.manage');
+        $targetStatus = InvoiceStatus::from($value);
+        $user = auth()->user();
+
+        if ($targetStatus === InvoiceStatus::Cleared && !$this->workflow()->canClearInvoice($this->shipment, $user)) {
+            $this->notification()->error(__('Access Denied'), __('You do not have permission to clear this invoice.'));
+
+            return;
+        }
+
+        if ($targetStatus === InvoiceStatus::Completed && !$this->workflow()->canCompleteInvoice($this->shipment, $user)) {
+            if ($this->shipment->shipment_status !== \App\Enums\ShipmentStatus::Loaded) {
+                $this->notification()->error(__('Action Blocked'), __('Shipment must be LOADED before invoice completion.'));
+            } else {
+                $this->notification()->error(__('Access Denied'), __('You do not have permission to complete this invoice.'));
+            }
+
+            return;
+        }
 
         $currentValue = $this->shipment->invoice?->status?->value ?? $this->shipment->invoice_status?->value;
 
@@ -381,6 +493,12 @@ new #[Title('Shipment Details')] class extends Component {
 
         DB::transaction(function () use ($invoice, $newStatus, $fromStatus): void {
             $invoice->status = $newStatus;
+
+            // Side effect: AWAITING_BL -> AWAITING_PAYMENT when completed
+            if ($newStatus === InvoiceStatus::Completed && $this->shipment->payment_status === \App\Enums\PaymentStatus::AwaitingBL) {
+                $this->shipment->payment_status = \App\Enums\PaymentStatus::AwaitingPayment;
+            }
+
             $invoice->save();
 
             $this->shipment->invoice_status = $newStatus;
@@ -485,6 +603,20 @@ new #[Title('Shipment Details')] class extends Component {
 
         $driverId = (int) $validated['driver_id'];
         $vehicleId = $validated['selectedVehicleId'];
+        $vehicle = $vehicleId ? \App\Models\Vehicle::findOrFail($vehicleId) : null;
+
+        if (!auth()->user()->can('workflow.assign_driver')) {
+            $this->notification()->error(__('Access Denied'), __('You do not have permission to assign drivers.'));
+
+            return;
+        }
+
+        if (!$this->workflow()->canAssignDriver($this->shipment, $vehicle)) {
+            $this->notification()->error(__('Invalid Action'), __('Driver cannot be assigned in the current status.'));
+
+            return;
+        }
+
         $driver = Driver::query()->findOrFail($driverId);
 
         $this->shipment->loadMissing('shipper');
@@ -494,31 +626,29 @@ new #[Title('Shipment Details')] class extends Component {
                 ? (string) $driver->company
                 : (filled($driver->phone) ? (string) $driver->phone : (string) $driver->id);
 
-            if ($vehicleId) {
+            if ($this->shipment->shipping_mode === \App\Enums\ShippingMode::Container) {
+                // Container: individual vehicle driver assignment
+                if (!$vehicleId) {
+                    throw new \RuntimeException('Vehicle selection is required for driver assignment in container mode.');
+                }
+
                 $vehicle = \App\Models\Vehicle::query()->findOrFail($vehicleId);
-                $vehicle->update([
-                    'driver_id' => $driverId,
-                ]);
-
-                \App\Models\VehicleTracking::create([
-                    'vehicle_id' => $vehicleId,
-                    'status' => ShipmentStatus::Dispatched, // Or another relevant status
-                    'note' => __('Driver assigned to vehicle: :d', ['d' => $driverLabel]),
-                    'recorded_at' => now(),
-                ]);
+                $vehicle->update(['driver_id' => $driverId]);
+                $vehicle->updateStatus(\App\Enums\VehicleStatus::Dispatched, __('Driver assigned to vehicle: :d', ['d' => $driverLabel]));
             } else {
-                // If no vehicle selected, assign to ALL vehicles in shipment
-                $this->shipment->vehicles()->update(['driver_id' => $driverId]);
-
+                // RoRo: shipment-level assignment
                 $this->shipment->update([
                     'driver_id' => $driverId,
-                    'shipment_status' => ShipmentStatus::Dispatched,
+                    'shipment_status' => \App\Enums\ShipmentStatus::Dispatched,
                 ]);
 
-                ShipmentTracking::query()->create([
+                // Also update the single vehicle status for RoRo
+                $this->shipment->vehicles()->update(['driver_id' => $driverId, 'tracking_status' => \App\Enums\VehicleStatus::Dispatched]);
+
+                \App\Models\ShipmentTracking::query()->create([
                     'shipment_id' => $this->shipment->id,
-                    'status' => ShipmentStatus::Dispatched,
-                    'note' => __('Driver assigned to shipment; all vehicles dispatched.'),
+                    'status' => \App\Enums\ShipmentStatus::Dispatched,
+                    'note' => __('Driver assigned to RoRo shipment; status moved to DISPATCHED.'),
                     'recorded_at' => now(),
                 ]);
             }
@@ -581,25 +711,17 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function updatedAttachDocumentType(): void
     {
-        if ($this->attachDocumentType !== ShipmentDocumentType::TitleDocument->value) {
-            $this->attachTitleVehicleIs = '';
-
-            return;
-        }
-
-        $this->shipment->loadMissing('vehicles');
-        // Logic to pre-select a vehicle if only one exists or based on some context
-        // For now, we might need a public property to track which vehicle is being documented
+        // No longer tracking TitleDocument for shipment-level documents
     }
 
-    public function openAttachDocumentModal(): void
+    public function openAttachDocumentModal(?int $vehicleId = null, ?string $documentType = null): void
     {
         $this->authorize('documents.manage');
-        $this->attachDocumentType = '';
+        $this->attachDocumentType = $documentType ?? '';
         $this->attachDocumentNotes = '';
         $this->attachFiles = [];
-        $this->attachTitleVehicleIs = '';
-        $this->selectedVehicleId = $this->shipment->vehicles->first()?->id;
+        $this->attachTitleVehicleIs = 'runner';
+        $this->selectedVehicleId = $vehicleId ?? $this->shipment->vehicles->first()?->id;
         $this->showAttachDocumentModal = true;
     }
 
@@ -612,9 +734,7 @@ new #[Title('Shipment Details')] class extends Component {
             'attachDocumentNotes' => ['nullable', 'string', 'max:2000'],
             'attachFiles' => ['required', 'array', 'min:1'],
             'attachFiles.*' => ['file', 'max:20480'],
-            'selectedVehicleId' => ['nullable', 'integer', 'exists:vehicles,id'],
             'attachTitleVehicleIs' => [
-                Rule::requiredIf(fn() => $this->attachDocumentType === ShipmentDocumentType::TitleDocument->value),
                 'nullable',
                 'string',
                 Rule::enum(VehicleIs::class),
@@ -625,22 +745,44 @@ new #[Title('Shipment Details')] class extends Component {
 
         $documentType = ShipmentDocumentType::from($this->attachDocumentType);
 
-        // For multi-vehicle, we might need a vehicle_id in the form state
-        // if ($documentType === ShipmentDocumentType::TitleDocument && ...)
+        if ($documentType === ShipmentDocumentType::StampDockReceipt) {
+            if (!auth()->user()->can('workflow.attach_dock_receipt')) {
+                $this->notification()->error(__('Access Denied'), __('Insufficient permission for Dock Receipt.'));
+
+                return;
+            }
+            if (!$this->workflow()->canAttachDockReceipt($this->shipment)) {
+                $this->notification()->error(__('Invalid Action'), __('Dock Receipt can only be attached in INLAND status.'));
+
+                return;
+            }
+        }
+
+        if ($documentType === ShipmentDocumentType::BillOfLading) {
+            if (!auth()->user()->can('workflow.attach_bl')) {
+                $this->notification()->error(__('Access Denied'), __('Insufficient permission for Bill of Lading.'));
+
+                return;
+            }
+            if (!$this->workflow()->canAttachBL($this->shipment)) {
+                $this->notification()->error(__('Invalid Action'), __('Bill of Lading can only be attached in DELIVERED status.'));
+
+                return;
+            }
+        }
 
         $fromShipmentStatus = $this->shipment->shipment_status;
         $document = null;
         $fileCount = 0;
 
         DB::transaction(function () use ($documentType, &$document, &$fileCount, $fromShipmentStatus): void {
-            if ($documentType === ShipmentDocumentType::TitleDocument) {
-                if ($this->selectedVehicleId === null) {
-                    throw new \RuntimeException('Vehicle selection required for title document.');
-                }
 
-                $vehicle = \App\Models\Vehicle::query()->findOrFail($this->selectedVehicleId);
-                $vehicle->vehicle_is = VehicleIs::from($this->attachTitleVehicleIs);
-                $vehicle->save();
+            if ($documentType === ShipmentDocumentType::StampDockReceipt) {
+                $this->shipment->update(['shipment_status' => \App\Enums\ShipmentStatus::Delivered]);
+            }
+
+            if ($documentType === ShipmentDocumentType::BillOfLading) {
+                $this->shipment->update(['shipment_status' => \App\Enums\ShipmentStatus::Loaded]);
             }
 
             /** @var ShipmentDocument $document */
@@ -666,102 +808,373 @@ new #[Title('Shipment Details')] class extends Component {
                 $fileCount++;
             }
 
-            $targetStatus = $documentType->targetShipmentStatusAfterAttachment();
-            $toShipmentStatus = $fromShipmentStatus;
-
-            if ($targetStatus !== null) {
-                $this->shipment->shipment_status = $targetStatus;
-                if ($targetStatus !== ShipmentStatus::AtWorkshop) {
-                    $this->shipment->workshop_id = null;
-                    $this->shipment->shipment_status_before_workshop = null;
-                }
-
-                $this->shipment->save();
-                $toShipmentStatus = $this->shipment->shipment_status;
-            }
-
-            $vehicleIsLabel = null;
-            if ($documentType === ShipmentDocumentType::TitleDocument) {
-                $vehicleIsLabel = VehicleIs::from($this->attachTitleVehicleIs)->label();
-            }
-
-            $logProperties = [
-                'shipment_document_id' => $document->id,
-                'document_type' => $documentType->value,
-                'document_type_label' => $documentType->label(),
-                'file_count' => $fileCount,
-                'file_names' => $attachedFileNames,
-                'reference_no' => $this->shipment->reference_no,
-                'source' => 'shipment_show_attach_document',
-                'uploaded_by' => Auth::id(),
-                'vehicle_is' => $vehicleIsLabel,
-            ];
-
-            if ($fromShipmentStatus !== $toShipmentStatus) {
-                $logProperties['from_shipment_status'] = $fromShipmentStatus?->value;
-                $logProperties['to_shipment_status'] = $toShipmentStatus?->value;
-            }
+            $currentStatus = $this->shipment->refresh()->shipment_status;
 
             ActivityLog::query()->create([
                 'shipment_id' => $this->shipment->id,
                 'user_id' => Auth::id(),
                 'action' => 'document_attached',
-                'properties' => $logProperties,
-            ]);
-
-            $noteParts = [
-                __('Document attached: :type (:count files)', [
-                    'type' => $documentType->label(),
-                    'count' => $fileCount,
-                ])
-            ];
-
-            if ($fromShipmentStatus !== $toShipmentStatus && $fromShipmentStatus !== null && $toShipmentStatus !== null) {
-                $noteParts[] = __('Status: :from → :to', [
-                    'from' => $fromShipmentStatus->name,
-                    'to' => $toShipmentStatus->name,
-                ]);
-            }
-
-            ShipmentTracking::query()->create([
-                'shipment_id' => $this->shipment->id,
-                'status' => $this->shipment->shipment_status ?? ShipmentStatus::Pending,
-                'workshop_id' => $this->shipment->workshop_id,
-                'note' => implode(' — ', $noteParts),
-                'metadata' => [
-                    'source' => 'shipment_show_attach_document',
+                'properties' => [
                     'shipment_document_id' => $document->id,
                     'document_type' => $documentType->value,
                     'document_type_label' => $documentType->label(),
-                    'shipment_document_file_ids' => $attachedFileIds,
-                    'file_names' => $attachedFileNames,
-                    'vehicle_is' => $vehicleIsLabel,
-                    'created_by' => Auth::id(),
+                    'file_count' => $fileCount,
+                    'reference_no' => $this->shipment->reference_no,
+                    'source' => 'shipment_show_attach_document',
                 ],
-                'recorded_at' => now(),
             ]);
+
+            if ($fromShipmentStatus !== $currentStatus) {
+                ShipmentTracking::query()->create([
+                    'shipment_id' => $this->shipment->id,
+                    'status' => $currentStatus,
+                    'note' => __('Document attached: :type. Status moved to :s', ['type' => $documentType->label(), 's' => $currentStatus->name]),
+                    'recorded_at' => now(),
+                ]);
+            }
         });
-
-        $this->shipment->refresh();
-        $toStatus = $this->shipment->shipment_status;
-
-        if ($document !== null && $fileCount > 0) {
-            $this->sendDocumentAttachedNotifications(
-                $document,
-                $fileCount,
-                $fromShipmentStatus,
-                $fromShipmentStatus !== $toStatus ? $toStatus : null,
-            );
-        }
 
         $this->reloadShipmentPageData();
         $this->showAttachDocumentModal = false;
-        $this->attachDocumentType = '';
-        $this->attachDocumentNotes = '';
-        $this->attachFiles = [];
-        $this->attachTitleVehicleIs = '';
+        $this->reset(['attachDocumentType', 'attachDocumentNotes', 'attachFiles']);
+        $this->attachTitleVehicleIs = 'runner';
 
         $this->notification()->success(__('Document(s) attached.'));
+    }
+
+    public function openAttachVehicleDocumentModal(int $vehicleId, ?string $documentType = null): void
+    {
+        $this->authorize('documents.manage');
+        $this->attachVehicleDocumentType = $documentType ?? '';
+        $this->attachVehicleDocumentNotes = '';
+        $this->attachVehicleFiles = [];
+        $this->attachVehicleTitleVehicleIs = 'runner';
+        $this->selectedVehicleId = $vehicleId;
+        $this->showAttachVehicleDocumentModal = true;
+    }
+
+    public function saveAttachedVehicleDocuments(): void
+    {
+        $this->authorize('documents.manage');
+
+        $this->validate([
+            'attachVehicleDocumentType' => ['required', 'string', Rule::enum(VehicleDocumentType::class)],
+            'attachVehicleDocumentNotes' => ['nullable', 'string', 'max:2000'],
+            'attachVehicleFiles' => ['required', 'array', 'min:1'],
+            'attachVehicleFiles.*' => ['file', 'max:20480'],
+            'selectedVehicleId' => ['required', 'integer', 'exists:vehicles,id'],
+            'attachVehicleTitleVehicleIs' => [
+                Rule::requiredIf(fn() => $this->attachVehicleDocumentType === VehicleDocumentType::TitleDocument->value),
+                'nullable',
+                'string',
+                Rule::enum(VehicleIs::class),
+            ],
+        ]);
+
+        $documentType = VehicleDocumentType::from($this->attachVehicleDocumentType);
+        $vehicle = \App\Models\Vehicle::query()->findOrFail($this->selectedVehicleId);
+
+        if ($documentType === VehicleDocumentType::TitleDocument) {
+            if (!auth()->user()->can('workflow.attach_title')) {
+                $this->notification()->error(__('Access Denied'), __('Insufficient permission for Title Document.'));
+
+                return;
+            }
+            if (!$this->workflow()->canAttachTitle($this->shipment, $vehicle)) {
+                $this->notification()->error(__('Invalid Action'), __('Title Document can only be attached in DISPATCHED status.'));
+
+                return;
+            }
+        }
+
+        if ($documentType === VehicleDocumentType::PhotosAndVideos) {
+            if (!auth()->user()->can('workflow.upload_photos')) {
+                $this->notification()->error(__('Access Denied'), __('Insufficient permission for Photos.'));
+
+                return;
+            }
+            if (!$this->workflow()->canAttachPhotos($this->shipment, $vehicle)) {
+                $this->notification()->error(__('Invalid Action'), __('Photos can only be uploaded in INLAND status (or onwards for RoRo).'));
+
+                return;
+            }
+        }
+
+        if ($documentType === VehicleDocumentType::TitleDocument) {
+            if (!$this->workflow()->canTransitionToInland($this->shipment)) {
+                $this->notification()->error(__('Logistics Missing'), __('Please fill in the Logistics & Voyage information before moving to INLAND status.'));
+
+                return;
+            }
+        }
+
+        DB::transaction(function () use ($documentType): void {
+            $vehicle = \App\Models\Vehicle::query()->findOrFail($this->selectedVehicleId);
+
+            abort_unless($vehicle->shipment_id === $this->shipment->id, 403);
+
+            if ($documentType === VehicleDocumentType::TitleDocument) {
+                $vehicle->vehicle_is = VehicleIs::from($this->attachVehicleTitleVehicleIs);
+                $vehicle->save();
+            }
+
+            /** @var VehicleDocument $document */
+            $document = $vehicle->vehicleDocuments()->create([
+                'document_type' => $documentType,
+                'notes' => $this->attachVehicleDocumentNotes !== '' ? $this->attachVehicleDocumentNotes : null,
+            ]);
+
+            foreach ($this->attachVehicleFiles as $uploaded) {
+                $path = $uploaded->store('vehicle-documents/' . $vehicle->id, 'local');
+                VehicleDocumentFile::query()->create([
+                    'vehicle_document_id' => $document->id,
+                    'path' => $path,
+                    'original_name' => $uploaded->getClientOriginalName(),
+                    'uploaded_by' => Auth::id(),
+                ]);
+            }
+
+            ActivityLog::query()->create([
+                'shipment_id' => $this->shipment->id,
+                'user_id' => Auth::id(),
+                'action' => 'vehicle_document_attached',
+                'properties' => [
+                    'vehicle_id' => $vehicle->id,
+                    'document_type' => $documentType->value,
+                    'document_type_label' => $documentType->label(),
+                    'reference_no' => $this->shipment->reference_no,
+                    'source' => 'shipment_show',
+                ],
+            ]);
+
+            $statusNote = $documentType === VehicleDocumentType::TitleDocument
+                ? __('Title document attached.')
+                : ($documentType === VehicleDocumentType::PhotosAndVideos ? __('Vehicle photos uploaded.') : __('Vehicle document attached.'));
+
+            if ($this->shipment->shipping_mode === ShippingMode::Container) {
+                $vehicle->refresh();
+                if ($documentType === VehicleDocumentType::TitleDocument) {
+                    $vehicle->updateStatus(VehicleStatus::Inland, $statusNote);
+                } elseif ($documentType === VehicleDocumentType::PhotosAndVideos) {
+                    $vehicle->updateStatus(VehicleStatus::AtWarehouse, $statusNote);
+                }
+            } else {
+                // RoRo Logic
+                if ($documentType === VehicleDocumentType::TitleDocument) {
+                    $this->shipment->update([
+                        'shipment_status' => ShipmentStatus::Inland,
+                    ]);
+
+                    $this->shipment->vehicles()->update(['tracking_status' => VehicleStatus::Inland]);
+
+                    ShipmentTracking::query()->create([
+                        'shipment_id' => $this->shipment->id,
+                        'status' => ShipmentStatus::Inland,
+                        'note' => $statusNote,
+                        'recorded_at' => now(),
+                    ]);
+                }
+            }
+        });
+
+        $this->reloadShipmentPageData();
+
+        $this->showAttachVehicleDocumentModal = false;
+        $this->reset(['attachVehicleDocumentType', 'attachVehicleDocumentNotes', 'attachVehicleFiles']);
+        $this->attachVehicleTitleVehicleIs = 'runner';
+        $this->notification()->success(__('Vehicle document(s) attached.'));
+    }
+
+    public function markContainerFilled(bool $force = false): void
+    {
+        $this->authorize('shipments.update');
+
+        if (!$force) {
+            if (!$this->workflow()->canMarkFilled($this->shipment)) {
+                $this->notification()->error(__('Requirement missed'), __('Normal container filling requires at least 4 vehicles at warehouse status and status must be OPEN.'));
+
+                return;
+            }
+        } else {
+            $this->authorizeStaffOrSuperAdmin();
+            if (!auth()->user()->can('workflow.force_filled') || !$this->workflow()->canMarkFilled($this->shipment, true)) {
+                $this->notification()->error(__('Invalid Action'), __('Cannot force fill in current status or insufficient permission.'));
+
+                return;
+            }
+        }
+
+        if (!$this->workflow()->canTransitionToInland($this->shipment)) {
+            $this->notification()->error(__('Logistics Missing'), __('Please fill in the Logistics & Voyage information before marking as FILLED.'));
+
+            return;
+        }
+
+        DB::transaction(function () use ($force): void {
+            $this->shipment->update([
+                'shipment_status' => \App\Enums\ShipmentStatus::Inland,
+            ]);
+
+            ShipmentTracking::query()->create([
+                'shipment_id' => $this->shipment->id,
+                'status' => \App\Enums\ShipmentStatus::Inland,
+                'note' => $force ? __('Container forcefully filled by admin.') : __('Container marked as filled.'),
+                'recorded_at' => now(),
+            ]);
+
+            ActivityLog::query()->create([
+                'shipment_id' => $this->shipment->id,
+                'user_id' => Auth::id(),
+                'action' => 'container_filled',
+                'properties' => [
+                    'force' => $force,
+                    'reference_no' => $this->shipment->reference_no,
+                ],
+            ]);
+        });
+
+        $this->reloadShipmentPageData();
+        $this->notification()->success(__('Container status updated to INLAND.'));
+    }
+
+    public function editLogistics(): void
+    {
+        if (!auth()->user()->can('workflow.manage_logistics')) {
+            $this->notification()->error(__('Access Denied'), __('You do not have permission to manage logistics.'));
+            return;
+        }
+
+        $this->authorize('shipments.update');
+
+        $this->logisticsForm['shipment'] = [
+            'bill_of_lading_number' => $this->shipment->bill_of_lading_number,
+            'booking_number' => $this->shipment->booking_number,
+            'itn_number' => $this->shipment->itn_number,
+            'container_no' => $this->shipment->container_no,
+            'seal_no' => $this->shipment->seal_no,
+            'container_type' => $this->shipment->container_type,
+            'vessel_name' => $this->shipment->vessel_name,
+            'voyage_no' => $this->shipment->voyage_no,
+            'cut_off_date' => $this->shipment->cut_off_date?->format('Y-m-d'),
+            'departure_date' => $this->shipment->departure_date?->format('Y-m-d'),
+            'arrival_date' => $this->shipment->arrival_date?->format('Y-m-d'),
+            'domestic_routing' => $this->shipment->domestic_routing,
+            'loading_pier' => $this->shipment->loading_pier,
+        ];
+
+        $this->logisticsForm['vehicles'] = [];
+        foreach ($this->shipment->vehicles as $vehicle) {
+            $this->logisticsForm['vehicles'][$vehicle->id] = [
+                'value' => $vehicle->value,
+                'weight' => $vehicle->weight,
+                'weight_unit' => $vehicle->weight_unit ?? 'KG',
+                'measurement' => $vehicle->measurement,
+                'measurement_unit' => $vehicle->measurement_unit ?? 'CBM',
+            ];
+        }
+
+        $this->showLogisticsModal = true;
+    }
+
+    public function saveLogistics(): void
+    {
+        if (!auth()->user()->can('workflow.manage_logistics')) {
+            $this->notification()->error(__('Access Denied'), __('You do not have permission to manage logistics.'));
+            return;
+        }
+
+        $this->authorize('shipments.update');
+
+        $validated = $this->validate([
+            'logisticsForm.shipment.bill_of_lading_number' => 'nullable|string|max:255',
+            'logisticsForm.shipment.booking_number' => 'nullable|string|max:255',
+            'logisticsForm.shipment.itn_number' => 'nullable|string|max:255',
+            'logisticsForm.shipment.container_no' => 'nullable|string|max:255',
+            'logisticsForm.shipment.seal_no' => 'nullable|string|max:255',
+            'logisticsForm.shipment.container_type' => 'nullable|string|max:255',
+            'logisticsForm.shipment.vessel_name' => 'nullable|string|max:255',
+            'logisticsForm.shipment.voyage_no' => 'nullable|string|max:255',
+            'logisticsForm.shipment.cut_off_date' => 'nullable|date',
+            'logisticsForm.shipment.departure_date' => 'nullable|date',
+            'logisticsForm.shipment.arrival_date' => 'nullable|date',
+            'logisticsForm.shipment.domestic_routing' => 'nullable|string',
+            'logisticsForm.shipment.loading_pier' => 'nullable|string',
+            'logisticsForm.vehicles.*.value' => 'nullable|numeric|min:0',
+            'logisticsForm.vehicles.*.weight' => 'nullable|numeric|min:0',
+            'logisticsForm.vehicles.*.weight_unit' => 'required|string|in:KG,LBS',
+            'logisticsForm.vehicles.*.measurement' => 'nullable|numeric|min:0',
+            'logisticsForm.vehicles.*.measurement_unit' => 'required|string|in:CBM,CFT',
+        ]);
+
+        DB::transaction(function () use ($validated): void {
+            $this->shipment->update($validated['logisticsForm']['shipment']);
+
+            foreach ($validated['logisticsForm']['vehicles'] as $vehicleId => $data) {
+                $vehicle = \App\Models\Vehicle::find($vehicleId);
+                if ($vehicle) {
+                    $vehicle->update($data);
+                }
+            }
+
+            ActivityLog::query()->create([
+                'shipment_id' => $this->shipment->id,
+                'user_id' => Auth::id(),
+                'action' => 'logistics_updated',
+                'properties' => [
+                    'reference_no' => $this->shipment->reference_no,
+                    'source' => 'shipment_show_logistics_modal',
+                ],
+            ]);
+        });
+
+        $this->showLogisticsModal = false;
+        $this->notification()->success(__('Logistics updated successfully.'));
+        $this->reloadShipmentPageData();
+    }
+
+    public function completeShipment(): void
+    {
+        $this->authorize('shipments.update');
+        $this->authorizeStaffOrSuperAdmin();
+
+        if (!auth()->user()->can('workflow.complete')) {
+            $this->notification()->error(__('Access Denied'), __('You do not have permission to complete shipments.'));
+
+            return;
+        }
+
+        if (!$this->workflow()->canCompleteShipment($this->shipment)) {
+            $this->notification()->error(__('Invalid Action'), __('Shipment must be in LOADED status to complete.'));
+
+            return;
+        }
+
+        DB::transaction(function (): void {
+            $this->shipment->update([
+                'shipment_status' => \App\Enums\ShipmentStatus::Completed,
+                'completed_at' => now(),
+                'seal_closed_at' => $this->shipment->isContainer() ? now() : null,
+            ]);
+
+            ShipmentTracking::query()->create([
+                'shipment_id' => $this->shipment->id,
+                'status' => \App\Enums\ShipmentStatus::Completed,
+                'note' => __('Shipment completed successfully.'),
+                'recorded_at' => now(),
+            ]);
+
+            ActivityLog::query()->create([
+                'shipment_id' => $this->shipment->id,
+                'user_id' => Auth::id(),
+                'action' => 'shipment_completed',
+                'properties' => [
+                    'reference_no' => $this->shipment->reference_no,
+                ],
+            ]);
+        });
+
+        $this->reloadShipmentPageData();
+        $this->notification()->success(__('Shipment completed and locked.'));
     }
 
     public function openToWorkshopModal(?int $vehicleId = null): void
@@ -806,7 +1219,7 @@ new #[Title('Shipment Details')] class extends Component {
 
                 \App\Models\VehicleTracking::create([
                     'vehicle_id' => $vehicleId,
-                    'status' => ShipmentStatus::AtWorkshop,
+                    'status' => \App\Enums\VehicleStatus::Inland,
                     'workshop_id' => $workshopId,
                     'note' => __('Vehicle sent to workshop: :w', ['w' => $workshop->name]),
                     'recorded_at' => now(),
@@ -832,15 +1245,12 @@ new #[Title('Shipment Details')] class extends Component {
         $this->notification()->success(__('Action successful.'));
     }
 
-    public function openFromWorkshopConfirmModal(): void
+    public function openFromWorkshopConfirmModal(?int $vehicleId = null): void
     {
         $this->authorize('shipments.update');
         $this->authorizeStaffOrSuperAdmin();
 
-        if ($this->shipment->shipment_status !== ShipmentStatus::AtWorkshop) {
-            return;
-        }
-
+        $this->selectedVehicleId = $vehicleId;
         $this->showFromWorkshopConfirmModal = true;
     }
 
@@ -854,7 +1264,7 @@ new #[Title('Shipment Details')] class extends Component {
         DB::transaction(function () use ($vehicleId): void {
             if ($vehicleId) {
                 $vehicle = \App\Models\Vehicle::query()->findOrFail($vehicleId);
-                $stored = $vehicle->status_before_workshop ?? ShipmentStatus::Pending;
+                $stored = $vehicle->status_before_workshop ?? \App\Enums\VehicleStatus::Pending;
 
                 $vehicle->update([
                     'is_at_workshop' => false,
@@ -863,7 +1273,7 @@ new #[Title('Shipment Details')] class extends Component {
 
                 \App\Models\VehicleTracking::create([
                     'vehicle_id' => $vehicleId,
-                    'status' => $stored,
+                    'status' => $stored instanceof \App\Enums\VehicleStatus ? $stored : \App\Enums\VehicleStatus::Pending,
                     'note' => __('Vehicle returned from workshop.'),
                     'recorded_at' => now(),
                 ]);
@@ -1079,7 +1489,8 @@ new #[Title('Shipment Details')] class extends Component {
                     <x-crud.page-header :heading="__('SHIPMENT #') . $shipment->reference_no" :subheading="__('View full shipment, tracking, and financial details.')" />
                     <div class="mt-2 flex flex-wrap gap-2">
                         @if($shipment->shipment_status)
-                            <flux:badge color="indigo" variant="subtle" size="sm" icon="truck">
+                            <flux:badge color="indigo" variant="subtle" size="sm"
+                                :icon="$shipment->isContainer() ? 'container' : 'truck'">
                                 {{ $shipment->shipmentStatusDisplay() }}
                             </flux:badge>
                         @endif
@@ -1099,7 +1510,7 @@ new #[Title('Shipment Details')] class extends Component {
                             </flux:badge>
                         @endif
                         @if($shipment->logistics_service)
-                            <flux:badge color="zinc" variant="outline" size="sm" icon="briefcase">
+                            <flux:badge color="zinc" variant="outline" size="sm" icon="ship">
                                 {{ $shipment->logistics_service->name ?? $shipment->logistics_service }}
                             </flux:badge>
                         @endif
@@ -1122,6 +1533,14 @@ new #[Title('Shipment Details')] class extends Component {
             </div>
 
             <div class="flex flex-wrap justify-end gap-2">
+                @if(!$shipment->isLocked())
+                    @if($shipment->shipment_status === \App\Enums\ShipmentStatus::Loaded)
+                        <flux:button variant="filled" color="emerald" icon="flag" wire:click="completeShipment">
+                            {{ __('Complete Shipment') }}
+                        </flux:button>
+                    @endif
+                @endif
+
                 <flux:dropdown align="end" position="bottom">
                     <flux:button variant="outline" icon="ellipsis-horizontal">
                         {{ __('Actions') }}
@@ -1131,58 +1550,59 @@ new #[Title('Shipment Details')] class extends Component {
                             {{ __('Back to Shipments') }}
                         </flux:menu.item>
 
-                        @if(\Illuminate\Support\Facades\Route::has('shipments.edit'))
-                            <flux:menu.item icon="pencil-square" :href="route('shipments.edit', $shipment)" wire:navigate>
-                                {{ __('Edit Shipment') }}
-                            </flux:menu.item>
-                        @endif
-
-                        @can('invoices.manage')
+                        @can('workflow.download_invoice')
                             <flux:menu.item icon="document-arrow-down"
                                 :href="route('shipments.invoice.download', $shipment)">
                                 {{ __('Download Invoice') }}
                             </flux:menu.item>
                         @endcan
 
-
-                        <flux:menu.separator />
-
-                        <flux:menu.item icon="user-plus" wire:click="openAssignDriverModal">
-                            {{ __('Assign Driver') }}
-                        </flux:menu.item>
-
-                        @can('documents.manage')
-                            <flux:menu.item icon="paper-clip" wire:click="openAttachDocumentModal">
-                                {{ __('Attach document') }}
+                        @can('workflow.manage_logistics')
+                            <flux:menu.item icon="truck" wire:click="editLogistics">
+                                {{ __('Logistics & Voyage') }}
                             </flux:menu.item>
                         @endcan
 
-                        @can('shipments.update')
-                            @if(auth()->user()?->hasRole('super_admin') || auth()->user()?->staff()->exists())
-                                @if($shipment->shipment_status !== \App\Enums\ShipmentStatus::AtWorkshop)
-                                    <flux:menu.item icon="wrench-screwdriver" wire:click="openToWorkshopModal">
-                                        {{ __('To workshop') }}
-                                    </flux:menu.item>
-                                @else
-                                    <flux:menu.item icon="arrow-uturn-left" wire:click="openFromWorkshopConfirmModal">
-                                        {{ __('From workshop') }}
+                        @if($this->workflow()->canDownloadDockReceipt($shipment))
+                            @can('workflow.download_dock_receipt')
+                                <flux:menu.item icon="document-duplicate"
+                                    :href="route('shipments.dock-receipt.download', $shipment)">
+                                    {{ __('Download Dock Receipt') }}
+                                </flux:menu.item>
+                            @endcan
+                        @endif
+
+                        <flux:menu.item icon="eye" wire:click="openShipmentDocumentsModal">
+                            {{ __('View Documents') }}
+                        </flux:menu.item>
+
+                        <flux:menu.separator />
+
+                        @if(!$shipment->isLocked())
+                            @if($shipment->isContainer() && $this->workflow()->canMarkFilled($shipment))
+                                <flux:menu.item icon="check-circle" wire:click="markContainerFilled(false)">
+                                    {{ __('Mark Filled') }}
+                                </flux:menu.item>
+                                @if(auth()->user()?->hasRole('super_admin') && $this->workflow()->canMarkFilled($shipment, true))
+                                    <flux:menu.item icon="exclamation-triangle" wire:click="markContainerFilled(true)"
+                                        variant="danger">
+                                        {{ __('Force Fill') }}
                                     </flux:menu.item>
                                 @endif
                             @endif
-                        @endcan
+                            @can('documents.manage')
+                                <flux:menu.item icon="paper-clip" wire:click="openAttachDocumentModal">
+                                    {{ __('Attach documents') }}
+                                </flux:menu.item>
+                            @endcan
 
-                        @can('invoices.manage')
-                            <flux:menu.separator />
-                            <flux:menu.submenu :heading="__('Invoice status')" icon="document-text">
-                                @foreach(InvoiceStatus::cases() as $status)
-                                    @if(($shipment->invoice?->status?->value ?? $shipment->invoice_status?->value) !== $status->value)
-                                        <flux:menu.item wire:click="openInvoiceStatusConfirm('{{ $status->value }}')">
-                                            {{ $status->name }}
-                                        </flux:menu.item>
-                                    @endif
-                                @endforeach
-                            </flux:menu.submenu>
-                        @endcan
+                            @can('shipments.update')
+                                @if(auth()->user()?->hasRole('super_admin') || auth()->user()?->staff()->exists())
+                                @endif
+                            @endcan
+
+
+                        @endif
                     </flux:menu>
                 </flux:dropdown>
             </div>
@@ -1395,29 +1815,78 @@ new #[Title('Shipment Details')] class extends Component {
                                                     {{ $vehicle->year }} {{ $vehicle->make }} {{ $vehicle->model }}
                                                     @if($vehicle->workshop_id)
                                                         <flux:badge color="amber" size="sm" variant="subtle">
-                                                            {{ __('At Workshop') }}</flux:badge>
+                                                            {{ __('At Workshop') }}
+                                                        </flux:badge>
                                                     @endif
                                                 </h4>
-                                                <flux:text size="sm" class="font-mono text-zinc-500 uppercase mt-1">
-                                                    {{ $vehicle->vin }}</flux:text>
+                                                <div class="flex flex-col">
+                                                    <flux:text size="sm" class="font-mono text-zinc-500 uppercase mt-1">
+                                                        {{ $vehicle->vin }}
+                                                    </flux:text>
+                                                    @if($vehicle->tracking_status)
+                                                        <div class="mt-2">
+                                                            <flux:badge size="xs" color="zinc" variant="outline" icon="truck">
+                                                                {{ $vehicle->tracking_status->name }}
+                                                            </flux:badge>
+                                                        </div>
+                                                    @endif
+                                                </div>
                                             </div>
-                                            <div class="flex items-start gap-2">
-                                                {{--
-                                                <flux:button :href="route('vehicles.show', $vehicle)" icon="eye" size="sm"
-                                                    variant="ghost" wire:navigate /> --}}
-                                                @can('shipments.update')
+                                            <div class="flex w-full items-start justify-end gap-2 md:w-auto">
+                                                @if(!$shipment->isLocked())
                                                     <flux:dropdown>
-                                                        <flux:button icon="ellipsis-vertical" size="sm" variant="ghost" />
+                                                        <flux:button icon="ellipsis-horizontal" size="sm" variant="outline">
+                                                            {{ __('Actions') }}
+                                                        </flux:button>
                                                         <flux:menu>
-                                                            <flux:menu.item icon="wrench"
-                                                                wire:click="openToWorkshopModal({{ $vehicle->id }})">
-                                                                {{ __('Send to Workshop') }}</flux:menu.item>
-                                                            <flux:menu.item icon="truck"
-                                                                wire:click="openAssignDriverModal({{ $vehicle->id }})">
-                                                                {{ __('Assign Driver') }}</flux:menu.item>
+                                                            @if($this->workflow()->canAssignDriver($shipment, $vehicle))
+                                                                <flux:menu.item icon="user-plus"
+                                                                    wire:click="openAssignDriverModal({{ $vehicle->id }})">
+                                                                    {{ __('Assign Driver') }}
+                                                                </flux:menu.item>
+                                                            @endif
+
+                                                            @if($this->workflow()->canAttachTitle($shipment, $vehicle))
+                                                                <flux:menu.item icon="document-text"
+                                                                    wire:click="openAttachVehicleDocumentModal({{ $vehicle->id }}, '{{ \App\Enums\VehicleDocumentType::TitleDocument->value }}')">
+                                                                    {{ __('Attach Title') }}
+                                                                </flux:menu.item>
+                                                            @endif
+
+                                                            @if($this->workflow()->canAttachPhotos($shipment, $vehicle))
+                                                                <flux:menu.item icon="photo"
+                                                                    wire:click="openAttachVehicleDocumentModal({{ $vehicle->id }}, '{{ \App\Enums\VehicleDocumentType::PhotosAndVideos->value }}')">
+                                                                    {{ __('Upload Photos') }}
+                                                                </flux:menu.item>
+                                                            @endif
+
+                                                            <flux:menu.item icon="paper-clip"
+                                                                wire:click="openAttachVehicleDocumentModal({{ $vehicle->id }}, '{{ \App\Enums\VehicleDocumentType::Other->value }}')">
+                                                                {{ __('Other Document') }}
+                                                            </flux:menu.item>
+
+                                                            <flux:menu.separator />
+                                                            @if($vehicle->workshop_id)
+                                                                <flux:menu.item icon="arrow-uturn-left"
+                                                                    wire:click="openFromWorkshopConfirmModal({{ $vehicle->id }})">
+                                                                    {{ __('From Workshop') }}
+                                                                </flux:menu.item>
+                                                            @else
+                                                                <flux:menu.item icon="wrench"
+                                                                    wire:click="openToWorkshopModal({{ $vehicle->id }})">
+                                                                    {{ __('Send to Workshop') }}
+                                                                </flux:menu.item>
+                                                            @endif
+
+                                                            <flux:menu.separator />
+
+                                                            <flux:menu.item icon="eye"
+                                                                wire:click="openVehicleDocumentsModal({{ $vehicle->id }})">
+                                                                {{ __('View Documents') }}
+                                                            </flux:menu.item>
                                                         </flux:menu>
                                                     </flux:dropdown>
-                                                @endcan
+                                                @endif
                                             </div>
                                         </div>
 
@@ -1425,27 +1894,32 @@ new #[Title('Shipment Details')] class extends Component {
                                             <div>
                                                 <flux:text size="xs"
                                                     class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
-                                                    {{ __('Lot #') }}</flux:text>
+                                                    {{ __('Lot #') }}
+                                                </flux:text>
                                                 <flux:text size="sm" class="font-semibold">{{ $vehicle->lot_number ?: '—' }}
                                                 </flux:text>
                                             </div>
                                             <div>
                                                 <flux:text size="xs"
                                                     class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
-                                                    {{ __('Condition') }}</flux:text>
+                                                    {{ __('Condition') }}
+                                                </flux:text>
                                                 <flux:badge color="indigo" size="sm">
-                                                    {{ $vehicle->vehicle_is?->label() ?: '—' }}</flux:badge>
+                                                    {{ $vehicle->vehicle_is?->label() ?: '—' }}
+                                                </flux:badge>
                                             </div>
                                             <div>
                                                 <flux:text size="xs"
                                                     class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
-                                                    {{ __('Workshop') }}</flux:text>
+                                                    {{ __('Workshop') }}
+                                                </flux:text>
                                                 <flux:text size="sm">{{ $vehicle->workshop?->name ?: '—' }}</flux:text>
                                             </div>
                                             <div>
                                                 <flux:text size="xs"
                                                     class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
-                                                    {{ __('Driver') }}</flux:text>
+                                                    {{ __('Driver') }}
+                                                </flux:text>
                                                 <flux:text size="sm">
                                                     {{ $vehicle->driver?->company ?: $vehicle->driver?->phone ?: '—' }}
                                                 </flux:text>
@@ -1453,9 +1927,43 @@ new #[Title('Shipment Details')] class extends Component {
                                             <div>
                                                 <flux:text size="xs"
                                                     class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
-                                                    {{ __('Gatepass PIN') }}</flux:text>
+                                                    {{ __('Gatepass PIN') }}
+                                                </flux:text>
                                                 <flux:text size="sm" class="font-mono font-bold">
-                                                    {{ $vehicle->gatepass_pin ?: '—' }}</flux:text>
+                                                    {{ $vehicle->gatepass_pin ?: '—' }}
+                                                </flux:text>
+                                            </div>
+                                            @php
+                                                $w = (float) $vehicle->weight;
+                                                $wu = strtoupper($vehicle->weight_unit ?? 'LB');
+                                                $wLb = in_array($wu, ['LB', 'LBS']) ? $w : $w * 2.20462262;
+                                                $wKg = in_array($wu, ['LB', 'LBS']) ? $w / 2.20462262 : $w;
+
+                                                $m = (float) $vehicle->measurement;
+                                                $mFt3 = ($m < 100 && strtoupper($vehicle->measurement_unit ?? '') === 'CBM') 
+                                                    ? $m * 35.3146667 
+                                                    : $m;
+                                                $mVlb = $mFt3 * (1728 / 166);
+                                            @endphp
+                                            <div>
+                                                <flux:text size="xs"
+                                                    class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
+                                                    {{ __('Weight') }}
+                                                </flux:text>
+                                                <flux:text size="sm" class="font-semibold">
+                                                    {{ number_format($wKg, 2) }} {{ __('Kg') }}<br>
+                                                    <span class="text-zinc-500 font-normal">"{{ number_format($wLb, 2) }} {{ __('Lb') }}"</span>
+                                                </flux:text>
+                                            </div>
+                                            <div>
+                                                <flux:text size="xs"
+                                                    class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
+                                                    {{ __('Measurement') }}
+                                                </flux:text>
+                                                <flux:text size="sm" class="font-semibold">
+                                                    {{ number_format($mFt3, 2) }} {{ __('ft³') }}<br>
+                                                    <span class="text-zinc-500 font-normal">"{{ number_format($mVlb, 2) }} {{ __('Vlb') }}"</span>
+                                                </flux:text>
                                             </div>
                                         </div>
                                     </div>
@@ -1466,117 +1974,170 @@ new #[Title('Shipment Details')] class extends Component {
                 </div>
 
                 {{-- Invoice & Items --}}
-                <x-crud.panel class="p-6 bg-zinc-50 dark:bg-zinc-800/60 border-zinc-200 dark:border-zinc-700">
-                    <div class="flex items-start justify-between gap-3 mb-4">
-                        <div>
-                            <flux:heading size="lg" class="flex items-center gap-2">
-                                <flux:icon.receipt-percent class="size-5 text-indigo-500" />
-                                {{ __('Invoice') }}
-                            </flux:heading>
-                            <flux:text size="sm" class="text-zinc-500 mt-1">
-                                {{ $shipment->invoice?->invoice_number ?? __('No invoice number assigned yet.') }}
-                            </flux:text>
-                        </div>
-                        <div class="shrink-0 text-right">
-                            @php
-                                $effectiveInvoiceStatus = $shipment->invoice?->status ?? $shipment->invoice_status;
-                            @endphp
-                            @if($effectiveInvoiceStatus)
-                                <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1 block">
-                                    {{ __('Status') }}
+                @if($this->workflow()->canViewInvoice($shipment, auth()->user()))
+                    <x-crud.panel class="p-6 bg-zinc-50 dark:bg-zinc-800/60 border-zinc-200 dark:border-zinc-700">
+                        <div class="flex items-start justify-between gap-3 mb-4">
+                            <div>
+                                <flux:heading size="lg" class="flex items-center gap-2">
+                                    <flux:icon.receipt-percent class="size-5 text-indigo-500" />
+                                    {{ __('Invoice') }}
+                                </flux:heading>
+                                <flux:text size="sm" class="text-zinc-500 mt-1">
+                                    {{ $shipment->invoice?->invoice_number ?? __('No invoice number assigned yet.') }}
                                 </flux:text>
-                                <flux:badge color="amber" variant="subtle" size="sm" icon="document-text">
-                                    {{ $effectiveInvoiceStatus->name }}
-                                </flux:badge>
-                            @else
-                                <flux:text size="xs" class="text-zinc-500">
-                                    {{ __('No invoice status') }}
-                                </flux:text>
-                            @endif
-                        </div>
-                    </div>
-
-                    <div class="mb-1">
-                        <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
-                            {{ __('Total') }}
-                        </flux:text>
-                        <flux:text class="font-mono font-semibold text-indigo-600 dark:text-indigo-400">
-                            {{ '$' . number_format((float) ($shipment->invoice?->total_amount ?? 0), 2) }}
-                        </flux:text>
-                    </div>
-
-                    <div class="border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden mb-4">
-                        <div class="bg-zinc-100 dark:bg-zinc-800 px-3 py-2 flex items-center justify-between">
-                            <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-500">
-                                {{ __('Invoice Items') }}
-                            </flux:text>
-                        </div>
-                        <div class="max-h-56 overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800">
-                            @forelse($shipment->invoice?->items ?? collect() as $item)
-                                <div class="px-3 py-2 flex items-center justify-between gap-3">
-                                    <div class="flex-1">
-                                        <flux:text size="sm" class="font-medium">
-                                            {{ $item->description }}
+                            </div>
+                            <div class="shrink-0 flex items-center gap-3">
+                                @php
+                                    $effectiveInvoiceStatus = $shipment->invoice?->status ?? $shipment->invoice_status;
+                                @endphp
+                                <div class="text-right">
+                                    @if($effectiveInvoiceStatus)
+                                        <flux:text size="xs"
+                                            class="uppercase tracking-widest font-bold text-zinc-400 mb-1 block">
+                                            {{ __('Status') }}
                                         </flux:text>
-                                    </div>
-                                    <div class="flex items-center gap-3">
-                                        <div class="flex flex-col items-end gap-0.5">
-                                            @if((float) $item->discount_amount > 0)
-                                                <flux:text size="xs" class="text-zinc-500 line-through font-mono">
-                                                    {{ '$' . number_format((float) $item->gross_amount, 2) }}
-                                                </flux:text>
-                                                <flux:text size="xs" class="text-emerald-600 dark:text-emerald-400">
-                                                    −{{ '$' . number_format((float) $item->discount_amount, 2) }}
-                                                </flux:text>
-                                            @endif
-                                            <flux:text size="sm" class="font-mono font-semibold">
-                                                {{ '$' . number_format((float) $item->amount, 2) }}
+                                        <flux:badge color="amber" variant="subtle" size="sm" icon="document-text">
+                                            {{ $effectiveInvoiceStatus->name }}
+                                        </flux:badge>
+                                    @else
+                                        <flux:text size="xs" class="text-zinc-500">
+                                            {{ __('No invoice status') }}
+                                        </flux:text>
+                                    @endif
+                                </div>
+                                @php
+                                    $user = auth()->user();
+                                    $canClear = $this->workflow()->canClearInvoice($shipment, $user);
+                                    $canComplete = $this->workflow()->canCompleteInvoice($shipment, $user);
+                                    // Show dropdown if user can transition to any status or is super_admin
+                                    $showDropdown = $user->hasRole('super_admin') || $canClear || $canComplete;
+                                @endphp
+
+                                @if($showDropdown && !$shipment->isLocked())
+                                    <flux:dropdown align="end" position="bottom">
+                                        <flux:button icon="ellipsis-vertical" size="sm" variant="ghost" />
+                                        <flux:menu>
+                                            @foreach(InvoiceStatus::cases() as $status)
+                                                @php
+                                                    $currentStatus = $shipment->invoice?->status?->value ?? $shipment->invoice_status?->value;
+                                                    $isAllowed = match ($status) {
+                                                        InvoiceStatus::Draft => false, // Cannot go back to draft from UI currently
+                                                        InvoiceStatus::Cleared => $canClear,
+                                                        InvoiceStatus::Completed => $canComplete,
+                                                    } || $user->hasRole('super_admin');
+                                                @endphp
+
+                                                @if($isAllowed && $currentStatus !== $status->value)
+                                                    <flux:menu.item wire:click="openInvoiceStatusConfirm('{{ $status->value }}')">
+                                                        {{ $status->name }}
+                                                    </flux:menu.item>
+                                                @endif
+                                            @endforeach
+                                        </flux:menu>
+                                    </flux:dropdown>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="mb-1">
+                            <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1">
+                                {{ __('Total') }}
+                            </flux:text>
+                            <flux:text class="font-mono font-semibold text-indigo-600 dark:text-indigo-400">
+                                {{ '$' . number_format((float) ($shipment->invoice?->total_amount ?? 0), 2) }}
+                            </flux:text>
+                        </div>
+
+                        <div class="border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden mb-4">
+                            <div class="bg-zinc-100 dark:bg-zinc-800 px-3 py-2 flex items-center justify-between">
+                                <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-500">
+                                    {{ __('Invoice Items') }}
+                                </flux:text>
+                            </div>
+                            <div class="max-h-56 overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800">
+                                @forelse($shipment->invoice?->items ?? collect() as $item)
+                                    <div class="px-3 py-2 flex items-center justify-between gap-3">
+                                        <div class="flex-1">
+                                            <flux:text size="sm" class="font-medium">
+                                                {{ $item->description }}
                                             </flux:text>
                                         </div>
-                                        <div class="flex items-center gap-2">
-                                            <flux:button icon="pencil-square" size="xs" variant="ghost"
-                                                wire:click="editItem({{ $item->id }})" />
-                                            <flux:button icon="trash" size="xs" variant="ghost"
-                                                class="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950/40"
-                                                wire:click="deleteItem({{ $item->id }})" />
+                                        <div class="flex items-center gap-3">
+                                            <div class="flex flex-col items-end gap-0.5">
+                                                @if((float) $item->discount_amount > 0)
+                                                    <flux:text size="xs" class="text-zinc-500 line-through font-mono">
+                                                        {{ '$' . number_format((float) $item->gross_amount, 2) }}
+                                                    </flux:text>
+                                                    <flux:text size="xs" class="text-emerald-600 dark:text-emerald-400">
+                                                        −{{ '$' . number_format((float) $item->discount_amount, 2) }}
+                                                    </flux:text>
+                                                @endif
+                                                <flux:text size="sm" class="font-mono font-semibold">
+                                                    {{ '$' . number_format((float) $item->amount, 2) }}
+                                                </flux:text>
+                                            </div>
+                                            @if($this->workflow()->canEditInvoice($shipment, auth()->user()))
+                                                <div class="flex items-center gap-2">
+                                                    <flux:button icon="pencil-square" size="xs" variant="ghost"
+                                                        wire:click="editItem({{ $item->id }})" />
+                                                    <flux:button icon="trash" size="xs" variant="ghost"
+                                                        class="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950/40"
+                                                        wire:click="deleteItem({{ $item->id }})" />
+                                                </div>
+                                            @endif
                                         </div>
                                     </div>
-                                </div>
-                            @empty
-                                <div class="px-3 py-4">
-                                    <flux:text size="sm" class="text-zinc-500">
-                                        {{ __('No invoice items yet. Add the first charge below.') }}
-                                    </flux:text>
-                                </div>
-                            @endforelse
+                                @empty
+                                    <div class="px-3 py-4">
+                                        <flux:text size="sm" class="text-zinc-500">
+                                            {{ __('No invoice items yet. Add the first charge below.') }}
+                                        </flux:text>
+                                    </div>
+                                @endforelse
+                            </div>
                         </div>
-                    </div>
 
-                    <form wire:submit.prevent="addOrUpdateItem" class="space-y-3">
-                        <flux:select wire:model.live="item_description" label="{{ __('Invoice item') }}"
-                            icon="document-text">
-                            <flux:select.option value="">{{ __('Select invoice item') }}</flux:select.option>
-                            @foreach(\App\Models\ChargeItem::query()->whereNotNull('item')->orderBy('item')->get() as $chargeItem)
-                                <flux:select.option :value="$chargeItem->item">
-                                    {{ $chargeItem->item }}
-                                </flux:select.option>
-                            @endforeach
-                        </flux:select>
-                        <flux:input type="number" min="0" step="0.01" wire:model="item_amount" :label="__('Amount')"
-                            icon="currency-dollar" :readonly="$this->invoiceItemAmountReadonly" />
-                        <div class="flex gap-2">
-                            <flux:button type="submit" variant="primary" icon="plus-circle" class="flex-1">
-                                {{ $invoiceItemId ? __('Update Item') : __('Add Item') }}
-                            </flux:button>
-                            @if($invoiceItemId)
-                                <flux:button type="button" variant="ghost" class="flex-none"
-                                    wire:click="$set('invoiceItemId', null)">
-                                    {{ __('Cancel') }}
-                                </flux:button>
-                            @endif
-                        </div>
-                    </form>
-                </x-crud.panel>
+                        @if($this->workflow()->canEditInvoice($shipment, auth()->user()))
+                            <form wire:submit.prevent="addOrUpdateItem" class="space-y-3">
+                                @if($shipment->isContainer())
+                                    <flux:select wire:model="invoice_vehicle_id" label="{{ __('Vehicle (Optional)') }}"
+                                        icon="truck">
+                                        <flux:select.option value="">{{ __('Entire Container') }}</flux:select.option>
+                                        @foreach($shipment->vehicles as $v)
+                                            <flux:select.option :value="$v->id">
+                                                {{ $v->year ?: '' }} {{ $v->make ?: '' }} {{ $v->model ?: '' }}
+                                                ({{ substr($v->vin ?: '—', -6) }})
+                                            </flux:select.option>
+                                        @endforeach
+                                    </flux:select>
+                                @endif
+
+                                <flux:select wire:model.live="item_description" label="{{ __('Invoice item') }}"
+                                    icon="document-text">
+                                    <flux:select.option value="">{{ __('Select invoice item') }}</flux:select.option>
+                                    @foreach(\App\Models\ChargeItem::query()->whereNotNull('item')->orderBy('item')->get() as $chargeItem)
+                                        <flux:select.option :value="$chargeItem->item">
+                                            {{ $chargeItem->item }}
+                                        </flux:select.option>
+                                    @endforeach
+                                </flux:select>
+                                <flux:input type="number" min="0" step="0.01" wire:model="item_amount" :label="__('Amount')"
+                                    icon="currency-dollar" :readonly="$this->invoiceItemAmountReadonly" />
+                                <div class="flex gap-2">
+                                    <flux:button type="submit" variant="primary" icon="plus-circle" class="flex-1">
+                                        {{ $invoiceItemId ? __('Update Item') : __('Add Item') }}
+                                    </flux:button>
+                                    @if($invoiceItemId)
+                                        <flux:button type="button" variant="ghost" class="flex-none"
+                                            wire:click="$set('invoiceItemId', null)">
+                                            {{ __('Cancel') }}
+                                        </flux:button>
+                                    @endif
+                                </div>
+                            </form>
+                        @endif
+                    </x-crud.panel>
+                @endif
 
                 {{-- Tracking Dual-Timeline --}}
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -1601,7 +2162,8 @@ new #[Title('Shipment Details')] class extends Component {
                                             <flux:badge color="indigo" size="sm" variant="subtle">{{ $tracking->status->name }}
                                             </flux:badge>
                                             <flux:text size="xs" class="text-zinc-400 font-mono">
-                                                {{ $tracking->recorded_at?->format('M d, Y H:i') }}</flux:text>
+                                                {{ $tracking->recorded_at?->format('M d, Y H:i') }}
+                                            </flux:text>
                                         </div>
                                         <flux:text size="sm">{{ $tracking->note }}</flux:text>
                                     </div>
@@ -1637,11 +2199,13 @@ new #[Title('Shipment Details')] class extends Component {
                                                 ({{ $vTracking->vehicle->lot_number }})
                                             </flux:text>
                                             <flux:text size="xs" class="text-zinc-400 font-mono">
-                                                {{ $vTracking->recorded_at?->format('M d, Y H:i') }}</flux:text>
+                                                {{ $vTracking->recorded_at?->format('M d, Y H:i') }}
+                                            </flux:text>
                                         </div>
                                         <div class="flex items-center gap-2 mb-2">
                                             <flux:badge color="emerald" size="xs" variant="subtle">
-                                                {{ $vTracking->status->name }}</flux:badge>
+                                                {{ $vTracking->status->name }}
+                                            </flux:badge>
                                         </div>
                                         <flux:text size="xs" class="text-zinc-600 dark:text-zinc-400 italic">
                                             "{{ $vTracking->note }}"</flux:text>
@@ -1709,114 +2273,61 @@ new #[Title('Shipment Details')] class extends Component {
             <div class="space-y-6">
                 {{-- Documents & Auction Receipt --}}
                 <x-crud.panel class="p-6">
-                    <flux:heading size="lg" class="mb-4 flex items-center gap-2">
-                        <flux:icon.paper-clip class="size-5 text-indigo-500" />
-                        {{ __('Documents') }}
-                    </flux:heading>
+                    <div class="flex items-center justify-between mb-4">
+                        <flux:heading size="lg" class="flex items-center gap-2">
+                            <flux:icon.paper-clip class="size-5 text-indigo-500" />
+                            {{ __('Documents & Attachments') }}
+                        </flux:heading>
+                    </div>
 
                     @php
-                        $documents = $shipment->documents->sortByDesc(fn($d) => $d->created_at?->timestamp ?? 0)->values();
-                        $isStaffOrAdmin = auth()->user()?->hasRole('super_admin') || auth()->user()?->staff()->exists();
+                        $docCount = $shipment->documents()->count();
+                        $fileCount = \App\Models\ShipmentDocumentFile::whereIn('shipment_document_id', $shipment->documents()->pluck('id'))->count();
+                        $hasReceipt = (bool) $shipment->auction_receipt;
                     @endphp
 
                     <div class="space-y-4">
-                        @if($shipment->auction_receipt)
-                            <div
-                                class="flex items-center gap-3 p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800">
+                        <div
+                            class="flex items-center justify-between p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800">
+                            <div class="flex items-center gap-3">
                                 <div
-                                    class="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400">
-                                    <flux:icon.document-arrow-down class="size-5" />
+                                    class="size-10 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center">
+                                    <flux:icon.document-duplicate class="size-5 text-zinc-400" />
+                                </div>
+                                <div>
+                                    <flux:text size="sm" class="font-bold">{{ $docCount }} {{ __('Document Groups') }}
+                                    </flux:text>
+                                    <flux:text size="xs" class="text-zinc-500">{{ $fileCount }} {{ __('Total Files') }}
+                                    </flux:text>
+                                </div>
+                            </div>
+                            <flux:button variant="ghost" size="sm" icon="eye" wire:click="openShipmentDocumentsModal">
+                                {{ __('View all') }}
+                            </flux:button>
+                        </div>
+
+                        @if($hasReceipt)
+                            <div
+                                class="flex items-center gap-3 p-3 rounded-xl bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100/50 dark:border-indigo-900/30">
+                                <div
+                                    class="size-10 rounded-lg bg-white dark:bg-zinc-900 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center">
+                                    <flux:icon.document-arrow-down class="size-5 text-indigo-500" />
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <flux:text size="sm" class="font-semibold">
-                                        {{ __('Auction receipt') }}
-                                    </flux:text>
-                                    <flux:text size="xs" class="text-zinc-500 font-mono truncate">
-                                        {{ \Illuminate\Support\Str::limit($shipment->auction_receipt, 48) }}
-                                    </flux:text>
+                                    <flux:text size="sm" class="font-bold text-indigo-900 dark:text-indigo-200">
+                                        {{ __('Auction Receipt Attached') }}</flux:text>
+                                    <flux:text size="xs" class="text-indigo-600 dark:text-indigo-400 truncate">
+                                        {{ $shipment->auction_receipt }}</flux:text>
                                 </div>
                             </div>
                         @endif
 
-                        @if($documents->isEmpty() && !$shipment->auction_receipt)
-                            <flux:text size="sm" class="text-zinc-500">
-                                {{ __('No documents attached yet.') }}
-                            </flux:text>
-                        @elseif($documents->isNotEmpty())
-                            <div class="space-y-4">
-                                @foreach($documents as $document)
-                                    <div class="rounded-xl border border-zinc-200 dark:border-zinc-700 p-3 space-y-2">
-                                        <div class="flex items-start justify-between gap-2">
-                                            <div>
-                                                <flux:text size="sm" class="font-semibold text-zinc-900 dark:text-zinc-100">
-                                                    {{ $document->document_type?->label() ?? __('Document') }}
-                                                </flux:text>
-                                                @if(filled($document->notes))
-                                                    <flux:text size="xs" class="text-zinc-500 mt-0.5 block">
-                                                        {{ $document->notes }}
-                                                    </flux:text>
-                                                @endif
-                                            </div>
-                                            @if($isStaffOrAdmin)
-                                                <flux:button type="button" variant="ghost" size="sm" icon="trash"
-                                                    class="text-red-600 dark:text-red-400"
-                                                    wire:click="openDeleteDocumentConfirm({{ $document->id }})"
-                                                    wire:key="del-doc-{{ $document->id }}" />
-                                            @endif
-                                        </div>
-                                        <ul class="space-y-2">
-                                            @foreach($document->files as $docFile)
-                                                @php
-                                                    $ext = strtoupper(pathinfo((string) ($docFile->original_name ?? $docFile->path), PATHINFO_EXTENSION) ?: '—');
-                                                @endphp
-                                                <li
-                                                    class="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 px-3 py-2">
-                                                    <div class="min-w-0 flex-1">
-                                                        <flux:text size="sm" class="font-medium truncate">
-                                                            {{ $docFile->original_name ?? basename($docFile->path) }}
-                                                        </flux:text>
-                                                        <flux:text size="xs" class="text-zinc-500">
-                                                            {{ __('Format') }}: {{ $ext }}
-                                                            @if(\Illuminate\Support\Facades\Storage::disk('local')->exists($docFile->path))
-                                                                ·
-                                                                {{ number_format(\Illuminate\Support\Facades\Storage::disk('local')->size($docFile->path) / 1024, 1) }}
-                                                                KB
-                                                            @endif
-                                                        </flux:text>
-                                                    </div>
-                                                    <div class="flex items-center gap-1 shrink-0">
-                                                        <flux:button size="sm" variant="outline" icon="arrow-down-tray"
-                                                            :href="\App\Support\ShipmentDocumentSignedDownloadUrl::for($shipment, $docFile)">
-                                                            {{ __('Download') }}
-                                                        </flux:button>
-                                                        @if($isStaffOrAdmin)
-                                                            <flux:button type="button" size="sm" variant="ghost" icon="trash"
-                                                                class="text-red-600 dark:text-red-400"
-                                                                wire:click="openDeleteFileConfirm({{ $docFile->id }})"
-                                                                wire:key="del-file-{{ $docFile->id }}" />
-                                                        @endif
-                                                    </div>
-                                                </li>
-                                            @endforeach
-                                        </ul>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @endif
-
-                        <div class="pt-2 border-t border-zinc-100 dark:border-zinc-800 mt-2">
-                            <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-2 block">
-                                {{ __('Manage attachments') }}
-                            </flux:text>
+                        <div class="pt-2">
                             @can('documents.manage')
-                                <flux:button variant="outline" icon="arrow-up-tray" class="w-full"
+                                <flux:button variant="outline" icon="plus" class="w-full"
                                     wire:click="openAttachDocumentModal">
-                                    {{ __('Attach document') }}
+                                    {{ __('Attach documents') }}
                                 </flux:button>
-                            @else
-                                <flux:text size="sm" class="text-zinc-500">
-                                    {{ __('You do not have permission to attach documents.') }}
-                                </flux:text>
                             @endcan
                         </div>
                     </div>
@@ -1920,35 +2431,18 @@ new #[Title('Shipment Details')] class extends Component {
         <flux:modal wire:model.self="showAttachDocumentModal" class="max-w-lg md:w-[36rem]">
             <form wire:submit="saveAttachedDocuments" class="space-y-4">
                 <div>
-                    <flux:heading size="lg">{{ __('Attach document') }}</flux:heading>
+                    <flux:heading size="lg">{{ __('Attach Shipping Document') }}</flux:heading>
                     <flux:subheading>{{ __('Select type, add files, and optional notes.') }}</flux:subheading>
                 </div>
 
                 <flux:select wire:model.live="attachDocumentType" :label="__('Document type')" required>
                     <flux:select.option value="">{{ __('Choose type…') }}</flux:select.option>
-                    @foreach(\App\Enums\ShipmentDocumentType::cases() as $type)
+                    @foreach($this->workflow()->allowedShipmentDocumentTypes($shipment) as $typeValue)
+                        @php $type = \App\Enums\ShipmentDocumentType::from($typeValue); @endphp
                         <flux:select.option value="{{ $type->value }}">{{ $type->label() }}</flux:select.option>
                     @endforeach
                 </flux:select>
                 <flux:error name="attachDocumentType" />
-
-                <flux:select wire:model.live="selectedVehicleId" :label="__('Relates to vehicle…')">
-                    @foreach($shipment->vehicles as $v)
-                        <flux:select.option value="{{ $v->id }}">{{ $v->year }} {{ $v->make }} {{ $v->model }} ({{ $v->vin }})
-                        </flux:select.option>
-                    @endforeach
-                </flux:select>
-                <flux:error name="selectedVehicleId" />
-
-                @if($attachDocumentType === \App\Enums\ShipmentDocumentType::TitleDocument->value)
-                    <flux:select wire:model="attachTitleVehicleIs" :label="__('Vehicle condition')" required>
-                        <flux:select.option value="">{{ __('Select…') }}</flux:select.option>
-                        @foreach(\App\Enums\VehicleIs::cases() as $v)
-                            <flux:select.option value="{{ $v->value }}">{{ $v->label() }}</flux:select.option>
-                        @endforeach
-                    </flux:select>
-                    <flux:error name="attachTitleVehicleIs" />
-                @endif
 
                 <flux:textarea wire:model="attachDocumentNotes" :label="__('Notes (optional)')" rows="2" />
 
@@ -1960,6 +2454,70 @@ new #[Title('Shipment Details')] class extends Component {
                     <flux:error name="attachFiles" />
                     <flux:error name="attachFiles.*" />
                     <div wire:loading wire:target="attachFiles" class="mt-1 text-xs text-zinc-500">{{ __('Uploading…') }}
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2">
+                    <flux:modal.close>
+                        <flux:button variant="ghost" type="button">{{ __('Cancel') }}</flux:button>
+                    </flux:modal.close>
+                    <flux:button type="submit" variant="primary" wire:loading.attr="disabled">
+                        {{ __('Save') }}
+                    </flux:button>
+                </div>
+            </form>
+        </flux:modal>
+    @endcan
+
+    @can('documents.manage')
+        <flux:modal wire:model.self="showAttachVehicleDocumentModal" class="max-w-lg md:w-[36rem]">
+            <form wire:submit="saveAttachedVehicleDocuments" class="space-y-4">
+                <div>
+                    <flux:heading size="lg">{{ __('Attach Vehicle Document') }}</flux:heading>
+                    @if($selectedVehicleId)
+                        @php $selectedV = $shipment->vehicles->firstWhere('id', $selectedVehicleId); @endphp
+                        <flux:subheading>
+                            {{ $selectedV?->year }} {{ $selectedV?->make }} {{ $selectedV?->model }}
+                            <span class="font-mono text-xs text-zinc-500">({{ $selectedV?->vin }})</span>
+                        </flux:subheading>
+                    @endif
+                </div>
+
+                <flux:select wire:model.live="attachVehicleDocumentType" :label="__('Document type')" required>
+                    <flux:select.option value="">{{ __('Choose type…') }}</flux:select.option>
+                    @if($selectedVehicleId)
+                        @php $selectedV = $shipment->vehicles->firstWhere('id', $selectedVehicleId); @endphp
+                        @if($selectedV)
+                            @foreach($this->workflow()->allowedVehicleDocumentTypes($shipment, $selectedV) as $typeValue)
+                                @php $type = \App\Enums\VehicleDocumentType::from($typeValue); @endphp
+                                <flux:select.option value="{{ $type->value }}">{{ $type->label() }}</flux:select.option>
+                            @endforeach
+                        @endif
+                    @endif
+                </flux:select>
+                <flux:error name="attachVehicleDocumentType" />
+
+                @if($attachVehicleDocumentType === \App\Enums\VehicleDocumentType::TitleDocument->value)
+                    <flux:radio.group wire:model="attachVehicleTitleVehicleIs" :label="__('Vehicle condition')"
+                        variant="segmented">
+                        @foreach(\App\Enums\VehicleIs::cases() as $v)
+                            <flux:radio :value="$v->value" :label="$v->label()" />
+                        @endforeach
+                    </flux:radio.group>
+                    <flux:error name="attachVehicleTitleVehicleIs" />
+                @endif
+
+                <flux:textarea wire:model="attachVehicleDocumentNotes" :label="__('Notes (optional)')" rows="2" />
+
+                <div>
+                    <flux:text class="mb-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">{{ __('Files') }}
+                    </flux:text>
+                    <input type="file" wire:model="attachVehicleFiles" multiple
+                        class="block w-full text-sm text-zinc-600 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-indigo-700 hover:file:bg-indigo-100 dark:text-zinc-400 dark:file:bg-indigo-950 dark:file:text-indigo-300" />
+                    <flux:error name="attachVehicleFiles" />
+                    <flux:error name="attachVehicleFiles.*" />
+                    <div wire:loading wire:target="attachVehicleFiles" class="mt-1 text-xs text-zinc-500">
+                        {{ __('Uploading…') }}
                     </div>
                 </div>
 
@@ -2053,5 +2611,361 @@ new #[Title('Shipment Details')] class extends Component {
                 </div>
             </div>
         </flux:modal>
+
+        <flux:modal wire:model="showShipmentDocumentsModal" class="max-w-3xl">
+            <div class="space-y-6">
+                <div>
+                    <flux:heading size="lg">{{ __('Shipping Documents') }}</flux:heading>
+                    <flux:subheading>
+                        {{ $shipment->tracking_number ?: __('No tracking #') }} ·
+                        {{ $shipment->shipping_mode?->name ?? __('Unknown Mode') }}
+                    </flux:subheading>
+                </div>
+
+                @php
+                    $isStaffOrAdmin = auth()->user()?->hasRole('super_admin') || auth()->user()?->staff()->exists();
+                    $documents = $shipment->documents()->with(['files.uploader'])->get()->sortByDesc(fn($d) => $d->created_at?->timestamp ?? 0);
+                @endphp
+
+                <div class="space-y-8 max-h-[65vh] overflow-y-auto pr-2 custom-scrollbar">
+                    {{-- Auction Receipt (Pinned) --}}
+                    @if($shipment->auction_receipt)
+                        <div class="space-y-3">
+                            <flux:heading size="sm" class="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+                                <flux:icon.star class="size-4" />
+                                {{ __('Priority Document') }}
+                            </flux:heading>
+                            <div
+                                class="flex items-center gap-4 p-4 rounded-2xl border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/30 dark:bg-indigo-900/10">
+                                <div
+                                    class="shrink-0 size-14 rounded-xl bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center border border-indigo-200 dark:border-indigo-800">
+                                    <flux:icon.document-arrow-down class="size-7 text-indigo-600 dark:text-indigo-400" />
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <flux:text size="sm" class="font-bold text-zinc-900 dark:text-zinc-100">
+                                        {{ __('Auction receipt') }}
+                                    </flux:text>
+                                    <flux:text size="xs" class="text-zinc-500 font-mono truncate"
+                                        :title="$shipment->auction_receipt">
+                                        {{ \Illuminate\Support\Str::limit($shipment->auction_receipt, 15) }}
+                                    </flux:text>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
+                    @if($documents->isEmpty() && !$shipment->auction_receipt)
+                        <div
+                            class="flex flex-col items-center justify-center py-20 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800">
+                            <flux:icon.document-text class="size-16 text-zinc-300 dark:text-zinc-700 mb-4" />
+                            <flux:text class="text-zinc-500 font-medium">{{ __('No documents attached yet.') }}</flux:text>
+                        </div>
+                    @else
+                        @foreach($documents as $doc)
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <div class="size-2 rounded-full bg-indigo-500"></div>
+                                        <flux:heading size="sm" class="uppercase tracking-wider font-bold text-zinc-500">
+                                            {{ $doc->document_type?->label() ?? __('Other') }}
+                                        </flux:heading>
+                                    </div>
+                                    @if($isStaffOrAdmin)
+                                        <flux:button type="button" variant="ghost" size="sm" icon="trash"
+                                            class="text-red-600 dark:text-red-400"
+                                            wire:click="openDeleteDocumentConfirm({{ $doc->id }})"
+                                            wire:key="del-ship-doc-{{ $doc->id }}" />
+                                    @endif
+                                </div>
+
+                                @if(filled($doc->notes))
+                                    <flux:text size="xs" class="text-zinc-500 -mt-2 block italic">
+                                        "{{ $doc->notes }}"
+                                    </flux:text>
+                                @endif
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    @foreach($doc->files as $file)
+                                        @php
+                                            $ext = strtolower(pathinfo($file->original_name ?? $file->path, PATHINFO_EXTENSION));
+                                            $isImage = in_array($ext, ['jpg', 'jpeg', 'png', 'webp']);
+                                        @endphp
+                                        <div
+                                            class="flex items-center gap-4 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 group hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/5 transition-all duration-200">
+                                            <div
+                                                class="shrink-0 size-14 rounded-xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center overflow-hidden border border-zinc-100 dark:border-zinc-700 group-hover:scale-105 transition-transform">
+                                                @if($isImage)
+                                                    <flux:icon.photo class="size-7 text-indigo-500/70" />
+                                                @elseif($ext === 'pdf')
+                                                    <flux:icon.document-text class="size-7 text-red-500/70" />
+                                                @else
+                                                    <flux:icon.document class="size-7 text-zinc-400" />
+                                                @endif
+                                            </div>
+
+                                            <div class="min-w-0 flex-1">
+                                                <flux:text size="sm"
+                                                    class="font-bold text-zinc-900 dark:text-zinc-100 truncate pr-2 group-hover:text-indigo-600 transition-colors"
+                                                    :title="$file->original_name ?? basename($file->path)">
+                                                    {{ \Illuminate\Support\Str::limit($file->original_name ?? basename($file->path), 30) }}
+                                                </flux:text>
+                                                <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
+                                                    <flux:text size="xs"
+                                                        class="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-mono uppercase tracking-tighter">
+                                                        {{ $ext ?: '???' }}
+                                                    </flux:text>
+                                                    <flux:text size="xs" class="text-zinc-400">
+                                                        {{ $file->created_at->format('M d, Y') }}
+                                                    </flux:text>
+                                                </div>
+                                            </div>
+
+                                            <div class="flex items-center gap-1">
+                                                <flux:button variant="ghost" size="sm" icon="arrow-down-tray"
+                                                    class="shrink-0 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
+                                                    :href="\App\Support\ShipmentDocumentSignedDownloadUrl::for($shipment, $file)" />
+                                                @if($isStaffOrAdmin)
+                                                    <flux:button type="button" size="sm" variant="ghost" icon="trash"
+                                                        class="text-red-600 dark:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        wire:click="openDeleteFileConfirm({{ $file->id }})"
+                                                        wire:key="del-ship-file-{{ $file->id }}" />
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endforeach
+                    @endif
+                </div>
+
+                <div class="flex justify-end gap-2 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                    <flux:modal.close>
+                        <flux:button variant="ghost">{{ __('Close') }}</flux:button>
+                    </flux:modal.close>
+                </div>
+            </div>
+        </flux:modal>
+
+        <flux:modal wire:model="showVehicleDocumentsModal" class="max-w-3xl">
+            @if($selectedVehicleIdForDocs)
+                @php
+                    $v = $shipment->vehicles->firstWhere('id', $selectedVehicleIdForDocs);
+                    $vDocs = $v?->vehicleDocuments()->with(['files.uploader'])->get() ?? collect();
+                @endphp
+                <div class="space-y-6">
+                    <div>
+                        <flux:heading size="lg">{{ __('Vehicle Documents') }}</flux:heading>
+                        <flux:subheading>
+                            @if($v)
+                                {{ $v->year }} {{ $v->make }} {{ $v->model }} · {{ $v->vin }}
+                            @endif
+                        </flux:subheading>
+                    </div>
+
+                    @if($vDocs->isEmpty() && !$v?->auction_receipt)
+                        <div
+                            class="flex flex-col items-center justify-center py-20 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800">
+                            <flux:icon.document-text class="size-16 text-zinc-300 dark:text-zinc-700 mb-4" />
+                            <flux:text class="text-zinc-500 font-medium">{{ __('No documents attached to this vehicle.') }}
+                            </flux:text>
+                        </div>
+                    @else
+                        <div class="space-y-8 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                            {{-- Vehicle Auction Receipt (Pinned) --}}
+                            @if($v?->auction_receipt)
+                                <div class="space-y-3">
+                                    <div class="flex items-center gap-2 text-primary-600 dark:text-primary-400">
+                                        <flux:icon.star class="size-4" />
+                                        <flux:heading size="sm" class="uppercase tracking-wider font-bold">
+                                            {{ __('Priority Document') }}
+                                        </flux:heading>
+                                    </div>
+                                    @php
+                                        $receiptPath = $v->auction_receipt;
+                                        $ext = strtolower(pathinfo($receiptPath, PATHINFO_EXTENSION));
+                                        $isImage = in_array($ext, ['jpg', 'jpeg', 'png', 'webp']);
+                                    @endphp
+                                    <div
+                                        class="flex items-center gap-4 p-4 rounded-2xl border border-primary-200 dark:border-primary-900/50 bg-primary-50/30 dark:bg-primary-900/10 group hover:border-primary-500/50 transition-all">
+                                        <div
+                                            class="shrink-0 size-14 rounded-xl bg-primary-100 dark:bg-primary-900 flex items-center justify-center border border-primary-200 dark:border-primary-800">
+                                            @if($isImage)
+                                                <flux:icon.photo class="size-7 text-primary-600 dark:text-primary-400" />
+                                            @elseif($ext === 'pdf')
+                                                <flux:icon.document-text class="size-7 text-red-500/70" />
+                                            @else
+                                                <flux:icon.document class="size-7 text-primary-400" />
+                                            @endif
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <flux:text size="sm" class="font-bold text-zinc-900 dark:text-zinc-100">
+                                                {{ __('Auction receipt') }}
+                                            </flux:text>
+                                            <flux:text size="xs" class="text-zinc-500 font-mono truncate"
+                                                :title="basename($receiptPath)">
+                                                {{ \Illuminate\Support\Str::limit(basename($receiptPath), 15) }}
+                                            </flux:text>
+                                        </div>
+                                        <flux:button variant="ghost" size="sm" icon="arrow-down-tray"
+                                            class="shrink-0 text-zinc-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20"
+                                            target="_blank" :href="Storage::url($receiptPath)" />
+                                    </div>
+                                </div>
+                            @endif
+                            @foreach($vDocs as $doc)
+                                <div class="space-y-4">
+                                    <div class="flex items-center gap-2">
+                                        <div class="size-2 rounded-full bg-primary-500"></div>
+                                        <flux:heading size="sm" class="uppercase tracking-wider font-bold text-zinc-500">
+                                            {{ $doc->document_type?->label() ?? __('Other') }}
+                                        </flux:heading>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        @foreach($doc->files as $file)
+                                            @php
+                                                $ext = strtolower(pathinfo($file->original_name ?? $file->path, PATHINFO_EXTENSION));
+                                                $isImage = in_array($ext, ['jpg', 'jpeg', 'png', 'webp']);
+                                            @endphp
+                                            <div
+                                                class="flex items-center gap-4 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 group hover:border-primary-500/50 hover:shadow-lg hover:shadow-primary-500/5 transition-all duration-200">
+                                                <div
+                                                    class="shrink-0 size-14 rounded-xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center overflow-hidden border border-zinc-100 dark:border-zinc-700 group-hover:scale-105 transition-transform">
+                                                    @if($isImage)
+                                                        <flux:icon.photo class="size-7 text-primary-500/70" />
+                                                    @elseif($ext === 'pdf')
+                                                        <flux:icon.document-text class="size-7 text-red-500/70" />
+                                                    @else
+                                                        <flux:icon.document class="size-7 text-zinc-400" />
+                                                    @endif
+                                                </div>
+
+                                                <div class="min-w-0 flex-1">
+                                                    <flux:text size="sm"
+                                                        class="font-bold text-zinc-900 dark:text-zinc-100 truncate pr-2 group-hover:text-primary-600 transition-colors"
+                                                        :title="$file->original_name ?? basename($file->path)">
+                                                        {{ \Illuminate\Support\Str::limit($file->original_name ?? basename($file->path), 30) }}
+                                                    </flux:text>
+                                                    <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
+                                                        <flux:text size="xs"
+                                                            class="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-mono uppercase tracking-tighter">
+                                                            {{ $ext ?: '???' }}
+                                                        </flux:text>
+                                                        <flux:text size="xs" class="text-zinc-400">
+                                                            {{ $file->created_at->format('M d, Y') }}
+                                                        </flux:text>
+                                                    </div>
+                                                </div>
+
+                                                <flux:button variant="ghost" size="sm" icon="arrow-down-tray"
+                                                    class="shrink-0 text-zinc-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20"
+                                                    :href="\App\Support\VehicleDocumentFileSignedDownloadUrl::for($v, $file)" />
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    <div class="flex justify-end gap-2 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                        <flux:modal.close>
+                            <flux:button variant="ghost">{{ __('Close') }}</flux:button>
+                        </flux:modal.close>
+                    </div>
+                </div>
+            @endif
+        </flux:modal>
     @endif
+
+    <flux:modal wire:model="showLogisticsModal" class="md:max-w-4xl" variant="flyout">
+        <form wire:submit="saveLogistics" class="space-y-8">
+            <div>
+                <flux:heading size="lg">{{ __('Logistics & Voyage Details') }}</flux:heading>
+                <flux:subheading>{{ __('Manage shipment-level identifiers and individual vehicle metrics.') }}
+                </flux:subheading>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Shipment Fields -->
+                <flux:input wire:model="logisticsForm.shipment.vessel_name" label="{{ __('Vessel Name') }}"
+                    icon="ship" />
+                <flux:input wire:model="logisticsForm.shipment.voyage_no" label="{{ __('Voyage #') }}" icon="hashtag" />
+                <flux:input wire:model="logisticsForm.shipment.itn_number" label="{{ __('ASL ITN #') }}"
+                    icon="finger-print" />
+
+                <flux:input wire:model="logisticsForm.shipment.booking_number" label="{{ __('Booking #') }}"
+                    icon="hashtag" />
+                <flux:input wire:model="logisticsForm.shipment.bill_of_lading_number" label="{{ __('BL #') }}"
+                    icon="document-text" />
+                <flux:input wire:model="logisticsForm.shipment.container_no" label="{{ __('Container #') }}"
+                    icon="square-3-stack-3d" />
+
+                <flux:input wire:model="logisticsForm.shipment.seal_no" label="{{ __('Seal #') }}" icon="lock-closed" />
+                <flux:input wire:model="logisticsForm.shipment.container_type" label="{{ __('Container Type') }}"
+                    placeholder="e.g. 40' HIGH CUBE" />
+                <flux:input type="date" wire:model="logisticsForm.shipment.cut_off_date"
+                    label="{{ __('Cut-off Date') }}" />
+
+                <flux:input type="date" wire:model="logisticsForm.shipment.departure_date"
+                    label="{{ __('ETD (Departure)') }}" />
+                <flux:input type="date" wire:model="logisticsForm.shipment.arrival_date"
+                    label="{{ __('ETA (Arrival)') }}" />
+                <flux:input wire:model="logisticsForm.shipment.loading_pier" label="{{ __('Loading Pier(Terminal)') }}" />
+
+                <div class="md:col-span-3">
+                    <flux:textarea wire:model="logisticsForm.shipment.domestic_routing"
+                        label="{{ __('Domestic Routing') }}" rows="2" />
+                </div>
+            </div>
+
+            <div class="border-t border-zinc-100 dark:border-zinc-800 pt-6">
+                <flux:heading size="md" class="mb-4">{{ __('Vehicle Measurements (Schedule B)') }}</flux:heading>
+                <div class="space-y-4">
+                    @foreach($shipment->vehicles as $v)
+                        <div wire:key="log-v-{{ $v->id }}"
+                            class="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800 grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                            <div class="md:col-span-1">
+                                <flux:text size="sm" class="font-bold truncate"
+                                    title="{{ $v->year }} {{ $v->make }} {{ $v->model }}">
+                                    {{ $v->year ?? '—' }} {{ $v->make ?? '—' }}
+                                </flux:text>
+                                <flux:text size="xs" class="font-mono text-zinc-500 uppercase">
+                                    {{ substr($v->vin ?? '—', -6) }}</flux:text>
+                            </div>
+                            <flux:input type="number" step="0.01" wire:model="logisticsForm.vehicles.{{ $v->id }}.value"
+                                label="{{ __('Value ($)') }}" />
+                            <div class="flex gap-2 items-end">
+                                <flux:input type="number" step="0.01"
+                                    wire:model="logisticsForm.vehicles.{{ $v->id }}.weight" label="{{ __('Weight') }}"
+                                    class="flex-1" />
+                                <flux:select wire:model="logisticsForm.vehicles.{{ $v->id }}.weight_unit" class="w-20">
+                                    <flux:select.option value="KG">KG</flux:select.option>
+                                    <flux:select.option value="LBS">LBS</flux:select.option>
+                                </flux:select>
+                            </div>
+                            <div class="flex gap-2 items-end md:col-span-1">
+                                <flux:input type="number" step="0.01"
+                                    wire:model="logisticsForm.vehicles.{{ $v->id }}.measurement" label="{{ __('Measure') }}"
+                                    class="flex-1" />
+                                <flux:select wire:model="logisticsForm.vehicles.{{ $v->id }}.measurement_unit" class="w-24">
+                                    <flux:select.option value="CBM">CBM</flux:select.option>
+                                    <flux:select.option value="CFT">CFT</flux:select.option>
+                                </flux:select>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                <flux:modal.close>
+                    <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
+                <flux:button type="submit" variant="primary" wire:loading.attr="disabled">{{ __('Save Logistics') }}
+                </flux:button>
+            </div>
+        </form>
+    </flux:modal>
 </x-crud.page-shell>

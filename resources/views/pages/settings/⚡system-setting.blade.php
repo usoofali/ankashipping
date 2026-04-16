@@ -35,6 +35,14 @@ new #[Title('System settings')] class extends Component {
     public string $tracking_number_type = 'auto_increment';
     public int $tracking_random_digits = 10;
     public string $preferred_mailer = 'hostinger';
+    public string $fmc_number = '';
+    public string $forwarding_agent_name = '';
+    public string $forwarding_agent_address = '';
+    public string $forwarding_agent_phone = '';
+    public string $terms_and_conditions = '';
+    public float $storage_rate_1 = 8.0;
+    public float $storage_rate_2 = 18.0;
+    public float $storage_rate_3 = 28.0;
 
 
     public function mount(): void
@@ -58,6 +66,19 @@ new #[Title('System settings')] class extends Component {
         $this->tracking_number_type = $setting->tracking_number_type ?? 'auto_increment';
         $this->tracking_random_digits = $setting->tracking_random_digits ?? 10;
         $this->preferred_mailer = $setting->preferred_mailer ?? 'hostinger';
+        
+        // New Fields
+        $this->fmc_number = $setting->fmc_number ?? '';
+        $this->forwarding_agent_name = $setting->forwarding_agent_name ?? '';
+        $this->forwarding_agent_address = $setting->forwarding_agent_address ?? '';
+        $this->forwarding_agent_phone = $setting->forwarding_agent_phone ?? '';
+        $this->terms_and_conditions = $setting->terms_and_conditions ?? '';
+        
+        $rates = $setting->storage_rates_json ?? [];
+        $this->storage_rate_1 = (float) ($rates[0] ?? 8.0);
+        $this->storage_rate_2 = (float) ($rates[1] ?? 18.0);
+        $this->storage_rate_3 = (float) ($rates[2] ?? 28.0);
+
         if ($this->preferred_mailer === 'failover') {
             $this->preferred_mailer = 'hostinger';
         }
@@ -97,9 +118,21 @@ new #[Title('System settings')] class extends Component {
             'tracking_number_type' => ['required', 'in:auto_increment,random'],
             'tracking_random_digits' => ['required', 'integer', 'min:1', 'max:20'],
             'preferred_mailer' => ['required', 'string', 'in:hostinger,google'],
-
+            'fmc_number' => ['nullable', 'string', 'max:255'],
+            'forwarding_agent_name' => ['nullable', 'string', 'max:255'],
+            'forwarding_agent_address' => ['nullable', 'string'],
+            'forwarding_agent_phone' => ['nullable', 'string', 'max:255'],
+            'terms_and_conditions' => ['nullable', 'string'],
+            'storage_rate_1' => ['required', 'numeric', 'min:0'],
+            'storage_rate_2' => ['required', 'numeric', 'min:0'],
+            'storage_rate_3' => ['required', 'numeric', 'min:0'],
         ]);
 
+        $validated['storage_rates_json'] = [
+            $this->storage_rate_1,
+            $this->storage_rate_2,
+            $this->storage_rate_3,
+        ];
 
         $setting = SystemSetting::current();
         $previousLogoPath = $setting->logo_path;
@@ -241,6 +274,18 @@ new #[Title('System settings')] class extends Component {
             </div>
 
             <div class="rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
+                <flux:heading size="sm">{{ __('Company Identity & Forwarding') }}</flux:heading>
+                <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <flux:input wire:model="fmc_number" :label="__('FMC Number')" />
+                    <flux:input wire:model="forwarding_agent_name" :label="__('Forwarding Agent Name')" />
+                    <div class="md:col-span-2">
+                        <flux:textarea wire:model="forwarding_agent_address" :label="__('Forwarding Agent Address')" rows="2" />
+                    </div>
+                    <flux:input wire:model="forwarding_agent_phone" :label="__('Forwarding Agent Phone')" />
+                </div>
+            </div>
+
+            <div class="rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
                 <flux:heading size="sm">{{ __('Tracking and billing information') }}</flux:heading>
                 <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                     <flux:input wire:model="tracking_delivery_prefix" :label="__('Delivery Prefix')" />
@@ -285,6 +330,20 @@ new #[Title('System settings')] class extends Component {
                             :description="__('All emails use your Google Workspace account via smtp.gmail.com.')"
                         />
                     </flux:radio.group>
+                </div>
+            </div>
+
+            <div class="rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
+                <flux:heading size="sm">{{ __('Legal & Storage Rates') }}</flux:heading>
+                <div class="mt-4 space-y-4">
+                    <flux:textarea wire:model="terms_and_conditions" :label="__('Terms and Conditions (COGSA/Legal)')" rows="4" :placeholder="__('Enter legal links or text here...')" />
+                    
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <flux:input type="number" step="0.01" wire:model="storage_rate_1" :label="__('Storage Rate 1 ($)')" />
+                        <flux:input type="number" step="0.01" wire:model="storage_rate_2" :label="__('Storage Rate 2 ($)')" />
+                        <flux:input type="number" step="0.01" wire:model="storage_rate_3" :label="__('Storage Rate 3 ($)')" />
+                    </div>
+                    <flux:subheading class="text-xs text-zinc-500">{{ __('These daily rates are used for storage calculations (default: $8, $18, $28).') }}</flux:subheading>
                 </div>
             </div>
 

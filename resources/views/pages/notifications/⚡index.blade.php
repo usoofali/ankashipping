@@ -131,15 +131,15 @@ new #[Title('Notifications')] class extends Component {
                                 <div class="space-y-1">
                                     @if ($url)
                                         <flux:link :href="$url" wire:navigate
-                                            class="font-semibold text-zinc-900 dark:text-zinc-100">
+                                            class="block font-semibold text-zinc-900 dark:text-zinc-100 whitespace-normal break-words">
                                             {{ $title }}
                                         </flux:link>
                                     @else
-                                        <span class="font-semibold text-zinc-900 dark:text-zinc-100">{{ $title }}</span>
+                                        <span class="block font-semibold text-zinc-900 dark:text-zinc-100 whitespace-normal break-words">{{ $title }}</span>
                                     @endif
 
                                     @if ($body !== '')
-                                        <p class="line-clamp-2 text-sm text-zinc-600 dark:text-zinc-300">{{ $body }}</p>
+                                        <p class="whitespace-normal break-words text-sm text-zinc-600 dark:text-zinc-300">{{ $body }}</p>
                                     @endif
                                 </div>
                             </flux:table.cell>

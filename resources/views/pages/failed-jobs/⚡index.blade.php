@@ -14,6 +14,12 @@ use WireUi\Traits\WireUiActions;
 new #[Title('Failed Jobs')] class extends Component {
     use WithPagination, WireUiActions;
 
+    public bool $showRetryModal = false;
+    public bool $showRetryAllModal = false;
+    public bool $showForgetModal = false;
+    public bool $showFlushModal = false;
+    public ?string $selectedJobId = null;
+
     public function mount(): void
     {
         // Only staff/admin can manage failed jobs
@@ -30,97 +36,90 @@ new #[Title('Failed Jobs')] class extends Component {
 
     public function confirmRetry(string $id): void
     {
-        $this->dialog()->confirm([
-            'title' => __('Retry Job?'),
-            'description' => __('This will push the job back onto the queue to be attempted again.'),
-            'icon' => 'arrow-path',
-            'accept' => [
-                'label' => __('Yes, retry'),
-                'method' => 'retry',
-                'params' => $id,
-            ],
-            'reject' => [
-                'label' => __('Cancel'),
-            ],
-        ]);
+        $this->selectedJobId = $id;
+        $this->showRetryModal = true;
     }
 
-    public function retry(string $id): void
+    public function retry(): void
     {
-        Artisan::call('queue:retry', ['id' => $id]);
-        $this->notification()->success(__('Job pushed back onto the queue.'));
-        // refresh component
+        if (!$this->selectedJobId) return;
+
+        try {
+            Artisan::call('queue:retry', ['id' => $this->selectedJobId]);
+            $this->notification()->success(__('Job pushed back onto the queue.'));
+        } catch (\Throwable $e) {
+            $this->notification()->error(__('Failed to retry job: :message', ['message' => $e->getMessage()]));
+        }
+
+        $this->showRetryModal = false;
+        $this->selectedJobId = null;
     }
 
     public function confirmRetryAll(): void
     {
-        $this->dialog()->confirm([
-            'title' => __('Retry All Jobs?'),
-            'description' => __('This will push all failed jobs back onto the queue.'),
-            'icon' => 'arrow-path',
-            'accept' => [
-                'label' => __('Yes, retry all'),
-                'method' => 'retryAll',
-            ],
-            'reject' => [
-                'label' => __('Cancel'),
-            ],
-        ]);
+        $this->showRetryAllModal = true;
     }
 
     public function retryAll(): void
     {
-        Artisan::call('queue:retry', ['id' => 'all']);
-        $this->notification()->success(__('All failed jobs pushed back onto the queue.'));
+        $failedJobs = DB::table('failed_jobs')->pluck('uuid');
+        
+        $successCount = 0;
+        $failedCount = 0;
+
+        foreach ($failedJobs as $uuid) {
+            try {
+                Artisan::call('queue:retry', ['id' => $uuid]);
+                $successCount++;
+            } catch (\Throwable $e) {
+                $failedCount++;
+            }
+        }
+
+        if ($failedCount > 0) {
+            $this->notification()->warning(__(':success retried, :failed skipped (e.g. models deleted).', [
+                'success' => $successCount,
+                'failed' => $failedCount,
+            ]));
+        } else {
+            $this->notification()->success(__('All failed jobs pushed back onto the queue.'));
+        }
+
+        $this->showRetryAllModal = false;
     }
 
     public function confirmForget(string $id): void
     {
-        $this->dialog()->confirm([
-            'title' => __('Delete Failed Job?'),
-            'description' => __('This will permanently remove the failed job record. It cannot be recovered.'),
-            'icon' => 'trash',
-            'accept' => [
-                'label' => __('Yes, delete'),
-                'method' => 'forget',
-                'params' => $id,
-            ],
-            'reject' => [
-                'label' => __('Cancel'),
-            ],
-        ]);
+        $this->selectedJobId = $id;
+        $this->showForgetModal = true;
     }
 
-    public function forget(string $id): void
+    public function forget(): void
     {
-        Artisan::call('queue:forget', ['id' => $id]);
+        if (!$this->selectedJobId) return;
+
+        Artisan::call('queue:forget', ['id' => $this->selectedJobId]);
         $this->notification()->success(__('Failed job removed.'));
+        
+        $this->showForgetModal = false;
+        $this->selectedJobId = null;
     }
 
     public function confirmFlush(): void
     {
-        $this->dialog()->confirm([
-            'title' => __('Flush All Failed Jobs?'),
-            'description' => __('This will completely clear the failed jobs table. Are you sure?'),
-            'icon' => 'trash',
-            'accept' => [
-                'label' => __('Yes, flush all'),
-                'method' => 'flush',
-            ],
-            'reject' => [
-                'label' => __('Cancel'),
-            ],
-        ]);
+        $this->showFlushModal = true;
     }
 
     public function flush(): void
     {
         Artisan::call('queue:flush');
         $this->notification()->success(__('Failed jobs list cleared.'));
+        $this->showFlushModal = false;
     }
 }; ?>
 
-<x-crud.page-shell>
+<div>
+    <x-crud.page-shell>
     <div class="flex items-center justify-between mb-8 flex-wrap gap-4">
         <x-crud.page-header :heading="__('Failed Queue Jobs')" :subheading="__('Monitor and retry background tasks that failed to execute properly.')" icon="exclamation-triangle" class="mb-0!" />
 
@@ -160,7 +159,7 @@ new #[Title('Failed Jobs')] class extends Component {
                                     $queue = $job->queue;
                                 @endphp
                                 <div class="flex flex-col">
-                                    <span class="font-medium truncate max-w-xs"
+                                    <span class="font-medium whitespace-normal break-words"
                                         title="{{ $jobName }}">{{ class_basename($jobName) }}</span>
                                     <span class="text-xs text-zinc-500">
                                         <span class="font-mono">{{ $connection }}</span> / <span
@@ -170,7 +169,7 @@ new #[Title('Failed Jobs')] class extends Component {
                             </flux:table.cell>
                             <flux:table.cell>
                                 <div class="max-w-md">
-                                    <div class="line-clamp-2 text-xs font-mono bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 p-2 rounded border border-red-100 dark:border-red-500/20"
+                                    <div class="whitespace-normal break-words text-xs font-mono bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 p-2 rounded border border-red-100 dark:border-red-500/20"
                                         title="{{ $job->exception }}">
                                         {{ explode("\n", (string) $job->exception)[0] }}
                                     </div>
@@ -197,4 +196,74 @@ new #[Title('Failed Jobs')] class extends Component {
             </flux:table>
         </x-crud.panel>
     @endif
-</x-crud.page-shell>
+    </x-crud.page-shell>
+
+    {{-- Modals --}}
+    <flux:modal wire:model="showRetryModal" class="max-w-md">
+        <form wire:submit="retry" class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('Retry Job?') }}</flux:heading>
+                <flux:subheading>
+                    {{ __('This will push the job back onto the queue to be attempted again.') }}
+                </flux:subheading>
+            </div>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
+                <flux:button type="submit" variant="primary">{{ __('Yes, retry') }}</flux:button>
+            </div>
+        </form>
+    </flux:modal>
+
+    <flux:modal wire:model="showRetryAllModal" class="max-w-md">
+        <form wire:submit="retryAll" class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('Retry All Jobs?') }}</flux:heading>
+                <flux:subheading>
+                    {{ __('This will push all failed jobs back onto the queue. Jobs with deleted models will be skipped.') }}
+                </flux:subheading>
+            </div>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
+                <flux:button type="submit" variant="primary">{{ __('Yes, retry all') }}</flux:button>
+            </div>
+        </form>
+    </flux:modal>
+
+    <flux:modal wire:model="showForgetModal" class="max-w-md">
+        <form wire:submit="forget" class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('Delete Failed Job?') }}</flux:heading>
+                <flux:subheading>
+                    {{ __('This will permanently remove the failed job record. It cannot be recovered.') }}
+                </flux:subheading>
+            </div>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
+                <flux:button type="submit" variant="danger">{{ __('Yes, delete') }}</flux:button>
+            </div>
+        </form>
+    </flux:modal>
+
+    <flux:modal wire:model="showFlushModal" class="max-w-md">
+        <form wire:submit="flush" class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('Flush All Failed Jobs?') }}</flux:heading>
+                <flux:subheading>
+                    {{ __('This will completely clear the failed jobs table. Are you sure?') }}
+                </flux:subheading>
+            </div>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
+                <flux:button type="submit" variant="danger">{{ __('Yes, flush all') }}</flux:button>
+            </div>
+        </form>
+    </flux:modal>
+</div>

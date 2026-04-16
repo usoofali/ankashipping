@@ -378,11 +378,12 @@
                 <strong>{{ ($settings->company_name ?? null) ?: config('app.name') }}</strong>
                 @if($settings->phone) {{ $settings->phone }} @endif
                 @if($settings->email) | {{ $settings->email }} @endif <br>
-                {{ $settings->address ?? '' }},
+                {{ $settings->address ?? '' }}
                 @if($settings->city), {{ optional($settings->city)->name }} @endif
-                @if($settings->state), {{ optional($settings->state)->iso2 ?? optional($settings->state)->name }}, @endif
+                @if($settings->state), {{ optional($settings->state)->iso2 ?? optional($settings->state)->name }},
+                @endif
                 @if($settings->country) {{ optional($settings->country)->iso2 ?? optional($settings->country)->name }},
-                @if($settings->zipcode) {{ $settings->zipcode }} @endif
+                    @if($settings->zipcode) {{ $settings->zipcode }} @endif
                 @endif
             </div>
         </div>
@@ -396,10 +397,8 @@
         <div class="invoice-header-row">
             <h1 class="invoice-title">
                 <span class="invoice-title__word">INVOICE</span>@if ($invoiceTitlePaid)<span
-                    class="invoice-title__status invoice-title__status--paid"
-                > PAID</span>@else<span
-                    class="invoice-title__status invoice-title__status--unpaid"
-                > UNPAID</span>@endif
+                class="invoice-title__status invoice-title__status--paid"> PAID</span>@else<span
+                    class="invoice-title__status invoice-title__status--unpaid"> UNPAID</span>@endif
             </h1>
         </div>
 
@@ -447,6 +446,15 @@
                                 {{ optional($shipment->destinationPort?->country)->iso2 ? '(' . optional($shipment->destinationPort?->country)->iso2 . ')' : '' }}
                             </td>
                         </tr>
+                        @if($shipment->isContainer())
+                            <tr>
+                                <td class="meta-label">Units in Container</td>
+                                <td class="meta-value" style="font-size: 10px; line-height: 1.1;">
+                                    {{ $shipment->vehicles->count() }} Units:
+                                    {{ $shipment->vehicles->map(fn($v) => trim(($v->year ?? '') . ' ' . ($v->make ?? '')) . ' (' . substr($v->vin ?: '—', -6) . ')')->implode(', ') }}
+                                </td>
+                            </tr>
+                        @endif
                         <tr class="meta-table-spacer">
                             <td></td>
                             <td></td>
@@ -481,14 +489,18 @@
                                     &mdash; {{ __('Discount') }}: ${{ number_format((float) $item->discount_amount, 2) }}
                                 </div>
                             @endif
-                            @if($shipment->vehicle)
+                            @php
+                                $isVehicleSpecific = str_contains($item->description, '(') && str_contains($item->description, ')');
+                            @endphp
+
+                            @if($shipment->isRoRo() && $shipment->vehicle)
                                 <div class="item-subtext">
                                     {{ $shipment->vehicle->year }} {{ $shipment->vehicle->make }}
                                     {{ $shipment->vehicle->model }} &bull; VIN {{ $shipment->vehicle->vin ?: $shipment->vin }}
                                 </div>
-                            @else
-                                <div class="item-subtext">REF: {{ $shipment->reference_no }} &bull; VIN
-                                    {{ $shipment->vin ?: 'N/A' }}
+                            @elseif($shipment->isContainer() && ! $isVehicleSpecific)
+                                <div class="item-subtext">
+                                    {{ __('Shipment of') }} {{ $shipment->vehicles->count() }} {{ __('units consolidated in container') }}.
                                 </div>
                             @endif
                         </td>

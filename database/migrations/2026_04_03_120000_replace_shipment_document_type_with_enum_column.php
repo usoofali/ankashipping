@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Enums\ShipmentDocumentType;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -14,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('shipment_documents', function (Blueprint $table) {
             $table->string('document_type')
-                ->default(ShipmentDocumentType::Other->value)
+                ->default('other')
                 ->after('shipment_id');
         });
 
@@ -27,18 +26,22 @@ return new class extends Migration
                 ->where('id', $row->document_type_id)
                 ->value('slug');
 
-            $documentType = is_string($slug) ? $slug : ShipmentDocumentType::Other->value;
+            $documentType = is_string($slug) ? $slug : 'other';
 
             DB::table('shipment_documents')
                 ->where('id', $row->id)
                 ->update(['document_type' => $documentType]);
         }
 
-        $valid = ShipmentDocumentType::values();
+        $valid = [
+            'bill-of-lading', 'commercial-invoice', 'customs-declaration',
+            'packing-list', 'bill-of-sale', 'title-document',
+            'stamp-dock-receipt', 'photos-and-videos', 'other',
+        ];
 
         DB::table('shipment_documents')
             ->whereNotIn('document_type', $valid)
-            ->update(['document_type' => ShipmentDocumentType::Other->value]);
+            ->update(['document_type' => 'other']);
 
         Schema::table('shipment_documents', function (Blueprint $table) {
             $table->dropForeign(['document_type_id']);
@@ -60,10 +63,22 @@ return new class extends Migration
 
         $now = now();
 
-        foreach (ShipmentDocumentType::cases() as $case) {
+        $oldCases = [
+            'bill-of-lading' => 'Bill of lading',
+            'commercial-invoice' => 'Commercial invoice',
+            'customs-declaration' => 'Customs declaration',
+            'packing-list' => 'Packing list',
+            'bill-of-sale' => 'Bill of sale',
+            'title-document' => 'Title document',
+            'stamp-dock-receipt' => 'Stamp dock receipt',
+            'photos-and-videos' => 'Photos and videos',
+            'other' => 'Other',
+        ];
+
+        foreach ($oldCases as $slug => $name) {
             DB::table('document_types')->insert([
-                'name' => $this->documentTypeSeedName($case),
-                'slug' => $case->value,
+                'name' => $name,
+                'slug' => $slug,
                 'description' => null,
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -84,7 +99,7 @@ return new class extends Migration
             ->select(['id', 'document_type'])
             ->get();
 
-        $otherId = $slugToId[ShipmentDocumentType::Other->value] ?? null;
+        $otherId = $slugToId['other'] ?? null;
 
         foreach ($documents as $row) {
             $typeId = $slugToId[$row->document_type] ?? $otherId;
@@ -99,18 +114,5 @@ return new class extends Migration
         });
     }
 
-    private function documentTypeSeedName(ShipmentDocumentType $case): string
-    {
-        return match ($case) {
-            ShipmentDocumentType::BillOfLading => 'Bill of lading',
-            ShipmentDocumentType::CommercialInvoice => 'Commercial invoice',
-            ShipmentDocumentType::CustomsDeclaration => 'Customs declaration',
-            ShipmentDocumentType::PackingList => 'Packing list',
-            ShipmentDocumentType::BillOfSale => 'Bill of sale',
-            ShipmentDocumentType::TitleDocument => 'Title document',
-            ShipmentDocumentType::StampDockReceipt => 'Stamp dock receipt',
-            ShipmentDocumentType::PhotosAndVideos => 'Photos and videos',
-            ShipmentDocumentType::Other => 'Other',
-        };
-    }
+    // Private helper methods removed
 };

@@ -6,27 +6,15 @@ namespace App\Enums;
 
 enum ShipmentDocumentType: string
 {
+    case StampDockReceipt = 'stamped-dock-receipt';
     case BillOfLading = 'bill-of-lading';
-    case CommercialInvoice = 'commercial-invoice';
-    case CustomsDeclaration = 'customs-declaration';
-    case PackingList = 'packing-list';
-    case BillOfSale = 'bill-of-sale';
-    case TitleDocument = 'title-document';
-    case StampDockReceipt = 'stamp-dock-receipt';
-    case PhotosAndVideos = 'photos-and-videos';
     case Other = 'other';
 
     public function label(): string
     {
         return match ($this) {
+            self::StampDockReceipt => __('Stamped dock receipt'),
             self::BillOfLading => __('Bill of lading'),
-            self::CommercialInvoice => __('Commercial invoice'),
-            self::CustomsDeclaration => __('Customs declaration'),
-            self::PackingList => __('Packing list'),
-            self::BillOfSale => __('Bill of sale'),
-            self::TitleDocument => __('Title document'),
-            self::StampDockReceipt => __('Stamp dock receipt'),
-            self::PhotosAndVideos => __('Photos and videos'),
             self::Other => __('Other'),
         };
     }
@@ -45,9 +33,8 @@ enum ShipmentDocumentType: string
     public function targetShipmentStatusAfterAttachment(): ?ShipmentStatus
     {
         return match ($this) {
-            self::TitleDocument => ShipmentStatus::Inland,
-            self::StampDockReceipt => ShipmentStatus::DeliveredToPort,
-            self::BillOfLading => ShipmentStatus::CargoLoaded,
+            self::StampDockReceipt => ShipmentStatus::Delivered,
+            self::BillOfLading => ShipmentStatus::Loaded,
             default => null,
         };
     }

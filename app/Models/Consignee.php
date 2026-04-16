@@ -18,7 +18,11 @@ final class Consignee extends Model
     protected $fillable = [
         'shipper_id',
         'name',
+        'contact',
+        'phone',
         'address',
+        'country_id',
+        'state_id',
         'is_default',
     ];
 
@@ -35,6 +39,16 @@ final class Consignee extends Model
     public function shipper(): BelongsTo
     {
         return $this->belongsTo(Shipper::class);
+    }
+
+    public function country(): BelongsTo
+    {
+        return $this->belongsTo(Country::class);
+    }
+
+    public function state(): BelongsTo
+    {
+        return $this->belongsTo(State::class);
     }
 
     public function shipments(): HasMany

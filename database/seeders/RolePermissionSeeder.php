@@ -30,6 +30,10 @@ final class RolePermissionSeeder extends Seeder
             'shippers.update',
             'shippers.delete',
             'invoices.view',
+            'invoices.view_draft',
+            'invoices.view_cleared',
+            'invoices.clear',
+            'invoices.complete',
             'invoices.manage',
             'payments.manage',
             'documents.manage',
@@ -82,6 +86,17 @@ final class RolePermissionSeeder extends Seeder
             'system_logs.manage',
             'default_shipment_settings.view',
             'default_shipment_settings.update',
+            'workflow.assign_driver',
+            'workflow.attach_title',
+            'workflow.upload_photos',
+            'workflow.mark_filled',
+            'workflow.force_filled',
+            'workflow.attach_dock_receipt',
+            'workflow.attach_bl',
+            'workflow.complete',
+            'workflow.manage_logistics',
+            'workflow.download_dock_receipt',
+            'workflow.download_invoice',
         ];
 
         foreach ($permissionNames as $name) {
@@ -163,6 +178,17 @@ final class RolePermissionSeeder extends Seeder
             'system_logs.manage',
             'default_shipment_settings.view',
             'default_shipment_settings.update',
+            'workflow.assign_driver',
+            'workflow.attach_title',
+            'workflow.upload_photos',
+            'workflow.mark_filled',
+            'workflow.force_filled',
+            'workflow.attach_dock_receipt',
+            'workflow.attach_bl',
+            'workflow.complete',
+            'workflow.manage_logistics',
+            'workflow.download_dock_receipt',
+            'workflow.download_invoice',
         ]);
 
         $staffOperator = Role::query()->firstOrCreate(
@@ -191,6 +217,17 @@ final class RolePermissionSeeder extends Seeder
             'charge_items.view',
             'payment_methods.view',
             'system_logs.view',
+            'workflow.assign_driver',
+            'workflow.attach_title',
+            'workflow.upload_photos',
+            'workflow.mark_filled',
+            'workflow.force_filled',
+            'workflow.attach_dock_receipt',
+            'workflow.attach_bl',
+            'workflow.complete',
+            'workflow.manage_logistics',
+            'workflow.download_dock_receipt',
+            'workflow.download_invoice',
         ]);
 
         $shipper = Role::query()->firstOrCreate(
@@ -207,6 +244,7 @@ final class RolePermissionSeeder extends Seeder
             'wallets.view',
             'wallet_top_ups.view',
             'wallet_top_ups.create',
+            'workflow.download_invoice',
         ]);
     }
 }

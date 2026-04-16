@@ -44,6 +44,8 @@ new #[Title('Submit Prealert')] class extends Component {
     public bool $showConsigneeModal = false;
     public string $newConsigneeName = '';
     public string $newConsigneeAddress = '';
+    public ?int $newConsigneeCountryId = null;
+    public ?int $newConsigneeStateId = null;
 
     public bool $loadingVehicle = false;
     public ?string $vinError = null;
@@ -313,6 +315,8 @@ new #[Title('Submit Prealert')] class extends Component {
         $this->validate([
             'newConsigneeName' => ['required', 'string', 'max:255'],
             'newConsigneeAddress' => ['nullable', 'string', 'max:500'],
+            'newConsigneeCountryId' => ['nullable', 'integer', 'exists:countries,id'],
+            'newConsigneeStateId' => ['nullable', 'integer', 'exists:states,id'],
         ]);
 
         if (!$this->shipper_id) {
@@ -324,12 +328,14 @@ new #[Title('Submit Prealert')] class extends Component {
             'shipper_id' => $this->shipper_id,
             'name' => $this->newConsigneeName,
             'address' => $this->newConsigneeAddress,
+            'country_id' => $this->newConsigneeCountryId,
+            'state_id' => $this->newConsigneeStateId,
             'is_default' => false,
         ]);
 
         $this->consignee_id = $consignee->id;
         $this->showConsigneeModal = false;
-        $this->reset(['newConsigneeName', 'newConsigneeAddress']);
+        $this->reset(['newConsigneeName', 'newConsigneeAddress', 'newConsigneeCountryId', 'newConsigneeStateId']);
         unset($this->consignees);
 
         $this->notification()->success(__('Consignee created successfully.'));
@@ -438,7 +444,7 @@ new #[Title('Submit Prealert')] class extends Component {
                                     <flux:error class="mt-1">{{ $vinError }}</flux:error>
                                 @endif
                                 <flux:description class="mt-1">
-                                    {{ __('Search for a vehicle to add it to your shipment. Adding multiple vehicles automatically switches to Container mode.') }}
+                                    {{ __('Search for a vehicle to add.') }}
                                 </flux:description>
                             </flux:field>
                         </div>
@@ -552,13 +558,13 @@ new #[Title('Submit Prealert')] class extends Component {
                                                         </div>
                                                         <div>
                                                             <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">{{ __('Location') }}</p>
-                                                            <p class="font-medium text-zinc-900 dark:text-zinc-100 text-sm truncate">
+                                                            <p class="font-medium text-zinc-900 dark:text-zinc-100 text-sm whitespace-normal break-words">
                                                                 {{ ($v['details']['location'] ?? null) ?: '—' }}
                                                             </p>
                                                         </div>
                                                         <div>
                                                             <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">{{ __('Auction') }}</p>
-                                                            <p class="font-medium text-zinc-900 dark:text-zinc-100 text-sm truncate">
+                                                            <p class="font-medium text-zinc-900 dark:text-zinc-100 text-sm whitespace-normal break-words">
                                                                 {{ ($v['details']['auction_name'] ?? null) ?: '—' }}
                                                             </p>
                                                         </div>
@@ -573,7 +579,7 @@ new #[Title('Submit Prealert')] class extends Component {
                                                                 <label for="receipt-{{ $index }}" class="w-full flex items-center justify-center gap-2 px-3 h-10 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700 rounded-xl cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 transition text-sm font-semibold overflow-hidden">
                                                                     <flux:icon.paper-clip class="size-4 shrink-0 text-zinc-400" />
                                                                     @if(isset($receipt_files[$index]))
-                                                                        <span class="text-indigo-600 dark:text-indigo-400 truncate">{{ $receipt_files[$index]->getClientOriginalName() }}</span>
+                                                                        <span class="text-indigo-600 dark:text-indigo-400 whitespace-normal break-words">{{ $receipt_files[$index]->getClientOriginalName() }}</span>
                                                                     @else
                                                                         <span class="text-zinc-500 shrink-0">{{ __('Choose File') }}</span>
                                                                     @endif
@@ -723,7 +729,21 @@ new #[Title('Submit Prealert')] class extends Component {
 
             <div class="space-y-4">
                 <flux:input wire:model="newConsigneeName" :label="__('Full Name')" required />
-                <flux:textarea wire:model="newConsigneeAddress" :label="__('Address (Optional)')" rows="3" />
+                <flux:textarea wire:model="newConsigneeAddress" :label="__('Address')" rows="2" />
+                <flux:select wire:model.live="newConsigneeCountryId" :label="__('Country')">
+                    <flux:select.option value="">{{ __('Select country') }}</flux:select.option>
+                    @foreach(\App\Models\Country::orderBy('name')->get() as $country)
+                        <flux:select.option :value="$country->id">{{ $country->name }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+                @if($newConsigneeCountryId)
+                    <flux:select wire:model="newConsigneeStateId" :label="__('State / Region')">
+                        <flux:select.option value="">{{ __('Select state') }}</flux:select.option>
+                        @foreach(\App\Models\State::where('country_id', $newConsigneeCountryId)->orderBy('name')->get() as $state)
+                            <flux:select.option :value="$state->id">{{ $state->name }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                @endif
             </div>
 
             <div class="flex justify-end gap-2">

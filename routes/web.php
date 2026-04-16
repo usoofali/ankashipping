@@ -3,10 +3,12 @@
 use App\Http\Controllers\Auth\RegisterGeoOptionsController;
 use App\Http\Controllers\DriverOptionsController;
 use App\Http\Controllers\ImportTemplateController;
+use App\Http\Controllers\ShipmentDockReceiptController;
 use App\Http\Controllers\ShipmentDocumentFileDownloadController;
 use App\Http\Controllers\ShipmentDocumentFileSignedDownloadController;
 use App\Http\Controllers\ShipmentInvoiceController;
 use App\Http\Controllers\ShipperOptionsController;
+use App\Http\Controllers\VehicleDocumentFileSignedDownloadController;
 use App\Models\User;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
@@ -35,6 +37,11 @@ Route::middleware(['web', 'signed', 'throttle:60,1'])->group(function (): void {
         ->whereNumber('shipment')
         ->whereNumber('file')
         ->name('shipments.documents.files.download.signed');
+
+    Route::get('/vehicles/{vehicle}/documents/files/{file}/signed', VehicleDocumentFileSignedDownloadController::class)
+        ->whereNumber('vehicle')
+        ->whereNumber('file')
+        ->name('vehicles.documents.files.download.signed');
 });
 
 Route::middleware(['web', 'throttle:120,1'])->group(function (): void {
@@ -77,6 +84,10 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('/shipments/{shipment}/invoice', [ShipmentInvoiceController::class, 'download'])
         ->whereNumber('shipment')
         ->name('shipments.invoice.download');
+
+    Route::get('/shipments/{shipment}/dock-receipt', [ShipmentDockReceiptController::class, 'download'])
+        ->whereNumber('shipment')
+        ->name('shipments.dock-receipt.download');
 
     Route::get('/shipments/{shipment}/documents/files/{file}', ShipmentDocumentFileDownloadController::class)
         ->whereNumber('shipment')

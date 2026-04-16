@@ -38,6 +38,12 @@ final class SystemSetting extends Model
         'tracking_number_type',
         'tracking_random_digits',
         'preferred_mailer',
+        'fmc_number',
+        'forwarding_agent_name',
+        'forwarding_agent_address',
+        'forwarding_agent_phone',
+        'terms_and_conditions',
+        'storage_rates_json',
     ];
 
     /**
@@ -50,6 +56,7 @@ final class SystemSetting extends Model
             'whatsapp_api_key' => 'encrypted',
             'tracking_digits' => 'integer',
             'tracking_random_digits' => 'integer',
+            'storage_rates_json' => 'array',
         ];
     }
 
@@ -152,7 +159,7 @@ final class SystemSetting extends Model
             $type = pathinfo($path, PATHINFO_EXTENSION);
             $data = file_get_contents($path);
 
-            return 'data:image/' . $type . ';base64,' . base64_encode($data);
+            return 'data:image/'.$type.';base64,'.base64_encode($data);
         }
 
         return null;

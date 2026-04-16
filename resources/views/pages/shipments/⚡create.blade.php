@@ -645,7 +645,7 @@ new #[Title('Create Shipment')] class extends Component {
                                             <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">
                                                 {{ __('Location') }}
                                             </p>
-                                            <p class="font-medium text-zinc-900 dark:text-zinc-100 text-sm truncate">
+                                            <p class="font-medium text-zinc-900 dark:text-zinc-100 text-sm whitespace-normal break-words">
                                                 {{ ($v['details']['location'] ?? null) ?: '—' }}
                                             </p>
                                         </div>
@@ -653,7 +653,7 @@ new #[Title('Create Shipment')] class extends Component {
                                             <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">
                                                 {{ __('Auction') }}
                                             </p>
-                                            <p class="font-medium text-zinc-900 dark:text-zinc-100 text-sm truncate">
+                                            <p class="font-medium text-zinc-900 dark:text-zinc-100 text-sm whitespace-normal break-words">
                                                 {{ ($v['details']['auction_name'] ?? null) ?: '—' }}
                                             </p>
                                         </div>

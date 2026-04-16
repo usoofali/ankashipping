@@ -5,7 +5,6 @@ namespace Database\Factories;
 use App\Enums\ShipmentStatus;
 use App\Models\Shipment;
 use App\Models\ShipmentTracking;
-use App\Models\Workshop;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -22,19 +21,11 @@ class ShipmentTrackingFactory extends Factory
     {
         return [
             'shipment_id' => Shipment::factory(),
-            'status' => ShipmentStatus::Booked->value,
+            'status' => ShipmentStatus::Open->value,
             'workshop_id' => null,
             'note' => fake()->optional()->sentence(),
             'metadata' => null,
             'recorded_at' => now(),
         ];
-    }
-
-    public function atWorkshop(?Workshop $workshop = null): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'status' => ShipmentStatus::AtWorkshop->value,
-            'workshop_id' => $workshop?->id ?? Workshop::factory(),
-        ]);
     }
 }

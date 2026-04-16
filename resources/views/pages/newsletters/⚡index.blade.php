@@ -163,7 +163,7 @@ new #[Title('Newsletters')] class extends Component {
                             <div class="flex flex-col">
                                 <span>{{ $newsletter->subject }}</span>
                                 <span
-                                    class="text-xs text-zinc-500 line-clamp-1">{{ Str::limit($newsletter->body, 50) }}</span>
+                                    class="text-xs text-zinc-500 whitespace-normal break-words">{{ Str::limit($newsletter->body, 250) }}</span>
                             </div>
                         </flux:table.cell>
                         <flux:table.cell>

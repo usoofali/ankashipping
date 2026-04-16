@@ -303,7 +303,7 @@ new #[Title('Email Logs')] class extends Component {
                             </div>
                         </flux:table.cell>
                         <flux:table.cell>
-                            <span class="line-clamp-1 max-w-xs" title="{{ $log->subject }}">{{ $log->subject }}</span>
+                            <span class="block whitespace-normal break-words max-w-sm text-sm" title="{{ $log->subject }}">{{ $log->subject }}</span>
                         </flux:table.cell>
                         <flux:table.cell>
                             @if ($log->status->value === 'sent')

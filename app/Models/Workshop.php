@@ -24,4 +24,9 @@ final class Workshop extends Model
     {
         return $this->hasMany(ShipmentTracking::class);
     }
+
+    public function vehicleTrackings(): HasMany
+    {
+        return $this->hasMany(VehicleTracking::class);
+    }
 }
