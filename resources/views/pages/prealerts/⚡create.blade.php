@@ -28,6 +28,7 @@ new #[Title('Submit Prealert')] class extends Component {
 
     public ?int $shipper_id = null;
     public ?int $consignee_id = null;
+    public ?int $notify_party_id = null;
     public string $vin = '';
     public ?int $carrier_id = null;
     public ?int $destination_port_id = null;
@@ -65,6 +66,7 @@ new #[Title('Submit Prealert')] class extends Component {
     public function updatedShipperId(): void
     {
         $this->consignee_id = null;
+        $this->notify_party_id = null;
         if ($this->shipper_id) {
             $this->assignDefaultConsignee();
         }
@@ -203,6 +205,7 @@ new #[Title('Submit Prealert')] class extends Component {
         $this->validate([
             'shipper_id' => ['required', 'exists:shippers,id'],
             'consignee_id' => ['nullable', 'exists:consignees,id'],
+            'notify_party_id' => ['nullable', 'exists:consignees,id'],
             'vehicles' => ['required', 'array', 'min:1'],
             'vehicles.*.gatepass_pin' => ['nullable', 'string', 'max:11'],
             'shipping_mode' => ['required', 'string'],
@@ -253,6 +256,7 @@ new #[Title('Submit Prealert')] class extends Component {
         $prealert = Prealert::create([
             'shipper_id' => $this->shipper_id,
             'consignee_id' => $this->consignee_id,
+            'notify_party_id' => $this->notify_party_id,
             'carrier_id' => (int) $this->carrier_id ?: null,
             'destination_port_id' => (int) $this->destination_port_id ?: null,
             'shipping_mode' => $this->shipping_mode,
@@ -654,6 +658,15 @@ new #[Title('Submit Prealert')] class extends Component {
                                     </div>
                                     <flux:error name="consignee_id" />
                                 </flux:field>
+
+                                <flux:select wire:model="notify_party_id" :label="__('Notify Party / Intermediate Consignee (Optional)')" :placeholder="__('Same as Consignee')">
+                                    <flux:select.option value="">{{ __('Same as Consignee') }}</flux:select.option>
+                                    @foreach($this->consignees as $consignee)
+                                        <flux:select.option :value="$consignee->id">
+                                            {{ $consignee->name }}
+                                        </flux:select.option>
+                                    @endforeach
+                                </flux:select>
                             </div>
 
                             @if($shipping_mode === 'container' && $shipper_id)

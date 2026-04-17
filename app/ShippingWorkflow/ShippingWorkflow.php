@@ -54,15 +54,16 @@ class ShippingWorkflow
         }
 
         if ($shipment->shipping_mode === ShippingMode::Roro) {
-            // RoRo allowed from INLAND status onwards, no further vehicle status change
+            // Photos allowed from BOOKING status onwards
             return in_array($shipment->shipment_status, [
+                ShipmentStatus::Booking,
                 ShipmentStatus::Inland,
                 ShipmentStatus::Delivered,
                 ShipmentStatus::Loaded,
             ], true);
         }
 
-        // Container only allowed when INLAND, moves to AT_WAREHOUSE
+        // Container allowed when INLAND, moves to AT_WAREHOUSE
         return $vehicle->tracking_status === VehicleStatus::Inland;
     }
 
@@ -92,7 +93,11 @@ class ShippingWorkflow
             return false;
         }
 
-        return $shipment->shipment_status === ShipmentStatus::Inland;
+        return in_array($shipment->shipment_status, [
+            ShipmentStatus::Inland,
+            ShipmentStatus::Delivered,
+            ShipmentStatus::Loaded,
+        ], true);
     }
 
     public function canAttachBL(Shipment $shipment): bool
@@ -111,6 +116,24 @@ class ShippingWorkflow
         }
 
         return $shipment->shipment_status === ShipmentStatus::Loaded;
+    }
+
+    public function canMarkDelivered(Shipment $shipment): bool
+    {
+        if ($shipment->shipment_status === ShipmentStatus::Cancelled) {
+            return false;
+        }
+
+        return $shipment->shipment_status === ShipmentStatus::Inland;
+    }
+
+    public function canMarkLoaded(Shipment $shipment): bool
+    {
+        if ($shipment->shipment_status === ShipmentStatus::Cancelled) {
+            return false;
+        }
+
+        return $shipment->shipment_status === ShipmentStatus::Delivered;
     }
 
     /**
@@ -246,6 +269,7 @@ class ShippingWorkflow
 
     public function canTransitionToInland(Shipment $shipment): bool
     {
-        return $this->hasLogisticsInfo($shipment);
+        return $shipment->shipment_status === ShipmentStatus::Booking
+            && $this->hasLogisticsInfo($shipment);
     }
 }

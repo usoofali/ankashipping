@@ -12,7 +12,7 @@
     x-data="{
         toasts: [],
         position: @js($position),
-        addToast(type, message, timeout = 5000) {
+        addToast(type, message, timeout = 3000) {
             const id = crypto.randomUUID();
             this.toasts.push({ id, type: type || 'info', message: message || '', timeout });
             if (timeout > 0) {

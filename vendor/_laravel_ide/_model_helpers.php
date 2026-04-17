@@ -5387,6 +5387,7 @@ namespace App\Models {
     /**
      * App\Models\Prealert
      *
+     * @property mixed $notify_party_id
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property \App\Enums\PrealertStatus $status
@@ -5400,6 +5401,7 @@ namespace App\Models {
      * @property int $id
      * @property-read \App\Models\Shipper $shipper
      * @property-read \App\Models\Consignee $consignee
+     * @property-read \App\Models\Consignee $notifyParty
      * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Vehicle> $vehicles
      * @property-read int|null $vehicles_count
      * @property-read \App\Models\Carrier $carrier
@@ -5417,6 +5419,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert whereStatus($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert whereNotifyPartyId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert query()
@@ -5735,6 +5738,7 @@ namespace App\Models {
     /**
      * App\Models\Shipment
      *
+     * @property mixed $notify_party_id
      * @property \Illuminate\Support\Carbon|null $arrival_date
      * @property \Illuminate\Support\Carbon|null $departure_date
      * @property \Illuminate\Support\Carbon|null $cut_off_date
@@ -5771,6 +5775,7 @@ namespace App\Models {
      * @property int $id
      * @property-read \App\Models\Shipper $shipper
      * @property-read \App\Models\Consignee $consignee
+     * @property-read \App\Models\Consignee $notifyParty
      * @property-read \App\Models\Driver $driver
      * @property-read \App\Models\Carrier $carrier
      * @property-read \App\Models\Port $originPort
@@ -5821,6 +5826,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereCutOffDate($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereDepartureDate($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereArrivalDate($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereNotifyPartyId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment query()

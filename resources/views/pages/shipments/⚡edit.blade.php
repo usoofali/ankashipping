@@ -27,6 +27,7 @@ new #[Title('Edit Shipment')] class extends Component {
     public string $reference_no = '';
     public ?int $shipper_id = null;
     public ?int $consignee_id = null;
+    public ?int $notify_party_id = null;
     public ?int $carrier_id = null;
     public ?int $origin_port_id = null;
     public ?int $destination_port_id = null;
@@ -48,6 +49,7 @@ new #[Title('Edit Shipment')] class extends Component {
         $this->shipment = $shipment->load([
             'shipper.user',
             'consignee',
+            'notifyParty',
             'carrier',
             'originPort.state',
             'originPort.country',
@@ -59,6 +61,7 @@ new #[Title('Edit Shipment')] class extends Component {
         $this->reference_no = (string) $shipment->reference_no;
         $this->shipper_id = $shipment->shipper_id;
         $this->consignee_id = $shipment->consignee_id;
+        $this->notify_party_id = $shipment->notify_party_id;
         $this->carrier_id = $shipment->carrier_id;
         $this->origin_port_id = $shipment->origin_port_id;
         $this->destination_port_id = $shipment->destination_port_id;
@@ -81,6 +84,7 @@ new #[Title('Edit Shipment')] class extends Component {
     public function updatedShipperId(): void
     {
         $this->consignee_id = null;
+        $this->notify_party_id = null;
     }
 
     public function save(): void
@@ -91,6 +95,7 @@ new #[Title('Edit Shipment')] class extends Component {
             'reference_no' => ['required', 'string', 'max:255', 'unique:shipments,reference_no,'.$this->shipment->id],
             'shipper_id' => ['required', 'exists:shippers,id'],
             'consignee_id' => ['required', 'exists:consignees,id'],
+            'notify_party_id' => ['nullable', 'exists:consignees,id'],
             'carrier_id' => ['nullable', 'exists:carriers,id'],
             'origin_port_id' => ['nullable', 'exists:ports,id'],
             'destination_port_id' => ['nullable', 'exists:ports,id'],
@@ -105,6 +110,7 @@ new #[Title('Edit Shipment')] class extends Component {
 
         $updateData = array_merge($validated, [
             'sealed_at' => $this->sealed_at,
+            'notify_party_id' => $this->notify_party_id,
         ]);
 
         $this->shipment->update($updateData);
@@ -241,6 +247,15 @@ new #[Title('Edit Shipment')] class extends Component {
                     />
 
                     <flux:select wire:model="consignee_id" :label="__('Consignee')" :placeholder="__('Select consignee')">
+                        @foreach($this->consignees as $consignee)
+                            <flux:select.option :value="$consignee->id">
+                                {{ $consignee->name }}
+                            </flux:select.option>
+                        @endforeach
+                    </flux:select>
+
+                    <flux:select wire:model="notify_party_id" :label="__('Notify Party / Intermediate Consignee (Optional)')" :placeholder="__('Same as Consignee')">
+                        <flux:select.option value="">{{ __('Same as Consignee') }}</flux:select.option>
                         @foreach($this->consignees as $consignee)
                             <flux:select.option :value="$consignee->id">
                                 {{ $consignee->name }}

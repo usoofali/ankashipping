@@ -33,6 +33,8 @@ final class ShipmentDockReceiptController extends Controller
             'shipper.city',
             'consignee.country',
             'consignee.state',
+            'notifyParty.country',
+            'notifyParty.state',
             'originPort.state',
             'originPort.country',
             'destinationPort.state',

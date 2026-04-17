@@ -45,6 +45,7 @@ new #[Title('Create Shipment')] class extends Component {
     public string $reference_no = '';
     public ?int $shipper_id = null;
     public ?int $consignee_id = null;
+    public ?int $notify_party_id = null;
     public ?int $carrier_id = null;
     public ?int $origin_port_id = null;
     public ?int $destination_port_id = null;
@@ -92,6 +93,7 @@ new #[Title('Create Shipment')] class extends Component {
             $pre = Prealert::with('vehicles')->findOrFail($this->prealert);
             $this->shipper_id = $pre->shipper_id;
             $this->consignee_id = $pre->consignee_id;
+            $this->notify_party_id = $pre->notify_party_id;
             $this->carrier_id = $pre->carrier_id;
             $this->destination_port_id = $pre->destination_port_id;
             $this->shipping_mode = $pre->shipping_mode?->value ?? $this->shipping_mode;
@@ -117,6 +119,8 @@ new #[Title('Create Shipment')] class extends Component {
                 $this->targetShipment = Shipment::withCount('vehicles')->findOrFail($pre->shipment_id);
                 $this->reference_no = $this->targetShipment->reference_no;
                 $this->origin_port_id = $this->targetShipment->origin_port_id;
+                $this->consignee_id = $this->targetShipment->consignee_id;
+                $this->notify_party_id = $this->targetShipment->notify_party_id;
                 $this->destination_port_id = $this->targetShipment->destination_port_id;
                 $this->logistics_service = $this->targetShipment->logistics_service->value ?? '';
                 $this->shipping_mode = $this->targetShipment->shipping_mode->value ?? '';
@@ -165,6 +169,7 @@ new #[Title('Create Shipment')] class extends Component {
             'reference_no' => 'required|string|unique:shipments,reference_no',
             'shipper_id' => 'required|exists:shippers,id',
             'consignee_id' => 'required|exists:consignees,id',
+            'notify_party_id' => 'nullable|exists:consignees,id',
             'vehicles' => 'required|array|min:1',
             'origin_port_id' => 'nullable|exists:ports,id',
             'destination_port_id' => 'nullable|exists:ports,id',
@@ -201,6 +206,7 @@ new #[Title('Create Shipment')] class extends Component {
                         'reference_no' => $this->reference_no,
                         'shipper_id' => $this->shipper_id,
                         'consignee_id' => $this->consignee_id,
+                        'notify_party_id' => $this->notify_party_id,
                         'carrier_id' => $this->carrier_id,
                         'origin_port_id' => $this->origin_port_id,
                         'destination_port_id' => $this->destination_port_id,
@@ -701,6 +707,15 @@ new #[Title('Create Shipment')] class extends Component {
                                 </div>
                                 <flux:error name="consignee_id" />
                             </flux:field>
+
+                            <flux:select wire:model="notify_party_id" :label="__('Notify Party / Intermediate Consignee (Optional)')" :placeholder="__('Same as Consignee')">
+                                <flux:select.option value="">{{ __('Same as Consignee') }}</flux:select.option>
+                                @foreach($this->consignees as $consignee)
+                                    <flux:select.option :value="$consignee->id">
+                                        {{ $consignee->name }}
+                                    </flux:select.option>
+                                @endforeach
+                            </flux:select>
                         </div>
                     </x-crud.panel>
 
@@ -768,7 +783,6 @@ new #[Title('Create Shipment')] class extends Component {
                     <x-crud.panel
                         class="p-6 bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700 shadow-sm!">
                         <flux:heading size="lg" class="mb-4">{{ __('Workflow Status') }}</flux:heading>
-
                         <div class="space-y-4">
                             <flux:select wire:model="shipment_status" label="{{ __('Initial status') }}" icon="clock" :disabled="(bool) $targetShipment">
                                 @foreach(ShipmentStatus::cases() as $status)
@@ -776,7 +790,6 @@ new #[Title('Create Shipment')] class extends Component {
                                     </flux:select.option>
                                 @endforeach
                             </flux:select>
-
                             <flux:select wire:model="invoice_status" label="{{ __('Invoice Status') }}"
                                 icon="document-text" :disabled="(bool) $targetShipment">
                                 @foreach(InvoiceStatus::cases() as $status)
@@ -784,7 +797,6 @@ new #[Title('Create Shipment')] class extends Component {
                                     </flux:select.option>
                                 @endforeach
                             </flux:select>
-
                             <flux:select wire:model="payment_status" label="{{ __('Payment Status') }}"
                                 icon="credit-card" :disabled="(bool) $targetShipment">
                                 @foreach(PaymentStatus::cases() as $status)
@@ -792,7 +804,6 @@ new #[Title('Create Shipment')] class extends Component {
                                     </flux:select.option>
                                 @endforeach
                             </flux:select>
-
                             <flux:select wire:model="initial_vehicle_status" label="{{ __('Initial Vehicle Status') }}"
                                 icon="truck">
                                 @foreach(VehicleStatus::cases() as $status)
@@ -800,7 +811,6 @@ new #[Title('Create Shipment')] class extends Component {
                                     </flux:select.option>
                                 @endforeach
                             </flux:select>
-
                             <flux:select wire:model="payment_method_id" label="{{ __('Payment method') }}"
                                 icon="banknotes" :disabled="(bool) $targetShipment">
                                 <flux:select.option value="">{{ __('None') }}</flux:select.option>

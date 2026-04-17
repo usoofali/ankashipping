@@ -61,6 +61,7 @@ final class Shipment extends Model
         'arrival_date',
         'domestic_routing',
         'loading_pier',
+        'notify_party_id',
     ];
 
     protected function casts(): array
@@ -89,6 +90,11 @@ final class Shipment extends Model
     public function consignee(): BelongsTo
     {
         return $this->belongsTo(Consignee::class);
+    }
+
+    public function notifyParty(): BelongsTo
+    {
+        return $this->belongsTo(Consignee::class, 'notify_party_id');
     }
 
     public function driver(): BelongsTo

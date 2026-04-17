@@ -9,6 +9,7 @@ enum ShipmentStatus: string
     case Open = 'OPEN';
     case Pending = 'PENDING';
     case Dispatched = 'DISPATCHED';
+    case Booking = 'BOOKING';
     case Inland = 'INLAND';
     case Delivered = 'DELIVERED';
     case Loaded = 'LOADED';

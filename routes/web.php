@@ -114,6 +114,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     // Operations Master Data
     Route::livewire('/drivers', 'pages::drivers.index')->name('drivers.index');
     Route::livewire('/vehicles', 'pages::vehicles.index')->name('vehicles.index');
+    Route::livewire('/vehicles/{vehicle}', 'pages::vehicles.show')
+        ->whereNumber('vehicle')
+        ->name('vehicles.show');
     Route::livewire('/staff', 'pages::staff.index')->name('staff.index');
     Route::livewire('/workshops', 'pages::workshops.index')->name('workshops.index');
 

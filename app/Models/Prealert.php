@@ -24,6 +24,7 @@ final class Prealert extends Model
         'shipment_id',
         'notes',
         'status',
+        'notify_party_id',
     ];
 
     protected function casts(): array
@@ -42,6 +43,11 @@ final class Prealert extends Model
     public function consignee(): BelongsTo
     {
         return $this->belongsTo(Consignee::class);
+    }
+
+    public function notifyParty(): BelongsTo
+    {
+        return $this->belongsTo(Consignee::class, 'notify_party_id');
     }
 
     /**

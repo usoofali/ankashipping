@@ -94,7 +94,7 @@
         td.doc-title {
             color: #fff;
             font-family: 'Helvetica-Bold', sans-serif;
-            font-size: 13pt;
+            font-size: 18pt;
             text-transform: uppercase;
             padding: 5px 10px;
         }
@@ -343,12 +343,14 @@
         <table class="grid">
             <tr>
                 <td style="width:50%;">
-                    <span class="lbl">1. Forwarding Agent / Identity</span>
-                    <div class="val">{{ $settings->forwarding_agent_name ?: $settings->company_name }}</div>
-                    <span class="sub">
-                        {{ $settings->forwarding_agent_address ?: $settings->address }}<br>
-                        Tel: {{ $settings->forwarding_agent_phone ?: $settings->phone }}
-                    </span>
+                    <span class="lbl">1. Shipper / Exporting Carrier</span>
+                    @if($shipment->shipper)
+                        <div class="val">{{ $shipment->shipper->company_name ?? $shipment->shipper->user?->name }}</div>
+                        <span class="sub">{{ $shipment->shipper->address }}, {{ $shipment->shipper->city?->name }},
+                            {{ $shipment->shipper->state?->code }} {{ $shipment->shipper->zip_code }}</span>
+                    @else
+                        <div class="val">N/A</div>
+                    @endif
                 </td>
                 <td style="width:50%; padding:0;">
                     <table style="width:100%;border-collapse:collapse;">
@@ -374,15 +376,13 @@
         {{-- ── ROW 2: Shipper | Consignee ── --}}
         <table class="grid">
             <tr>
-                <td style="width:50%;">
-                    <span class="lbl">5. Shipper / Exporting Carrier</span>
-                    @if($shipment->shipper)
-                        <div class="val">{{ $shipment->shipper->company_name ?? $shipment->shipper->user?->name }}</div>
-                        <span class="sub">{{ $shipment->shipper->address }}, {{ $shipment->shipper->city?->name }},
-                            {{ $shipment->shipper->state?->code }} {{ $shipment->shipper->zip_code }}</span>
-                    @else
-                        <div class="val">N/A</div>
-                    @endif
+                <td style="width:50%;" rowspan="2">
+                    <span class="lbl">5. Forwarding Agent / Identity</span>
+                    <div class="val">{{ $settings->forwarding_agent_name ?: $settings->company_name }}</div>
+                    <span class="sub">
+                        {{ $settings->forwarding_agent_address ?: $settings->address }}<br>
+                        Tel: {{ $settings->forwarding_agent_phone ?: $settings->phone }}
+                    </span>
                 </td>
                 <td style="width:50%;">
                     <span class="lbl">6. Consignee</span>
@@ -400,37 +400,57 @@
                     @endif
                 </td>
             </tr>
+            <tr>
+                <td style="width:50%;">
+                    <span class="lbl">7. Notify Party / Intermediate Consignee <i
+                            style="font-size:6.5pt;font-weight:normal;text-transform:none;">(Name and
+                            address)</i></span>
+                    @if($shipment->notifyParty)
+                        <div class="val">{{ $shipment->notifyParty->name }}</div>
+                        <span class="sub">
+                            {{ $shipment->notifyParty->address }}<br>
+                            @if($shipment->notifyParty->state || $shipment->notifyParty->country)
+                                {{ $shipment->notifyParty->state?->name }}{{ ($shipment->notifyParty->state && $shipment->notifyParty->country) ? ', ' : '' }}{{ $shipment->notifyParty->country?->name }}<br>
+                            @endif
+                            {{ $shipment->notifyParty->phone }}
+                        </span>
+                    @else
+                        <div class="val" style="margin-top:5px; font-family:'Helvetica-Bold', sans-serif; font-size:9pt;">
+                            SAME AS ABOVE</div>
+                    @endif
+                </td>
+            </tr>
         </table>
 
         {{-- ── ROW 3: Vessel / Pier / Ports / Routing (4 cols) ── --}}
         <table class="lg4">
             <tr>
                 <td>
-                    <span class="lbl">7. Vessel / Voyage</span>
+                    <span class="lbl">8. Vessel / Voyage</span>
                     <div class="val">{{ $shipment->vessel_name ?: 'TBD' }} / {{ $shipment->voyage_no ?: 'TBD' }}</div>
                 </td>
                 <td>
-                    <span class="lbl">8. Loading Pier/Terminal</span>
+                    <span class="lbl">9. Loading Pier/Terminal</span>
                     <div class="val">{{ $shipment->loading_pier ?: 'N/A' }}</div>
                 </td>
                 <td>
-                    <span class="lbl">9. Port of Loading</span>
+                    <span class="lbl">10. Port of Loading</span>
                     <div class="val">{{ $shipment->originPort?->name }}</div>
                     <span class="sub">ETD: {{ $shipment->departure_date?->format('d M Y') ?: 'TBD' }}</span>
                 </td>
                 <td>
-                    <span class="lbl">10. Port of Unloading</span>
+                    <span class="lbl">11. Port of Unloading</span>
                     <div class="val">{{ $shipment->destinationPort?->name }}</div>
                     <span class="sub">ETA: {{ $shipment->arrival_date?->format('d M Y') ?: 'TBD' }}</span>
                 </td>
             </tr>
             <tr>
                 <td colspan="3">
-                    <span class="lbl">Domestic Routing / Export Instructions</span>
+                    <span class="lbl"> 12. Domestic Routing / Export Instructions</span>
                     <div style="font-size:7.5pt;color:#333;min-height:14px;">{{ $shipment->domestic_routing }}</div>
                 </td>
                 <td style="text-align:center; vertical-align:middle;">
-                    <span class="lbl" style="text-align:left;">CONTAINERIZED (Vessel only)</span>
+                    <span class="lbl" style="text-align:left;">13. CONTAINERIZED (Vessel only)</span>
                     <div style="margin-top:4px; font-size:9.5pt; color:#001f3f;">
                         @if($shipment->isContainer())
                             <span style="font-family:'DejaVu Sans', sans-serif; font-size:11pt;">&#9746;</span> Yes
@@ -500,44 +520,6 @@
                     </tr>
                 @endforeach
             </tbody>
-            <tfoot>
-                @php
-                    $sumKg = 0;
-                    $sumLb = 0;
-                    $sumFt3 = 0;
-                    $sumVlb = 0;
-                    foreach ($shipment->vehicles as $v) {
-                        $w = (float) $v->weight;
-                        $wu = strtoupper($v->weight_unit ?? 'LB');
-                        $sumLb += in_array($wu, ['LB', 'LBS']) ? $w : $w * 2.20462262;
-                        $sumKg += in_array($wu, ['LB', 'LBS']) ? $w / 2.20462262 : $w;
-
-                        $m = (float) $v->measurement;
-                        $mFt3 = ($m < 100 && strtoupper($v->measurement_unit ?? '') === 'CBM')
-                            ? $m * 35.3146667
-                            : $m;
-                        $sumFt3 += $mFt3;
-                        $sumVlb += $mFt3 * (1728 / 166);
-                    }
-                @endphp
-                <tr>
-                    <td colspan="2" style="text-align:right;font-size:8pt;color:#555;padding:5px 6px;">Total Cargo:</td>
-                    <td style="text-align:center;color:#001f3f;">
-                        <div style="font-family:'Helvetica-Bold',sans-serif;font-size:8.5pt;">
-                            {{ number_format($sumKg, 2) }} Kg
-                        </div>
-                        <div style="font-size:7.5pt;font-weight:normal;color:#333;">"{{ number_format($sumLb, 2) }} Lb"
-                        </div>
-                    </td>
-                    <td style="text-align:center;color:#001f3f;">
-                        <div style="font-family:'Helvetica-Bold',sans-serif;font-size:8.5pt;">
-                            {{ number_format($sumFt3, 2) }} ft&sup3;
-                        </div>
-                        <div style="font-size:7.5pt;font-weight:normal;color:#333;">"{{ number_format($sumVlb, 2) }}
-                            Vlb"</div>
-                    </td>
-                </tr>
-            </tfoot>
         </table>
 
         {{-- ── FOOTER POLICY ── --}}
