@@ -1654,17 +1654,31 @@ new #[Title('Shipment Details')] class extends Component {
                             @endcan
                         @endif
 
+                        @can('documents.manage')
+                            <flux:menu.item icon="paper-clip" wire:click="openAttachDocumentModal">
+                                {{ __('Attach documents') }}
+                            </flux:menu.item>
+                        @endcan
+
+                        @can('documents.manage')
+                            <flux:menu.item icon="paper-clip" wire:click="openAttachDocumentModal">
+                                {{ __('Attach documents') }}
+                            </flux:menu.item>
+                        @endcan
                         <flux:menu.item icon="eye" wire:click="openShipmentDocumentsModal">
                             {{ __('View Documents') }}
                         </flux:menu.item>
 
+
                         <flux:menu.separator />
 
                         @if(!$shipment->isLocked())
-                            @if($shipment->isContainer() && $this->workflow()->canMarkFilled($shipment))
-                                <flux:menu.item icon="check-circle" wire:click="markContainerFilled(false)">
-                                    {{ __('Mark Filled') }}
-                                </flux:menu.item>
+                            @if($shipment->isContainer())
+                                @if($this->workflow()->canMarkFilled($shipment))
+                                    <flux:menu.item icon="check-circle" wire:click="markContainerFilled(false)">
+                                        {{ __('Mark Filled') }}
+                                    </flux:menu.item>
+                                @endif
                                 @if(auth()->user()?->hasRole('super_admin') && $this->workflow()->canMarkFilled($shipment, true))
                                     <flux:menu.item icon="exclamation-triangle" wire:click="markContainerFilled(true)"
                                         variant="danger">
@@ -1672,28 +1686,6 @@ new #[Title('Shipment Details')] class extends Component {
                                     </flux:menu.item>
                                 @endif
                             @endif
-                            @can('documents.manage')
-                                <flux:menu.item icon="paper-clip" wire:click="openAttachDocumentModal">
-                                    {{ __('Attach documents') }}
-                                </flux:menu.item>
-                            @endcan
-
-                            @can('shipments.update')
-                                @if(auth()->user()?->hasRole('super_admin') || auth()->user()?->staff()->exists())
-                                    @if($this->workflow()->canMarkDelivered($shipment))
-                                        <flux:menu.item icon="car-front" wire:click="markShipmentDelivered">
-                                            {{ __('Mark Delivered') }}
-                                        </flux:menu.item>
-                                    @endif
-
-                                    @if($this->workflow()->canMarkLoaded($shipment))
-                                        <flux:menu.item icon="archive-box" wire:click="markShipmentLoaded">
-                                            {{ __('Mark Loaded') }}
-                                        </flux:menu.item>
-                                    @endif
-                                @endif
-                            @endcan
-
 
                         @endif
                     </flux:menu>
