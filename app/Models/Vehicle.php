@@ -8,6 +8,7 @@ use App\Enums\ShipmentStatus;
 use App\Enums\VehicleIs;
 use App\Enums\VehicleStatus;
 use Database\Factories\VehicleFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -186,5 +187,55 @@ final class Vehicle extends Model
             'note' => $note,
             'recorded_at' => now(),
         ]);
+    }
+
+    /**
+     * @return Attribute<float, never>
+     */
+    protected function weightLb(): Attribute
+    {
+        return Attribute::get(function () {
+            $w = (float) $this->weight;
+            $wu = strtoupper($this->weight_unit ?? 'LB');
+
+            return in_array($wu, ['LB', 'LBS']) ? $w : $w * 2.20462262;
+        });
+    }
+
+    /**
+     * @return Attribute<float, never>
+     */
+    protected function weightKg(): Attribute
+    {
+        return Attribute::get(function () {
+            $w = (float) $this->weight;
+            $wu = strtoupper($this->weight_unit ?? 'LB');
+
+            return in_array($wu, ['LB', 'LBS']) ? $w / 2.20462262 : $w;
+        });
+    }
+
+    /**
+     * @return Attribute<float, never>
+     */
+    protected function measurementFt3(): Attribute
+    {
+        return Attribute::get(function () {
+            $m = (float) $this->measurement;
+
+            return ($m < 100 && strtoupper($this->measurement_unit ?? '') === 'CBM')
+                ? $m * 35.3146667
+                : $m;
+        });
+    }
+
+    /**
+     * @return Attribute<float, never>
+     */
+    protected function measurementVlb(): Attribute
+    {
+        return Attribute::get(function () {
+            return $this->measurement_ft3 * (1728 / 166);
+        });
     }
 }

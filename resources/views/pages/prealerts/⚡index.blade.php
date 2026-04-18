@@ -432,9 +432,6 @@ new #[Title('Prealerts')] class extends Component {
                 </div>
 
                 <div class="lg:col-span-3 mt-4 flex justify-end gap-3 pt-6 border-t border-zinc-100 dark:border-zinc-800">
-                    <flux:button variant="ghost" wire:click="$set('selectedPrealert', null)">
-                        {{ __('Close') }}
-                    </flux:button>
                     @if (auth()->user()?->hasRole('super_admin') || auth()->user()?->staff()->exists())
                         <flux:button variant="primary" icon="truck" wire:click="convertToShipment({{ $selectedPrealert->id }})">
                             {{ __('Convert to Shipment') }}

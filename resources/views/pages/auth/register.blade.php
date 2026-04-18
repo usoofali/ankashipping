@@ -106,6 +106,23 @@
 
         <section class="space-y-4">
             <div class="space-y-1">
+                <flux:heading size="sm" level="3">{{ __('Preferences') }}</flux:heading>
+                <flux:subheading size="sm" class="text-zinc-500 dark:text-zinc-400">
+                    {{ __('Set your default logistics preferences.') }}
+                </flux:subheading>
+            </div>
+            <flux:field variant="inline">
+                <flux:checkbox name="towing" value="1" :checked="(bool) old('towing', true)" />
+                <flux:label>
+                    <span class="text-sm">{{ __('Towing Required') }}</span>
+                </flux:label>
+            </flux:field>
+        </section>
+
+        <flux:separator variant="subtle" />
+
+        <section class="space-y-4">
+            <div class="space-y-1">
                 <flux:heading size="sm" level="3">{{ __('Security') }}</flux:heading>
                 <flux:subheading size="sm" class="text-zinc-500 dark:text-zinc-400">
                     {{ __('Choose a strong password for your account.') }}

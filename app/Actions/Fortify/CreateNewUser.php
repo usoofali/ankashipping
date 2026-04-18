@@ -73,6 +73,7 @@ class CreateNewUser implements CreatesNewUsers
                 'country_id' => $input['country_id'],
                 'state_id' => $input['state_id'],
                 'city_id' => $input['city_id'],
+                'towing' => !empty($input['towing']),
             ]);
 
             Wallet::create([
@@ -93,6 +94,16 @@ class CreateNewUser implements CreatesNewUsers
                 'state_id' => $shipper->state_id,
                 'is_default' => true,
             ]);
+
+            if (! $shipper->towing) {
+                $driver = \App\Models\Driver::create([
+                    'phone' => $input['phone'],
+                    'email' => $input['email'],
+                    'company' => $companyName,
+                ]);
+
+                $shipper->update(['default_driver_id' => $driver->id]);
+            }
 
             $user->assignRole('shipper');
 

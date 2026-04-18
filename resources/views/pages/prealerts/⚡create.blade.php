@@ -32,7 +32,6 @@ new #[Title('Submit Prealert')] class extends Component {
     public string $vin = '';
     public ?int $carrier_id = null;
     public ?int $destination_port_id = null;
-    public string $notes = '';
 
     // Logistics fields
     public string $shipping_mode = 'roro';
@@ -212,7 +211,6 @@ new #[Title('Submit Prealert')] class extends Component {
             'shipment_id' => ['nullable', 'exists:shipments,id'],
             'carrier_id' => ['nullable', 'exists:carriers,id'],
             'destination_port_id' => ['nullable', 'exists:ports,id'],
-            'notes' => ['nullable', 'string'],
         ]);
 
         // Capacity constraint when linking to an existing container
@@ -261,7 +259,6 @@ new #[Title('Submit Prealert')] class extends Component {
             'destination_port_id' => (int) $this->destination_port_id ?: null,
             'shipping_mode' => $this->shipping_mode,
             'shipment_id' => $this->shipment_id,
-            'notes' => $this->notes,
         ]);
 
         foreach ($this->vehicles as $vData) {
@@ -713,10 +710,6 @@ new #[Title('Submit Prealert')] class extends Component {
                                 @endforeach
                             </flux:select>
 
-                            <div class="md:col-span-2">
-                                <flux:textarea wire:model="notes" :label="__('Notes (Optional)')" rows="3"
-                                    placeholder="{{ __('Any additional information...') }}" />
-                            </div>
                         </div>
 
                         <div class="flex items-center justify-end gap-3 mt-8">

@@ -7150,6 +7150,8 @@ namespace App\Models {
     /**
      * App\Models\Shipper
      *
+     * @property mixed $default_driver_id
+     * @property boolean $towing
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property float $discount_amount
@@ -7175,6 +7177,7 @@ namespace App\Models {
      * @property-read \App\Models\Wallet $wallet
      * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\WalletTopUp> $walletTopUps
      * @property-read int|null $wallet_top_ups_count
+     * @property-read \App\Models\Driver $defaultDriver
      * @method static \Illuminate\Database\Eloquent\Builder<Shipper>|Shipper whereId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipper>|Shipper whereUserId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipper>|Shipper whereCompanyName($value)
@@ -7186,6 +7189,8 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<Shipper>|Shipper whereDiscountAmount($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipper>|Shipper whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipper>|Shipper whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Shipper>|Shipper whereTowing($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Shipper>|Shipper whereDefaultDriverId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipper>|Shipper newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Shipper>|Shipper newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Shipper>|Shipper query()
@@ -9280,6 +9285,10 @@ namespace App\Models {
      * @property \App\Enums\VehicleStatus|null $tracking_status
      * @property string|null $vin
      * @property int $id
+     * @property-read mixed $weight_lb
+     * @property-read mixed $weight_kg
+     * @property-read mixed $measurement_ft3
+     * @property-read mixed $measurement_vlb
      * @property-read \App\Models\Shipment $shipment
      * @property-read \App\Models\Prealert $prealert
      * @property-read \App\Models\Driver $driver

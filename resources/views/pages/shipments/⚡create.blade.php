@@ -233,13 +233,21 @@ new #[Title('Create Shipment')] class extends Component {
                 }
 
                 // 2. Link Vehicles to Shipment
+                $shipper = Shipper::find($this->shipper_id);
+                
                 foreach ($this->vehicles as $vData) {
                     $vehicle = Vehicle::find($vData['id']);
                     if ($vehicle) {
-                        $vehicle->update([
+                        $updateData = [
                             'shipment_id' => $shipment->id,
                             'tracking_status' => $this->initial_vehicle_status,
-                        ]);
+                        ];
+
+                        if ($shipper && !$shipper->towing && $shipper->default_driver_id) {
+                            $updateData['driver_id'] = $shipper->default_driver_id;
+                        }
+
+                        $vehicle->update($updateData);
 
                         VehicleTracking::create([
                             'vehicle_id' => $vehicle->id,

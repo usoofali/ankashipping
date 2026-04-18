@@ -25,12 +25,15 @@ final class Shipper extends Model
         'state_id',
         'city_id',
         'discount_amount',
+        'towing',
+        'default_driver_id',
     ];
 
     protected function casts(): array
     {
         return [
             'discount_amount' => 'decimal:2',
+            'towing' => 'boolean',
         ];
     }
 
@@ -82,5 +85,10 @@ final class Shipper extends Model
     public function walletTopUps(): HasMany
     {
         return $this->hasMany(WalletTopUp::class);
+    }
+
+    public function defaultDriver(): BelongsTo
+    {
+        return $this->belongsTo(Driver::class, 'default_driver_id');
     }
 }
