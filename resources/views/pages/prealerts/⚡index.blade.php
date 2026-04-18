@@ -263,7 +263,7 @@ new #[Title('Prealerts')] class extends Component {
                                         </flux:menu.item>
 
                                         @if (auth()->user()?->hasRole('super_admin') || auth()->user()?->staff()->exists())
-                                            <flux:menu.item icon="truck" wire:click="convertToShipment({{ $prealert->id }})"
+                                            <flux:menu.item icon="car-front" wire:click="convertToShipment({{ $prealert->id }})"
                                                 wire:key="convert-{{ $prealert->id }}">
                                                 {{ __('Convert to Shipment') }}
                                             </flux:menu.item>
@@ -310,7 +310,7 @@ new #[Title('Prealerts')] class extends Component {
                                 <flux:label size="xs" class="uppercase text-zinc-400">{{ __('Shipping Mode') }}</flux:label>
                                 <div class="flex items-center gap-2 mt-1">
                                     <flux:icon
-                                        :name="$selectedPrealert->shipping_mode === \App\Enums\ShippingMode::Container ? 'archive-box' : 'truck'"
+                                        :name="$selectedPrealert->shipping_mode === \App\Enums\ShippingMode::Container ? 'container' : 'car-front'"
                                         class="size-4 text-zinc-500" />
                                     <span
                                         class="font-bold text-zinc-900 dark:text-white">{{ $selectedPrealert->shipping_mode?->name }}</span>
@@ -433,7 +433,7 @@ new #[Title('Prealerts')] class extends Component {
 
                 <div class="lg:col-span-3 mt-4 flex justify-end gap-3 pt-6 border-t border-zinc-100 dark:border-zinc-800">
                     @if (auth()->user()?->hasRole('super_admin') || auth()->user()?->staff()->exists())
-                        <flux:button variant="primary" icon="truck" wire:click="convertToShipment({{ $selectedPrealert->id }})">
+                        <flux:button variant="primary" icon="car-front" wire:click="convertToShipment({{ $selectedPrealert->id }})">
                             {{ __('Convert to Shipment') }}
                         </flux:button>
                     @endif

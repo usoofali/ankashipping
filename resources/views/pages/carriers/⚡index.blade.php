@@ -152,8 +152,8 @@ new #[Title('Carriers')] class extends Component {
 <div>
     <x-crud.page-shell>
         <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-            <x-crud.page-header :heading="__('Carriers')" :subheading="__('Manage transport companies.')" icon="truck"
-                class="!mb-0" />
+            <x-crud.page-header :heading="__('Carriers')" :subheading="__('Manage transport companies.')"
+                icon="car-front" class="!mb-0" />
             @can('carriers.create')
                 <flux:button variant="primary" icon="plus" wire:click="openCreateModal">{{ __('Create Carrier') }}
                 </flux:button>
@@ -220,7 +220,7 @@ new #[Title('Carriers')] class extends Component {
     <flux:modal wire:model="showCreateModal" class="md:max-w-2xl">
         <form wire:submit="saveNewCarrier" class="space-y-6">
             <div class="flex items-center gap-3">
-                <flux:icon name="truck" class="text-zinc-500" />
+                <flux:icon name="car-front" class="text-zinc-500" />
                 <div>
                     <flux:heading size="lg">{{ __('Create Carrier') }}</flux:heading>
                     <flux:subheading>{{ __('Add a new transport company.') }}</flux:subheading>

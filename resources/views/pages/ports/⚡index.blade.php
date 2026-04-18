@@ -291,7 +291,7 @@ new #[Title('Ports')] class extends Component {
                     <flux:table.column icon="tag">{{ __('Type') }}</flux:table.column>
                     <flux:table.column icon="map-pin">{{ __('Name') }}</flux:table.column>
                     <flux:table.column icon="globe-alt">{{ __('Location') }}</flux:table.column>
-                    <flux:table.column icon="box">{{ __('Shipments') }}</flux:table.column>
+                    <flux:table.column icon="container">{{ __('Shipments') }}</flux:table.column>
                     <flux:table.column align="right">{{ __('Actions') }}</flux:table.column>
                 </flux:table.columns>
 

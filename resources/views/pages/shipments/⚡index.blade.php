@@ -88,7 +88,7 @@ new #[Title('Shipments')] class extends Component {
     <div class="flex items-center justify-between mb-6">
         <div class="flex items-center gap-3">
             <div class="rounded-lg bg-zinc-100 p-2 dark:bg-zinc-800">
-                <flux:icon.truck class="size-6 text-zinc-600 dark:text-zinc-400" />
+                <flux:icon.car-front class="size-6 text-zinc-600 dark:text-zinc-400" />
             </div>
             <x-crud.page-header :heading="__('Shipments')" :subheading="__('Manage all active shipments and their status.')" class="mb-0!" />
         </div>
@@ -123,7 +123,7 @@ new #[Title('Shipments')] class extends Component {
             @endforeach
         </flux:select>
 
-        <flux:select wire:model.live="filterShipmentStatus" label="{{ __('Shipment Status') }}" icon="truck">
+        <flux:select wire:model.live="filterShipmentStatus" label="{{ __('Shipment Status') }}" icon="car-front">
             <flux:select.option value="">{{ __('All Statuses') }}</flux:select.option>
             @foreach(ShipmentStatus::cases() as $status)
                 <flux:select.option value="{{ $status->value }}">{{ $status->name }}</flux:select.option>

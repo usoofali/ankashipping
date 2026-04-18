@@ -109,7 +109,7 @@ new #[Title('Vehicles')] class extends Component {
         $validated = $this->validate();
 
         $defaultPhoto = 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?q=80&w=300&auto=format&fit=crop';
-        
+
         $validated['api_snapshot'] = [
             'provider' => 'manual-entry',
             'car_photo' => ['photo' => [$defaultPhoto]],
@@ -148,7 +148,7 @@ new #[Title('Vehicles')] class extends Component {
         $this->doc_type = $vehicle->doc_type ?? '';
         $this->auction_name = $vehicle->auction_name ?? '';
         $this->seller = $vehicle->seller ?? '';
-        $this->est_retail_value = (float)$vehicle->est_retail_value;
+        $this->est_retail_value = (float) $vehicle->est_retail_value;
 
         $this->showEditModal = true;
     }
@@ -159,7 +159,7 @@ new #[Title('Vehicles')] class extends Component {
         $validated = $this->validate();
 
         $vehicle = Vehicle::findOrFail($this->editingVehicleId);
-        
+
         // If it was manual or is being updated, maybe we keep the snapshot but update attributes
         if (($vehicle->api_snapshot['provider'] ?? 'unknown') === 'manual-entry') {
             $snap = $vehicle->api_snapshot;
@@ -188,7 +188,7 @@ new #[Title('Vehicles')] class extends Component {
 
         if ($this->vehiclePendingDeleteId) {
             $vehicle = Vehicle::findOrFail($this->vehiclePendingDeleteId);
-            
+
             if ($vehicle->shipment_id || $vehicle->prealert_id) {
                 $this->showDeleteModal = false;
                 $this->notification()->warning(__('Cannot delete this vehicle because it is associated with a shipment or prealert.'));
@@ -207,7 +207,7 @@ new #[Title('Vehicles')] class extends Component {
 <div>
     <x-crud.page-shell>
         <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-4">
-            <x-crud.page-header :heading="__('Vehicles')" :subheading="__('Manage vehicles.')" icon="truck"
+            <x-crud.page-header :heading="__('Vehicles')" :subheading="__('Manage vehicles.')" icon="car-front"
                 class="!mb-0" />
             @can('vehicles.create')
                 <flux:button variant="primary" icon="plus" wire:click="openCreateModal">{{ __('Create Vehicle') }}
@@ -227,7 +227,7 @@ new #[Title('Vehicles')] class extends Component {
                     <flux:table.column>{{ __('Preview') }}</flux:table.column>
                     <flux:table.column icon="calendar">{{ __('Year') }}</flux:table.column>
                     <flux:table.column icon="tag">{{ __('Make') }}</flux:table.column>
-                    <flux:table.column icon="truck">{{ __('Model') }}</flux:table.column>
+                    <flux:table.column icon="car-front">{{ __('Model') }}</flux:table.column>
                     <flux:table.column icon="paint-brush">{{ __('Color') }}</flux:table.column>
                     <flux:table.column icon="banknotes">{{ __('Est. Value') }}</flux:table.column>
                     <flux:table.column align="right">{{ __('Actions') }}</flux:table.column>
@@ -239,7 +239,8 @@ new #[Title('Vehicles')] class extends Component {
                             <flux:table.cell class="font-mono text-xs">{{ $vehicle->vin ?: '—' }}</flux:table.cell>
                             <flux:table.cell>
                                 @php $photo = $vehicle->copartCarPhotoUrls()[0] ?? 'https://placehold.co/100x75?text=No+Photo'; @endphp
-                                <img src="{{ $photo }}" alt="Vehicle" class="h-10 w-16 object-cover rounded shadow-sm border border-zinc-200 dark:border-zinc-700">
+                                <img src="{{ $photo }}" alt="Vehicle"
+                                    class="h-10 w-16 object-cover rounded shadow-sm border border-zinc-200 dark:border-zinc-700">
                             </flux:table.cell>
                             <flux:table.cell>{{ $vehicle->year ?: '—' }}</flux:table.cell>
                             <flux:table.cell>{{ $vehicle->make ?: '—' }}</flux:table.cell>
@@ -254,7 +255,7 @@ new #[Title('Vehicles')] class extends Component {
                                 @endif
                             </flux:table.cell>
                             <flux:table.cell class="text-sm text-zinc-500">
-                                {{ $vehicle->est_retail_value ? number_format((float)$vehicle->est_retail_value, 2) : '—' }}
+                                {{ $vehicle->est_retail_value ? number_format((float) $vehicle->est_retail_value, 2) : '—' }}
                             </flux:table.cell>
                             <flux:table.cell align="right">
                                 <flux:dropdown align="end" variant="ghost">
@@ -291,7 +292,7 @@ new #[Title('Vehicles')] class extends Component {
     <flux:modal wire:model="showCreateModal" class="md:max-w-4xl">
         <form wire:submit="saveNewVehicle" class="space-y-6">
             <div class="flex items-center gap-3">
-                <flux:icon name="truck" class="text-zinc-500" />
+                <flux:icon name="car-front" class="text-zinc-500" />
                 <div>
                     <flux:heading size="lg">{{ __('Create Vehicle') }}</flux:heading>
                     <flux:subheading>{{ __('Add a new vehicle to the system manually.') }}</flux:subheading>
@@ -302,28 +303,29 @@ new #[Title('Vehicles')] class extends Component {
                 <flux:input wire:model="vin" :label="__('VIN')" icon="hashtag" required placeholder="ABC123..." />
                 <flux:input wire:model="lot_number" :label="__('Lot Number')" icon="tag" placeholder="12345678" />
                 <flux:input wire:model="make" :label="__('Make')" icon="building-office" placeholder="Toyota" />
-                <flux:input wire:model="model" :label="__('Model')" icon="truck" placeholder="Camry" />
+                <flux:input wire:model="model" :label="__('Model')" icon="car-front" placeholder="Camry" />
                 <flux:input wire:model="year" :label="__('Year')" icon="calendar" placeholder="2024" />
                 <flux:input wire:model="color" :label="__('Color')" icon="paint-brush" placeholder="Black" />
-                
+
                 <flux:input wire:model="series" :label="__('Series')" placeholder="SE" />
                 <flux:input wire:model="body_style" :label="__('Body Style')" placeholder="Sedan" />
                 <flux:input wire:model="vehicle_type" :label="__('Vehicle Type')" placeholder="Automobile" />
-                
+
                 <flux:input wire:model="transmission" :label="__('Transmission')" placeholder="Automatic" />
                 <flux:input wire:model="fuel" :label="__('Fuel')" placeholder="Gas" />
                 <flux:input wire:model="engine_type" :label="__('Engine Type')" placeholder="2.5L 4-Cyl" />
-                
+
                 <flux:input wire:model="drive" :label="__('Drive')" placeholder="FWD" />
                 <flux:input wire:model="cylinders" :label="__('Cylinders')" type="number" placeholder="4" />
                 <flux:input wire:model="odometer" :label="__('Odometer (Mi)')" type="number" placeholder="10" />
-                
+
                 <flux:input wire:model="car_keys" :label="__('Keys Status')" placeholder="1" />
                 <flux:input wire:model="doc_type" :label="__('Doc Type')" placeholder="CLEAN TITLE" />
                 <flux:input wire:model="auction_name" :label="__('Auction Name')" placeholder="Copart" />
-                
+
                 <flux:input wire:model="seller" :label="__('Seller')" placeholder="Geico" />
-                <flux:input wire:model="est_retail_value" :label="__('Est. Retail Value')" type="number" step="0.01" placeholder="25000.00" />
+                <flux:input wire:model="est_retail_value" :label="__('Est. Retail Value')" type="number" step="0.01"
+                    placeholder="25000.00" />
             </div>
 
             <div class="flex justify-end gap-2">
@@ -350,26 +352,26 @@ new #[Title('Vehicles')] class extends Component {
                 <flux:input wire:model="vin" :label="__('VIN')" icon="hashtag" required />
                 <flux:input wire:model="lot_number" :label="__('Lot Number')" icon="tag" />
                 <flux:input wire:model="make" :label="__('Make')" icon="building-office" />
-                <flux:input wire:model="model" :label="__('Model')" icon="truck" />
+                <flux:input wire:model="model" :label="__('Model')" icon="car-front" />
                 <flux:input wire:model="year" :label="__('Year')" icon="calendar" />
                 <flux:input wire:model="color" :label="__('Color')" icon="paint-brush" />
-                
+
                 <flux:input wire:model="series" :label="__('Series')" />
                 <flux:input wire:model="body_style" :label="__('Body Style')" />
                 <flux:input wire:model="vehicle_type" :label="__('Vehicle Type')" />
-                
+
                 <flux:input wire:model="transmission" :label="__('Transmission')" />
                 <flux:input wire:model="fuel" :label="__('Fuel')" />
                 <flux:input wire:model="engine_type" :label="__('Engine Type')" />
-                
+
                 <flux:input wire:model="drive" :label="__('Drive')" />
                 <flux:input wire:model="cylinders" :label="__('Cylinders')" type="number" />
                 <flux:input wire:model="odometer" :label="__('Odometer (Mi)')" type="number" />
-                
+
                 <flux:input wire:model="car_keys" :label="__('Keys Status')" />
                 <flux:input wire:model="doc_type" :label="__('Doc Type')" />
                 <flux:input wire:model="auction_name" :label="__('Auction Name')" />
-                
+
                 <flux:input wire:model="seller" :label="__('Seller')" />
                 <flux:input wire:model="est_retail_value" :label="__('Est. Retail Value')" type="number" step="0.01" />
             </div>

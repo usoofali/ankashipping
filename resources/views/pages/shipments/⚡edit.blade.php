@@ -17,8 +17,7 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 use WireUi\Traits\WireUiActions;
 
-new #[Title('Edit Shipment')] class extends Component
-{
+new #[Title('Edit Shipment')] class extends Component {
     use WireUiActions;
 
     public Shipment $shipment;
@@ -89,7 +88,7 @@ new #[Title('Edit Shipment')] class extends Component
         $this->capacity = $shipment->capacity ?? 1;
         $this->sealed_at = $shipment->sealed_at ? $shipment->sealed_at->toDateTimeString() : null;
 
-        $this->vehicles = $shipment->vehicles->map(fn ($v) => [
+        $this->vehicles = $shipment->vehicles->map(fn($v) => [
             'id' => $v->id,
             'vin' => $v->vin,
             'details' => $v,
@@ -98,7 +97,7 @@ new #[Title('Edit Shipment')] class extends Component
 
     public function removeVehicle(int $vehicleId): void
     {
-        $this->vehicles = array_filter($this->vehicles, fn ($v) => $v['id'] !== $vehicleId);
+        $this->vehicles = array_filter($this->vehicles, fn($v) => $v['id'] !== $vehicleId);
 
         if (count($this->vehicles) === 0) {
             $this->notification()->warning(__('Warning: Shipment will not be savable without at least 1 vehicle.'));
@@ -137,7 +136,7 @@ new #[Title('Edit Shipment')] class extends Component
         $this->authorize('shipments.update');
 
         $validated = $this->validate([
-            'reference_no' => ['required', 'string', 'max:255', 'unique:shipments,reference_no,'.$this->shipment->id],
+            'reference_no' => ['required', 'string', 'max:255', 'unique:shipments,reference_no,' . $this->shipment->id],
             'shipper_id' => ['required', 'exists:shippers,id'],
             'consignee_id' => ['required', 'exists:consignees,id'],
             'notify_party_id' => ['nullable', 'exists:consignees,id'],
@@ -177,7 +176,7 @@ new #[Title('Edit Shipment')] class extends Component
         $originalVehicleIds = $this->shipment->vehicles->pluck('id')->toArray();
         $removedVehicleIds = array_diff($originalVehicleIds, $currentVehicleIds);
 
-        if (! empty($removedVehicleIds)) {
+        if (!empty($removedVehicleIds)) {
             Vehicle::whereIn('id', $removedVehicleIds)->update([
                 'shipment_id' => null,
                 'tracking_status' => VehicleStatus::Pending->value,
@@ -188,7 +187,7 @@ new #[Title('Edit Shipment')] class extends Component
                 'user_id' => Auth::id(),
                 'action' => 'updated',
                 'properties' => [
-                    'message' => __('Removed vehicles from shipment: ').implode(', ', $removedVehicleIds),
+                    'message' => __('Removed vehicles from shipment: ') . implode(', ', $removedVehicleIds),
                     'source' => 'shipment_edit',
                 ],
             ]);
@@ -211,7 +210,7 @@ new #[Title('Edit Shipment')] class extends Component
     #[Computed]
     public function consignees()
     {
-        if (! $this->shipper_id) {
+        if (!$this->shipper_id) {
             return collect();
         }
 
@@ -310,7 +309,8 @@ new #[Title('Edit Shipment')] class extends Component
                     {{ __('Active Shipment Reference') }}
                 </flux:text>
                 <div class="flex items-center gap-3">
-                    <div class="rounded-lg bg-indigo-100 dark:bg-indigo-900/50 p-3 text-indigo-600 dark:text-indigo-400">
+                    <div
+                        class="rounded-lg bg-indigo-100 dark:bg-indigo-900/50 p-3 text-indigo-600 dark:text-indigo-400">
                         <flux:icon.qr-code class="size-8" />
                     </div>
                     <div>
@@ -361,7 +361,7 @@ new #[Title('Edit Shipment')] class extends Component
         <div class="grid grid-cols-1 gap-6">
             <x-crud.panel class="p-6">
                 <flux:heading size="lg" class="mb-4 flex items-center gap-2">
-                    <flux:icon.truck class="size-5 text-indigo-500" />
+                    <flux:icon.car-front class="size-5 text-indigo-500" />
                     {{ __('Vehicles to Ship') }} ({{ count($vehicles) }})
                 </flux:heading>
 
@@ -369,10 +369,11 @@ new #[Title('Edit Shipment')] class extends Component
                     @foreach($vehicles as $index => $v)
                         <div wire:key="ev-{{ $v['id'] }}"
                             class="relative group bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all">
-                            
+
                             {{-- Remove Vehicle Button overlay --}}
                             <div class="absolute top-3 right-3 z-20">
-                                <flux:button variant="danger" size="sm" icon="trash" wire:click="confirmRemove({{ $v['id'] }})">
+                                <flux:button variant="danger" size="sm" icon="trash"
+                                    wire:click="confirmRemove({{ $v['id'] }})">
                                     {{ __('Remove') }}
                                 </flux:button>
                             </div>
@@ -469,7 +470,8 @@ new #[Title('Edit Shipment')] class extends Component
                                             <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">
                                                 {{ __('Location') }}
                                             </p>
-                                            <p class="font-medium text-zinc-900 dark:text-zinc-100 text-sm whitespace-normal break-words">
+                                            <p
+                                                class="font-medium text-zinc-900 dark:text-zinc-100 text-sm whitespace-normal break-words">
                                                 {{ ($v['details']['location'] ?? null) ?: '—' }}
                                             </p>
                                         </div>
@@ -477,7 +479,8 @@ new #[Title('Edit Shipment')] class extends Component
                                             <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">
                                                 {{ __('Auction') }}
                                             </p>
-                                            <p class="font-medium text-zinc-900 dark:text-zinc-100 text-sm whitespace-normal break-words">
+                                            <p
+                                                class="font-medium text-zinc-900 dark:text-zinc-100 text-sm whitespace-normal break-words">
                                                 {{ ($v['details']['auction_name'] ?? null) ?: '—' }}
                                             </p>
                                         </div>
@@ -520,7 +523,9 @@ new #[Title('Edit Shipment')] class extends Component
                                 <flux:error name="consignee_id" />
                             </flux:field>
 
-                            <flux:select wire:model="notify_party_id" :label="__('Notify Party / Intermediate Consignee (Optional)')" :placeholder="__('Same as Consignee')">
+                            <flux:select wire:model="notify_party_id"
+                                :label="__('Notify Party / Intermediate Consignee (Optional)')"
+                                :placeholder="__('Same as Consignee')">
                                 <flux:select.option value="">{{ __('Same as Consignee') }}</flux:select.option>
                                 @foreach($this->consignees as $consignee)
                                     <flux:select.option :value="$consignee->id">
@@ -566,14 +571,16 @@ new #[Title('Edit Shipment')] class extends Component
                                 <flux:label class="mb-2">{{ __('Shipping Mode') }}</flux:label>
                                 @if(count($vehicles) <= 1)
                                     <flux:radio.group wire:model.live="shipping_mode" variant="segmented" class="w-full!">
-                                        <flux:radio :label="__('RoRo')" value="roro" icon="car" />
+                                        <flux:radio :label="__('RoRo')" value="roro" icon="car-front" />
                                         <flux:radio :label="__('Container')" value="container" icon="container" />
                                     </flux:radio.group>
                                 @else
-                                    <div class="flex items-center gap-2 p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-xl">
+                                    <div
+                                        class="flex items-center gap-2 p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-xl">
                                         <flux:icon.container class="size-5 text-indigo-500" />
                                         <flux:text font="medium">{{ __('Container (Locked)') }}</flux:text>
-                                        <flux:badge size="xs" color="indigo" variant="subtle" class="ml-auto">{{ count($vehicles) }} {{ __('Vehicles') }}</flux:badge>
+                                        <flux:badge size="xs" color="indigo" variant="subtle" class="ml-auto">
+                                            {{ count($vehicles) }} {{ __('Vehicles') }}</flux:badge>
                                     </div>
                                 @endif
                                 <flux:error name="shipping_mode" />
@@ -586,13 +593,15 @@ new #[Title('Edit Shipment')] class extends Component
                                     <flux:select.option value="{{ $carrier->id }}">{{ $carrier->name }}</flux:select.option>
                                 @endforeach
                             </flux:select>
-                            
+
                             @if($shipping_mode === \App\Enums\ShippingMode::Container->value)
-                                <flux:input wire:model="capacity" label="{{ __('Container Capacity') }}" type="number" icon="hashtag" />
-                                
+                                <flux:input wire:model="capacity" label="{{ __('Container Capacity') }}" type="number"
+                                    icon="hashtag" />
+
                                 <div class="flex items-center gap-4 pt-6">
                                     <flux:text size="sm" class="font-bold">{{ __('Seal Container') }}</flux:text>
-                                    <flux:button type="button" wire:click="$toggle('sealed_at')" :variant="$sealed_at ? 'primary' : 'ghost'" size="sm">
+                                    <flux:button type="button" wire:click="$toggle('sealed_at')"
+                                        :variant="$sealed_at ? 'primary' : 'ghost'" size="sm">
                                         {{ $sealed_at ? __('Sealed') : __('Mark as Sealed') }}
                                     </flux:button>
                                 </div>
@@ -620,7 +629,8 @@ new #[Title('Edit Shipment')] class extends Component
                                     </flux:select.option>
                                 @endforeach
                             </flux:select>
-                            <flux:select wire:model="payment_status" label="{{ __('Payment Status') }}" icon="banknotes">
+                            <flux:select wire:model="payment_status" label="{{ __('Payment Status') }}"
+                                icon="banknotes">
                                 @foreach(\App\Enums\PaymentStatus::cases() as $status)
                                     <flux:select.option value="{{ $status->value }}">{{ $status->name }}
                                     </flux:select.option>
@@ -639,7 +649,8 @@ new #[Title('Edit Shipment')] class extends Component
                         <flux:button variant="primary" type="submit" class="w-full">
                             {{ __('Save Changes') }}
                         </flux:button>
-                        <flux:button variant="ghost" :href="route('shipments.show', $shipment)" wire:navigate class="w-full">
+                        <flux:button variant="ghost" :href="route('shipments.show', $shipment)" wire:navigate
+                            class="w-full">
                             {{ __('Cancel') }}
                         </flux:button>
                     </div>

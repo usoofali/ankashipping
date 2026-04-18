@@ -16,8 +16,7 @@
                 @endphp
                 <div class="text-right">
                     @if($effectiveInvoiceStatus)
-                        <flux:text size="xs"
-                            class="uppercase tracking-widest font-bold text-zinc-400 mb-1 block">
+                        <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1 block">
                             {{ __('Status') }}
                         </flux:text>
                         <flux:badge color="amber" variant="subtle" size="sm" icon="document-text">
@@ -124,8 +123,7 @@
         @if($this->workflow()->canEditInvoice($shipment, auth()->user()))
             <form wire:submit.prevent="addOrUpdateItem" class="space-y-3">
                 @if($shipment->isContainer())
-                    <flux:select wire:model="invoice_vehicle_id" label="{{ __('Vehicle (Optional)') }}"
-                        icon="truck">
+                    <flux:select wire:model="invoice_vehicle_id" label="{{ __('Vehicle (Optional)') }}" icon="car-front">
                         <flux:select.option value="">{{ __('Container') }}</flux:select.option>
                         @foreach($shipment->vehicles as $v)
                             <flux:select.option :value="$v->id">
@@ -136,8 +134,7 @@
                     </flux:select>
                 @endif
 
-                <flux:select wire:model.live="item_description" label="{{ __('Invoice item') }}"
-                    icon="document-text">
+                <flux:select wire:model.live="item_description" label="{{ __('Invoice item') }}" icon="document-text">
                     <flux:select.option value="">{{ __('Select invoice item') }}</flux:select.option>
                     @foreach(\App\Models\ChargeItem::query()->whereNotNull('item')->orderBy('item')->get() as $chargeItem)
                         <flux:select.option :value="$chargeItem->item">
@@ -152,8 +149,7 @@
                         {{ $invoiceItemId ? __('Update Item') : __('Add Item') }}
                     </flux:button>
                     @if($invoiceItemId)
-                        <flux:button type="button" variant="ghost" class="flex-none"
-                            wire:click="$set('invoiceItemId', null)">
+                        <flux:button type="button" variant="ghost" class="flex-none" wire:click="$set('invoiceItemId', null)">
                             {{ __('Cancel') }}
                         </flux:button>
                     @endif

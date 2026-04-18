@@ -303,7 +303,8 @@ new #[Title('Shipper')] class extends Component {
             <div class="flex items-start justify-between gap-3">
                 <div>
                     <flux:text class="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                        {{ __('Total shipments') }}</flux:text>
+                        {{ __('Total shipments') }}
+                    </flux:text>
                     <flux:heading size="xl" class="mt-1 tabular-nums">{{ number_format($this->totalShipmentsCount) }}
                     </flux:heading>
                 </div>
@@ -317,11 +318,13 @@ new #[Title('Shipper')] class extends Component {
             <div class="flex items-start justify-between gap-3">
                 <div>
                     <flux:text class="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                        {{ __('Payments received') }}</flux:text>
+                        {{ __('Payments received') }}
+                    </flux:text>
                     <flux:heading size="xl" class="mt-1 tabular-nums">${{ number_format($summary['paid_sum'], 2) }}
                     </flux:heading>
                     <flux:text class="mt-1 text-sm text-zinc-500">
-                        {{ __(':count paid invoice(s)', ['count' => $summary['paid_count']]) }}</flux:text>
+                        {{ __(':count paid invoice(s)', ['count' => $summary['paid_count']]) }}
+                    </flux:text>
                 </div>
                 <div class="rounded-lg bg-emerald-50 p-2 dark:bg-emerald-950/40">
                     <flux:icon.banknotes class="size-6 text-emerald-600 dark:text-emerald-400" />
@@ -333,11 +336,13 @@ new #[Title('Shipper')] class extends Component {
             <div class="flex items-start justify-between gap-3">
                 <div>
                     <flux:text class="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                        {{ __('Outstanding invoices') }}</flux:text>
+                        {{ __('Outstanding invoices') }}
+                    </flux:text>
                     <flux:heading size="xl" class="mt-1 tabular-nums">
                         ${{ number_format($summary['outstanding_sum'], 2) }}</flux:heading>
                     <flux:text class="mt-1 text-sm text-zinc-500">
-                        {{ __(':count open invoice(s)', ['count' => $summary['outstanding_count']]) }}</flux:text>
+                        {{ __(':count open invoice(s)', ['count' => $summary['outstanding_count']]) }}
+                    </flux:text>
                 </div>
                 <div class="rounded-lg bg-amber-50 p-2 dark:bg-amber-950/40">
                     <flux:icon.clock class="size-6 text-amber-600 dark:text-amber-400" />
@@ -349,7 +354,8 @@ new #[Title('Shipper')] class extends Component {
             <div class="flex items-start justify-between gap-3">
                 <div>
                     <flux:text class="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                        {{ __('Wallet balance') }}</flux:text>
+                        {{ __('Wallet balance') }}
+                    </flux:text>
                     <flux:heading size="xl" class="mt-1 tabular-nums">
                         ${{ number_format((float) ($shipper->wallet?->balance ?? 0), 2) }}</flux:heading>
                     <flux:text class="mt-1 text-sm text-zinc-500">{{ $currency }}</flux:text>
@@ -383,7 +389,8 @@ new #[Title('Shipper')] class extends Component {
                             <div class="w-full max-w-[2.5rem] rounded-t-md bg-indigo-500/90 transition-all dark:bg-indigo-400/80"
                                 style="height: {{ $barPx }}px;" title="{{ $bar['label'] }}: {{ $bar['count'] }}"></div>
                             <flux:text class="max-w-full truncate text-center text-[10px] uppercase text-zinc-400 sm:text-xs">
-                                {{ $bar['label'] }}</flux:text>
+                                {{ $bar['label'] }}
+                            </flux:text>
                         </div>
                     @endforeach
                 </div>
@@ -396,12 +403,14 @@ new #[Title('Shipper')] class extends Component {
                 <div class="flex justify-between gap-2">
                     <dt class="text-zinc-500">{{ __('Consignees') }}</dt>
                     <dd class="font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
-                        {{ number_format((int) $shipper->consignees_count) }}</dd>
+                        {{ number_format((int) $shipper->consignees_count) }}
+                    </dd>
                 </div>
                 <div class="flex justify-between gap-2">
                     <dt class="text-zinc-500">{{ __('Prealerts') }}</dt>
                     <dd class="font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
-                        {{ number_format((int) $shipper->prealerts_count) }}</dd>
+                        {{ number_format((int) $shipper->prealerts_count) }}
+                    </dd>
                 </div>
                 <div class="flex justify-between gap-2">
                     <dt class="text-zinc-500">{{ __('Per-line discount (USD)') }}</dt>
@@ -411,7 +420,8 @@ new #[Title('Shipper')] class extends Component {
                 <div class="flex justify-between gap-2">
                     <dt class="text-zinc-500">{{ __('Last shipment') }}</dt>
                     <dd class="font-medium text-zinc-900 dark:text-zinc-100">
-                        {{ $this->lastShipmentCreatedAt?->format('d M Y') ?? '—' }}</dd>
+                        {{ $this->lastShipmentCreatedAt?->format('d M Y') ?? '—' }}
+                    </dd>
                 </div>
             </dl>
             @if (count($this->shipmentStatusBreakdown) > 0)
@@ -480,7 +490,7 @@ new #[Title('Shipper')] class extends Component {
             @endforeach
         </flux:select>
 
-        <flux:select wire:model.live="filterShipmentStatus" label="{{ __('Shipment status') }}" icon="truck">
+        <flux:select wire:model.live="filterShipmentStatus" label="{{ __('Shipment status') }}" icon="car-front">
             <flux:select.option value="">{{ __('All') }}</flux:select.option>
             @foreach (ShipmentStatus::cases() as $status)
                 <flux:select.option value="{{ $status->value }}">{{ $status->name }}</flux:select.option>

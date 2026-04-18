@@ -1566,7 +1566,7 @@ new #[Title('Shipment Details')] class extends Component {
                     <div class="mt-2 flex flex-wrap gap-2">
                         @if($shipment->shipment_status)
                             <flux:badge color="indigo" variant="subtle" size="sm"
-                                :icon="$shipment->isContainer() ? 'container' : 'truck'">
+                                :icon="$shipment->isContainer() ? 'container' : 'car-front'">
                                 {{ $shipment->shipmentStatusDisplay() }}
                             </flux:badge>
                         @endif
@@ -1640,7 +1640,7 @@ new #[Title('Shipment Details')] class extends Component {
                         @endcan
 
                         @can('workflow.manage_logistics')
-                            <flux:menu.item icon="truck" wire:click="editLogistics">
+                            <flux:menu.item icon="car-front" wire:click="editLogistics">
                                 {{ __('Booking & Logistics') }}
                             </flux:menu.item>
                         @endcan
@@ -1681,7 +1681,7 @@ new #[Title('Shipment Details')] class extends Component {
                             @can('shipments.update')
                                 @if(auth()->user()?->hasRole('super_admin') || auth()->user()?->staff()->exists())
                                     @if($this->workflow()->canMarkDelivered($shipment))
-                                        <flux:menu.item icon="truck" wire:click="markShipmentDelivered">
+                                        <flux:menu.item icon="car-front" wire:click="markShipmentDelivered">
                                             {{ __('Mark Delivered') }}
                                         </flux:menu.item>
                                     @endif
@@ -1976,7 +1976,7 @@ new #[Title('Shipment Details')] class extends Component {
                 <div class="space-y-6">
                     <div class="flex items-center justify-between">
                         <flux:heading size="lg" class="flex items-center gap-2">
-                            <flux:icon.truck class="size-5 text-indigo-500" />
+                            <flux:icon.car-front class="size-5 text-indigo-500" />
                             {{ __('Vehicles in Shipment') }} ({{ count($shipment->vehicles) }})
                         </flux:heading>
                     </div>

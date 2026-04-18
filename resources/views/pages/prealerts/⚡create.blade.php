@@ -125,7 +125,7 @@ new #[Title('Submit Prealert')] class extends Component {
 
             if ($result->outcome === VinLookupOutcome::VehicleReady || $result->outcome === VinLookupOutcome::FetchedFromApi) {
                 $vehicle = $result->vehicle;
-                
+
                 // Add to list, keyed by ID for strict DOM binding sync
                 $this->vehicles[$vehicle->id] = [
                     'id' => $vehicle->id,
@@ -136,6 +136,7 @@ new #[Title('Submit Prealert')] class extends Component {
                         'model' => $vehicle->model,
                         'color' => $vehicle->color,
                         'car_keys' => $vehicle->car_keys,
+                        'lot_number' => $vehicle->lot_number,
                         'est_retail_value' => $vehicle->est_retail_value,
                         'location' => $vehicle->location,
                         'auction_name' => $vehicle->auction_name,
@@ -184,12 +185,12 @@ new #[Title('Submit Prealert')] class extends Component {
 
     public function updatedShipmentId(): void
     {
-        if (! $this->shipment_id) {
+        if (!$this->shipment_id) {
             return;
         }
 
         $target = Shipment::withCount('vehicles')->find($this->shipment_id);
-        if (! $target) {
+        if (!$target) {
             return;
         }
 
@@ -233,7 +234,7 @@ new #[Title('Submit Prealert')] class extends Component {
 
         foreach ($this->vehicles as $v) {
             $vehicle = Vehicle::find($v['id']);
-            
+
             if ($vehicle && $vehicle->prealert_id) {
                 $this->notification()->warning(
                     title: __('Duplicate Vehicle'),
@@ -282,7 +283,7 @@ new #[Title('Submit Prealert')] class extends Component {
             ->role($adminRoleNames)
             ->pluck('id')
             ->merge(User::query()->whereHas('staff')->pluck('id'))
-            ->when($prealert->shipper?->user_id, fn ($q) => $q->push($prealert->shipper->user_id))
+            ->when($prealert->shipper?->user_id, fn($q) => $q->push($prealert->shipper->user_id))
             ->unique()
             ->values();
 
@@ -297,8 +298,8 @@ new #[Title('Submit Prealert')] class extends Component {
         $this->dialog()->show([
             'icon' => 'success',
             'title' => __('Success!'),
-            'description' => $this->shipping_mode === 'container' 
-                ? __('Container prealert submitted successfully.') 
+            'description' => $this->shipping_mode === 'container'
+                ? __('Container prealert submitted successfully.')
                 : __('RoRo prealert submitted successfully.'),
             'onClose' => [
                 'method' => 'redirectToPrealerts',
@@ -397,18 +398,22 @@ new #[Title('Submit Prealert')] class extends Component {
 }; ?>
 
 <div>
-    <x-crud.page-shell>
-        <div class="max-w-4xl mx-auto">
+    <x-crud.page-shell max-width="max-w-screen-2xl">
+        <div class="w-full mx-auto">
             <form wire:submit="save" class="space-y-6">
-                <x-crud.panel class="{{ $shipping_mode === 'roro' 
-                        ? 'bg-emerald-50/40 dark:bg-emerald-950/10 border-emerald-200/50 dark:border-emerald-800/50' 
-                        : 'bg-rose-50/40 dark:bg-rose-950/10 border-rose-200/50 dark:border-rose-800/50' }} p-4 sm:p-8 transition-colors duration-500">
+                <x-crud.panel
+                    class="{{ $shipping_mode === 'roro'
+    ? 'bg-emerald-50/40 dark:bg-emerald-950/10 border-emerald-200/50 dark:border-emerald-800/50'
+    : 'bg-rose-50/40 dark:bg-rose-950/10 border-rose-200/50 dark:border-rose-800/50' }} p-4 sm:p-8 transition-colors duration-500">
                     <div class="space-y-8">
                         {{-- Mode Header --}}
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200/50 dark:border-zinc-700/50 pb-6">
+                        <div
+                            class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200/50 dark:border-zinc-700/50 pb-6">
                             <div class="flex items-center gap-4">
-                                <div class="shrink-0 p-3 rounded-2xl {{ $shipping_mode === 'roro' ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400' : 'bg-rose-100 dark:bg-rose-900 text-rose-600 dark:text-rose-400' }}">
-                                    <flux:icon :name="$shipping_mode === 'roro' ? 'car' : 'container'" class="size-8" />
+                                <div
+                                    class="shrink-0 p-3 rounded-2xl {{ $shipping_mode === 'roro' ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400' : 'bg-rose-100 dark:bg-rose-900 text-rose-600 dark:text-rose-400' }}">
+                                    <flux:icon :name="$shipping_mode === 'roro' ? 'car-front' : 'container'"
+                                        class="size-8" />
                                 </div>
                                 <div>
                                     <flux:heading size="xl" class="font-bold tracking-tight">
@@ -417,7 +422,7 @@ new #[Title('Submit Prealert')] class extends Component {
                                     <div class="flex items-center gap-2 mt-1">
                                         @if(count($vehicles) <= 1)
                                             <flux:radio.group wire:model.live="shipping_mode" variant="segmented" size="xs">
-                                                <flux:radio :label="__('RoRo')" value="roro" icon="car" />
+                                                <flux:radio :label="__('RoRo')" value="roro" icon="car-front" />
                                                 <flux:radio :label="__('Container')" value="container" icon="container" />
                                             </flux:radio.group>
                                         @else
@@ -433,13 +438,14 @@ new #[Title('Submit Prealert')] class extends Component {
                         </div>
 
                         {{-- 1. VIN & Lookup --}}
-                        <div class="bg-white/50 dark:bg-zinc-900/30 rounded-2xl p-4 sm:p-6 border border-dashed {{ $shipping_mode === 'roro' ? 'border-emerald-200 dark:border-emerald-800' : 'border-rose-200 dark:border-rose-800' }} shadow-sm">
+                        <div
+                            class="bg-white/50 dark:bg-zinc-900/30 rounded-2xl p-4 sm:p-6 border border-dashed {{ $shipping_mode === 'roro' ? 'border-emerald-200 dark:border-emerald-800' : 'border-rose-200 dark:border-rose-800' }} shadow-sm">
                             <flux:field>
-                                <flux:label size="lg" class="mb-3 font-bold text-zinc-800 dark:text-zinc-200">{{ __('Add Vehicle VIN') }}</flux:label>
-                                <flux:input wire:model.live.debounce.500ms="vin"
-                                    icon="identification"
-                                    placeholder="{{ __('Enter VIN...') }}" 
-                                    maxlength="17"
+                                <flux:label size="lg" class="mb-3 font-bold text-zinc-800 dark:text-zinc-200">
+                                    {{ __('Add Vehicle VIN') }}
+                                </flux:label>
+                                <flux:input wire:model.live.debounce.500ms="vin" icon="identification"
+                                    placeholder="{{ __('Enter VIN...') }}" maxlength="17"
                                     class="font-mono uppercase text-xl"></flux:input>
                                 @if($vinError)
                                     <flux:error class="mt-1">{{ $vinError }}</flux:error>
@@ -459,10 +465,11 @@ new #[Title('Submit Prealert')] class extends Component {
                                     <flux:heading size="md">{{ __('Added Vehicles') }}</flux:heading>
                                     <flux:badge size="sm" color="zinc" variant="subtle">{{ count($vehicles) }}</flux:badge>
                                 </div>
-                                
+
                                 <div class="grid grid-cols-1 gap-4">
                                     @foreach($vehicles as $index => $v)
-                                        <div wire:key="v-{{ $v['id'] }}" class="relative group bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all">
+                                        <div wire:key="v-{{ $v['id'] }}"
+                                            class="relative group bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all">
                                             <div class="flex flex-col lg:flex-row">
                                                 <div class="lg:w-[45%] w-full bg-zinc-100 dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-700 relative min-h-[300px] lg:min-h-full"
                                                     x-data="{ activeSlide: 0, slides: @js($v['details']['photos'] ?? []) }">
@@ -509,19 +516,37 @@ new #[Title('Submit Prealert')] class extends Component {
                                                 <div class="lg:w-[55%] w-full p-4 lg:p-5 flex flex-col">
                                                     <div class="flex items-start justify-between mb-4">
                                                         <div>
-                                                            <h4 class="font-bold text-xl text-zinc-900 dark:text-white leading-tight">
-                                                                {{ $v['details']['year'] ?? '' }} {{ $v['details']['make'] ?? '' }} {{ $v['details']['model'] ?? '' }}
+                                                            <h4
+                                                                class="font-bold text-xl text-zinc-900 dark:text-white leading-tight">
+                                                                {{ $v['details']['year'] ?? '' }}
+                                                                {{ $v['details']['make'] ?? '' }}
+                                                                {{ $v['details']['model'] ?? '' }}
                                                             </h4>
-                                                            <p class="text-[8px] text-zinc-500 mt-1 uppercase tracking-widest font-bold">
-                                                                {{ __('Vehicle Identification (VIN)') }}
-                                                            </p>
-                                                            <p
-                                                                class="font-mono text-zinc-700 dark:text-zinc-300 font-medium text-sm mt-0.5">
-                                                                {{ $v['vin'] }}
-                                                            </p>
+                                                            <div class="flex items-center gap-4 mt-2 mb-1">
+                                                                <div>
+                                                                    <p
+                                                                        class="text-[8px] text-zinc-500 uppercase tracking-widest font-bold">
+                                                                        {{ __('VIN') }}
+                                                                    </p>
+                                                                    <p
+                                                                        class="font-mono text-zinc-700 dark:text-zinc-300 font-medium text-sm mt-0.5">
+                                                                        {{ $v['vin'] }}
+                                                                    </p>
+                                                                </div>
+                                                                <div class="pl-4 border-l border-zinc-200 dark:border-zinc-700">
+                                                                    <p
+                                                                        class="text-[8px] text-zinc-500 uppercase tracking-widest font-bold">
+                                                                        {{ __('Lot Number') }}
+                                                                    </p>
+                                                                    <p
+                                                                        class="font-mono text-zinc-700 dark:text-zinc-300 font-medium text-sm mt-0.5">
+                                                                        {{ ($v['details']['lot_number'] ?? null) ?: '—' }}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
                                                         </div>
-                                                        <button type="button" wire:click="removeVehicle({{ $v['id'] }})" 
-                                                            class="p-2 text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-colors shrink-0" 
+                                                        <button type="button" wire:click="removeVehicle({{ $v['id'] }})"
+                                                            class="p-2 text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-colors shrink-0"
                                                             title="{{ __('Remove vehicle') }}">
                                                             <flux:icon.x-mark class="size-6 sm:size-5" />
                                                         </button>
@@ -529,8 +554,10 @@ new #[Title('Submit Prealert')] class extends Component {
 
                                                     <div class="grid grid-cols-2 sm:grid-cols-3 gap-y-4 gap-x-4 text-xs mb-5">
                                                         <div>
-                                                            <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">
-                                                                {{ __('Color') }}</p>
+                                                            <p
+                                                                class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">
+                                                                {{ __('Color') }}
+                                                            </p>
                                                             <p
                                                                 class="font-medium text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                                                                 @if($v['details']['color'] ?? null)
@@ -542,15 +569,19 @@ new #[Title('Submit Prealert')] class extends Component {
                                                             </p>
                                                         </div>
                                                         <div>
-                                                            <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">
-                                                                {{ __('Car Keys') }}</p>
+                                                            <p
+                                                                class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">
+                                                                {{ __('Car Keys') }}
+                                                            </p>
                                                             <p class="font-medium text-zinc-900 dark:text-zinc-100">
                                                                 @if(($v['details']['car_keys'] ?? null) === '1')
-                                                                    <span class="text-green-600 dark:text-green-400 flex items-center gap-1">
+                                                                    <span
+                                                                        class="text-green-600 dark:text-green-400 flex items-center gap-1">
                                                                         <flux:icon.key class="size-3.5" /> {{ __('Yes') }}
                                                                     </span>
                                                                 @elseif(($v['details']['car_keys'] ?? null) === '0')
-                                                                    <span class="text-red-500 flex items-center gap-1"><flux:icon.x-mark
+                                                                    <span
+                                                                        class="text-red-500 flex items-center gap-1"><flux:icon.x-mark
                                                                             class="size-3.5" /> {{ __('No') }}</span>
                                                                 @else
                                                                     —
@@ -558,44 +589,65 @@ new #[Title('Submit Prealert')] class extends Component {
                                                             </p>
                                                         </div>
                                                         <div>
-                                                            <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">{{ __('Location') }}</p>
-                                                            <p class="font-medium text-zinc-900 dark:text-zinc-100 text-sm whitespace-normal break-words">
+                                                            <p
+                                                                class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">
+                                                                {{ __('Location') }}
+                                                            </p>
+                                                            <p
+                                                                class="font-medium text-zinc-900 dark:text-zinc-100 text-sm whitespace-normal break-words">
                                                                 {{ ($v['details']['location'] ?? null) ?: '—' }}
                                                             </p>
                                                         </div>
                                                         <div>
-                                                            <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">{{ __('Auction') }}</p>
-                                                            <p class="font-medium text-zinc-900 dark:text-zinc-100 text-sm whitespace-normal break-words">
+                                                            <p
+                                                                class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">
+                                                                {{ __('Auction') }}
+                                                            </p>
+                                                            <p
+                                                                class="font-medium text-zinc-900 dark:text-zinc-100 text-sm whitespace-normal break-words">
                                                                 {{ ($v['details']['auction_name'] ?? null) ?: '—' }}
                                                             </p>
                                                         </div>
                                                     </div>
-                                                    
+
                                                     {{-- Logistics Grid --}}
-                                                    <div class="mt-auto grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-zinc-100 dark:border-zinc-700/50 pt-4">
-                                                        <div class="space-y-1.5 min-w-0">
-                                                            <flux:label size="xs" class="font-bold uppercase tracking-widest text-zinc-400">{{ __('Auction Receipt') }}</flux:label>
+                                                    <div
+                                                        class="mt-auto flex flex-col xl:flex-row gap-4 border-t border-zinc-100 dark:border-zinc-700/50 pt-4">
+                                                        <flux:field class="flex-1 min-w-0">
+                                                            <flux:label size="xs"
+                                                                class="font-bold uppercase tracking-widest text-zinc-400 mb-1">
+                                                                {{ __('Auction Receipt') }}
+                                                            </flux:label>
                                                             <div class="flex items-center gap-2 w-full">
-                                                                <input type="file" wire:model="receipt_files.{{ $index }}" id="receipt-{{ $index }}" class="sr-only" required>
-                                                                <label for="receipt-{{ $index }}" class="w-full flex items-center justify-center gap-2 px-3 h-10 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700 rounded-xl cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 transition text-sm font-semibold overflow-hidden">
-                                                                    <flux:icon.paper-clip class="size-4 shrink-0 text-zinc-400" />
+                                                                <input type="file" wire:model="receipt_files.{{ $index }}"
+                                                                    id="receipt-{{ $index }}" class="sr-only" required>
+                                                                <label for="receipt-{{ $index }}"
+                                                                    class="w-full flex items-center justify-center gap-2 px-3 py-2 min-h-[40px] bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700 rounded-lg cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 transition text-sm font-semibold">
+                                                                    <flux:icon.paper-clip
+                                                                        class="size-4 shrink-0 text-zinc-400" />
                                                                     @if(isset($receipt_files[$index]))
-                                                                        <span class="text-indigo-600 dark:text-indigo-400 whitespace-normal break-words">{{ $receipt_files[$index]->getClientOriginalName() }}</span>
+                                                                        <span
+                                                                            class="text-indigo-600 dark:text-indigo-400 whitespace-normal break-words text-center">{{ $receipt_files[$index]->getClientOriginalName() }}</span>
                                                                     @else
-                                                                        <span class="text-zinc-500 shrink-0">{{ __('Choose File') }}</span>
+                                                                        <span
+                                                                            class="text-zinc-500 shrink-0">{{ __('Choose File') }}</span>
                                                                     @endif
                                                                 </label>
                                                             </div>
                                                             <flux:error :name="'receipt_files.'.$index" />
-                                                        </div>
- 
-                                                        <div class="space-y-1.5 min-w-0">
-                                                            <flux:label size="xs" class="font-bold uppercase tracking-widest text-zinc-400">{{ __('Gatepass PIN') }}</flux:label>
-                                                            <flux:input wire:model="vehicles.{{ $index }}.gatepass_pin" 
-                                                                placeholder="{{ __('PIN code') }}" 
-                                                                maxlength="11" class="font-mono text-center tracking-widest font-bold h-10 w-full" required />
+                                                        </flux:field>
+
+                                                        <flux:field class="xl:w-48 shrink-0">
+                                                            <flux:label size="xs"
+                                                                class="font-bold uppercase tracking-widest text-zinc-400 mb-1">
+                                                                {{ __('Gatepass PIN') }}
+                                                            </flux:label>
+                                                            <flux:input wire:model="vehicles.{{ $index }}.gatepass_pin"
+                                                                placeholder="{{ __('PIN code') }}" maxlength="11"
+                                                                class="font-mono text-center tracking-widest font-bold w-full"
+                                                                required />
                                                             <flux:error :name="'vehicles.'.$index.'.gatepass_pin'" />
-                                                        </div>
+                                                        </flux:field>
                                                     </div>
                                                 </div>
                                             </div>
@@ -604,15 +656,19 @@ new #[Title('Submit Prealert')] class extends Component {
                                 </div>
                             </div>
                         @else
-                            <div class="flex flex-col items-center justify-center py-12 px-4 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl bg-zinc-50/50 dark:bg-zinc-900/30">
-                                <flux:icon.truck class="size-12 text-zinc-300 mb-3" />
-                                <p class="text-zinc-500 text-sm">{{ __('No vehicles added yet. Enter a VIN above to begin.') }}</p>
+                            <div
+                                class="flex flex-col items-center justify-center py-12 px-4 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl bg-zinc-50/50 dark:bg-zinc-900/30">
+                                <flux:icon.car-front class="size-12 text-zinc-300 mb-3" />
+                                <p class="text-zinc-500 text-sm">
+                                    {{ __('No vehicles added yet. Enter a VIN above to begin.') }}
+                                </p>
                             </div>
                         @endif
 
                         {{-- 3. Common Logistics --}}
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                             <div class="md:col-span-2 flex flex-col gap-6">
+                        <div
+                            class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                            <div class="md:col-span-2 flex flex-col gap-6">
                                 <div>
                                     @if (Auth::user()?->hasRole('super_admin') || Auth::user()?->staff()->exists())
                                         <x-select wire:model.live="shipper_id" :label="__('Shipper')"
@@ -620,13 +676,11 @@ new #[Title('Submit Prealert')] class extends Component {
                                             option-label="name" :async-data="route('api.shippers.search')" searchable
                                             required />
                                     @else
-                                        <flux:input :label="__('Shipper')"
-                                            :value="sprintf(
-                                                '%s(%s)',
-                                                Auth::user()?->name ?? '',
-                                                Auth::user()?->shipper?->company_name ?? '-'
-                                            )"
-                                            disabled />
+                                        <flux:input :label="__('Shipper')" :value="sprintf(
+                                                            '%s(%s)',
+                                                            Auth::user()?->name ?? '',
+                                                            Auth::user()?->shipper?->company_name ?? '-'
+                                                        )" disabled />
                                         <input type="hidden" wire:model="shipper_id">
                                     @endif
                                 </div>
@@ -635,8 +689,8 @@ new #[Title('Submit Prealert')] class extends Component {
                                     <flux:label class="mb-2">{{ __('Consignee') }}</flux:label>
                                     <div class="flex items-start gap-2">
                                         <div class="flex-1">
-                                            <flux:select wire:model="consignee_id"
-                                                :placeholder="__('Select consignee')" required>
+                                            <flux:select wire:model="consignee_id" :placeholder="__('Select consignee')"
+                                                required>
                                                 @foreach($this->consignees as $consignee)
                                                     <flux:select.option :value="$consignee->id">
                                                         {{ $consignee->name }}
@@ -649,14 +703,18 @@ new #[Title('Submit Prealert')] class extends Component {
                                             </flux:select>
                                         </div>
                                         @if($shipper_id)
-                                            <flux:button variant="ghost" type="button" wire:click="$set('showConsigneeModal', true)"
-                                                icon="plus" class="shrink-0">{{ __('New') }}</flux:button>
+                                            <flux:button variant="ghost" type="button"
+                                                wire:click="$set('showConsigneeModal', true)" icon="plus" class="shrink-0">
+                                                {{ __('New') }}
+                                            </flux:button>
                                         @endif
                                     </div>
                                     <flux:error name="consignee_id" />
                                 </flux:field>
 
-                                <flux:select wire:model="notify_party_id" :label="__('Notify Party / Intermediate Consignee (Optional)')" :placeholder="__('Same as Consignee')">
+                                <flux:select wire:model="notify_party_id"
+                                    :label="__('Notify Party / Intermediate Consignee (Optional)')"
+                                    :placeholder="__('Same as Consignee')">
                                     <flux:select.option value="">{{ __('Same as Consignee') }}</flux:select.option>
                                     @foreach($this->consignees as $consignee)
                                         <flux:select.option :value="$consignee->id">
@@ -668,8 +726,11 @@ new #[Title('Submit Prealert')] class extends Component {
 
                             @if($shipping_mode === 'container' && $shipper_id)
                                 <flux:field>
-                                    <flux:label class="text-xs font-bold uppercase tracking-wider text-zinc-400">{{ __('Link to Container') }}</flux:label>
-                                    <flux:select wire:model.live="shipment_id" :placeholder="__('Select open container...')">
+                                    <flux:label class="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                                        {{ __('Link to Container') }}
+                                    </flux:label>
+                                    <flux:select wire:model.live="shipment_id"
+                                        :placeholder="__('Select open container...')">
                                         <flux:select.option value="">{{ __('Start New Container') }}</flux:select.option>
                                         @foreach($this->openContainers as $s)
                                             <flux:select.option :value="$s->id">
@@ -685,7 +746,9 @@ new #[Title('Submit Prealert')] class extends Component {
                                         @if($totalIfMerged > 5)
                                             <flux:callout color="rose" icon="exclamation-triangle" class="mt-2">
                                                 <flux:callout.heading>{{ __('Capacity Exceeded') }}</flux:callout.heading>
-                                                <flux:callout.text>{{ __('Adding :count vehicles to this container would result in :total/5 — exceeding the limit.', ['count' => count($vehicles), 'total' => $totalIfMerged]) }}</flux:callout.text>
+                                                <flux:callout.text>
+                                                    {{ __('Adding :count vehicles to this container would result in :total/5 — exceeding the limit.', ['count' => count($vehicles), 'total' => $totalIfMerged]) }}
+                                                </flux:callout.text>
                                             </flux:callout>
                                         @elseif($totalIfMerged > 0)
                                             <flux:badge color="emerald" variant="subtle" size="sm" icon="check-circle" class="mt-1">
@@ -696,14 +759,16 @@ new #[Title('Submit Prealert')] class extends Component {
                                 </flux:field>
                             @endif
 
-                            <flux:select wire:model.live="carrier_id" label="{{ __('Carrier') }}" :placeholder="__('Select carrier')" icon="truck">
+                            <flux:select wire:model.live="carrier_id" label="{{ __('Carrier') }}"
+                                :placeholder="__('Select carrier')" icon="car-front">
                                 <flux:select.option value="">{{ __('None') }}</flux:select.option>
                                 @foreach($this->carriers as $car)
                                     <flux:select.option :value="$car->id">{{ $car->name }}</flux:select.option>
                                 @endforeach
                             </flux:select>
 
-                            <flux:select wire:model.live="destination_port_id" label="{{ __('Destination Port') }}" :placeholder="__('Select destination port')" icon="map-pin">
+                            <flux:select wire:model.live="destination_port_id" label="{{ __('Destination Port') }}"
+                                :placeholder="__('Select destination port')" icon="map-pin">
                                 <flux:select.option value="">{{ __('None') }}</flux:select.option>
                                 @foreach($this->ports as $port)
                                     <flux:select.option :value="$port->id">{{ $port->name }}</flux:select.option>
@@ -714,9 +779,10 @@ new #[Title('Submit Prealert')] class extends Component {
 
                         <div class="flex items-center justify-end gap-3 mt-8">
                             <flux:button variant="ghost" :href="route('prealerts.index')" wire:navigate>
-                                {{ __('Cancel') }}</flux:button>
-                            <flux:button variant="primary" type="submit" :disabled="$loadingVehicle || count($vehicles) === 0"
-                                wire:loading.attr="disabled">
+                                {{ __('Cancel') }}
+                            </flux:button>
+                            <flux:button variant="primary" type="submit"
+                                :disabled="$loadingVehicle || count($vehicles) === 0" wire:loading.attr="disabled">
                                 {{ __('Submit Prealert') }}
                             </flux:button>
                         </div>

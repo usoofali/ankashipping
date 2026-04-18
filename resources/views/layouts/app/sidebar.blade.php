@@ -30,7 +30,7 @@
                     :current="request()->routeIs('prealerts.*')" wire:navigate>
                     {{ __('Prealerts') }}
                 </flux:sidebar.item>
-                <flux:sidebar.item icon="truck" icon-class="text-indigo-500" :href="route('shipments.index')"
+                <flux:sidebar.item icon="car-front" icon-class="text-indigo-500" :href="route('shipments.index')"
                     :current="request()->routeIs('shipments.*')" wire:navigate>
                     {{ __('Shipments') }}
                 </flux:sidebar.item>
@@ -47,7 +47,7 @@
 
                     {{ __('Drivers') }}
                 </flux:sidebar.item>
-                <flux:sidebar.item icon="truck" icon-class="text-sky-500" :href="route('vehicles.index')"
+                <flux:sidebar.item icon="car-front" icon-class="text-sky-500" :href="route('vehicles.index')"
                     :current="request()->routeIs('vehicles.*')" wire:navigate>
                     {{ __('Vehicles') }}
                 </flux:sidebar.item>
@@ -104,7 +104,7 @@
                     :current="request()->routeIs('charge-items.*')" wire:navigate>
                     {{ __('Charge Items') }}
                 </flux:sidebar.item>
-                <flux:sidebar.item icon="truck" icon-class="text-emerald-500" :href="route('carriers.index')"
+                <flux:sidebar.item icon="car-front" icon-class="text-emerald-500" :href="route('carriers.index')"
                     :current="request()->routeIs('carriers.*')" wire:navigate>
                     {{ __('Carriers') }}
                 </flux:sidebar.item>

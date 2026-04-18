@@ -78,7 +78,7 @@ new #[Title('Default Shipment Settings')] class extends Component {
 
                 return $port;
             });
-            
+
         return [
             'carriers' => Carrier::orderBy('name')->get(),
             'ports' => $ports,
@@ -97,7 +97,7 @@ new #[Title('Default Shipment Settings')] class extends Component {
             <form wire:submit="save" class="space-y-8">
                 <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <flux:field>
-                        <flux:label icon="truck">{{ __('Default Carrier') }}</flux:label>
+                        <flux:label icon="car-front">{{ __('Default Carrier') }}</flux:label>
                         <flux:select wire:model="carrier_id" placeholder="Choose a carrier...">
                             <flux:select.option value="">{{ __('None') }}</flux:select.option>
                             @foreach ($carriers as $carrier)
@@ -121,7 +121,8 @@ new #[Title('Default Shipment Settings')] class extends Component {
                         <flux:select wire:model="logistics_service" placeholder="Choose a logistics service...">
                             <flux:select.option value="">{{ __('None') }}</flux:select.option>
                             @foreach (App\Enums\LogisticsService::cases() as $case)
-                                <flux:select.option value="{{ $case->value }}">{{ str($case->name)->headline() }}</flux:select.option>
+                                <flux:select.option value="{{ $case->value }}">{{ str($case->name)->headline() }}
+                                </flux:select.option>
                             @endforeach
                         </flux:select>
                     </flux:field>
@@ -131,7 +132,8 @@ new #[Title('Default Shipment Settings')] class extends Component {
                         <flux:select wire:model="shipping_mode" placeholder="Choose a shipping mode...">
                             <flux:select.option value="">{{ __('None') }}</flux:select.option>
                             @foreach (App\Enums\ShippingMode::cases() as $case)
-                                <flux:select.option value="{{ $case->value }}">{{ str($case->name)->headline() }}</flux:select.option>
+                                <flux:select.option value="{{ $case->value }}">{{ str($case->name)->headline() }}
+                                </flux:select.option>
                             @endforeach
                         </flux:select>
                     </flux:field>
@@ -141,17 +143,20 @@ new #[Title('Default Shipment Settings')] class extends Component {
                         <flux:select wire:model="shipment_status" placeholder="Choose an initial status...">
                             <flux:select.option value="">{{ __('None') }}</flux:select.option>
                             @foreach (App\Enums\ShipmentStatus::cases() as $case)
-                                <flux:select.option value="{{ $case->value }}">{{ str($case->name)->headline() }}</flux:select.option>
+                                <flux:select.option value="{{ $case->value }}">{{ str($case->name)->headline() }}
+                                </flux:select.option>
                             @endforeach
                         </flux:select>
                     </flux:field>
 
                     <flux:field>
-                        <flux:label icon="truck">{{ __('Vehicle Status') }}</flux:label>
-                        <flux:select wire:model="initial_vehicle_status" placeholder="Choose an initial vehicle status...">
+                        <flux:label icon="car-front">{{ __('Vehicle Status') }}</flux:label>
+                        <flux:select wire:model="initial_vehicle_status"
+                            placeholder="Choose an initial vehicle status...">
                             <flux:select.option value="">{{ __('None') }}</flux:select.option>
                             @foreach (App\Enums\VehicleStatus::cases() as $case)
-                                <flux:select.option value="{{ $case->value }}">{{ str($case->name)->headline() }}</flux:select.option>
+                                <flux:select.option value="{{ $case->value }}">{{ str($case->name)->headline() }}
+                                </flux:select.option>
                             @endforeach
                         </flux:select>
                     </flux:field>
@@ -161,7 +166,8 @@ new #[Title('Default Shipment Settings')] class extends Component {
                         <flux:select wire:model="invoice_status" placeholder="Choose an initial invoice status...">
                             <flux:select.option value="">{{ __('None') }}</flux:select.option>
                             @foreach (App\Enums\InvoiceStatus::cases() as $case)
-                                <flux:select.option value="{{ $case->value }}">{{ str($case->name)->headline() }}</flux:select.option>
+                                <flux:select.option value="{{ $case->value }}">{{ str($case->name)->headline() }}
+                                </flux:select.option>
                             @endforeach
                         </flux:select>
                     </flux:field>
@@ -171,7 +177,8 @@ new #[Title('Default Shipment Settings')] class extends Component {
                         <flux:select wire:model="payment_status" placeholder="Choose an initial payment status...">
                             <flux:select.option value="">{{ __('None') }}</flux:select.option>
                             @foreach (App\Enums\PaymentStatus::cases() as $case)
-                                <flux:select.option value="{{ $case->value }}">{{ str($case->name)->headline() }}</flux:select.option>
+                                <flux:select.option value="{{ $case->value }}">{{ str($case->name)->headline() }}
+                                </flux:select.option>
                             @endforeach
                         </flux:select>
                     </flux:field>

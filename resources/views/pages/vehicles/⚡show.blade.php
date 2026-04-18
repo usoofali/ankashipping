@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire\Pages\Vehicles;
 
 use App\Livewire\Pages\Vehicles;
- 
+
 use App\Models\Vehicle;
 use App\Support\VehicleDocumentFileDownloadResponder;
 use Illuminate\Support\Facades\Auth;
@@ -200,7 +200,7 @@ new #[Title('Vehicle Details')] class extends Component {
             {{-- Vehicle Tracking Timeline (Moved from Shipment Show) --}}
             <x-crud.panel class="p-6">
                 <flux:heading size="lg" class="mb-6 flex items-center gap-2">
-                    <flux:icon.truck class="size-5 text-emerald-500" />
+                    <flux:icon.car-front class="size-5 text-emerald-500" />
                     {{ __('Tracking History') }}
                 </flux:heading>
 

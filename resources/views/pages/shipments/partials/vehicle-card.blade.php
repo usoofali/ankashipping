@@ -62,7 +62,7 @@
                         </p>
                         @if($vehicle->tracking_status)
                             <div class="mt-2">
-                                <flux:badge size="xs" color="zinc" variant="outline" icon="truck">
+                                <flux:badge size="xs" color="zinc" variant="outline" icon="car-front">
                                     {{ $vehicle->tracking_status->name }}
                                 </flux:badge>
                             </div>
