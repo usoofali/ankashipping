@@ -392,7 +392,7 @@
 
         <!-- Title & Status -->
         @php
-            $invoiceTitlePaid = optional($invoice->payment)->status === \App\Enums\PaymentStatus::Paid;
+            $invoiceTitlePaid = $shipment->payment_status === \App\Enums\PaymentStatus::Paid;
         @endphp
         <div class="invoice-header-row">
             <h1 class="invoice-title">
@@ -498,9 +498,10 @@
                                     {{ $shipment->vehicle->year }} {{ $shipment->vehicle->make }}
                                     {{ $shipment->vehicle->model }} &bull; VIN {{ $shipment->vehicle->vin ?: $shipment->vin }}
                                 </div>
-                            @elseif($shipment->isContainer() && ! $isVehicleSpecific)
+                            @elseif($shipment->isContainer() && !$isVehicleSpecific)
                                 <div class="item-subtext">
-                                    {{ __('Shipment of') }} {{ $shipment->vehicles->count() }} {{ __('units consolidated in container') }}.
+                                    {{ __('Shipment of') }} {{ $shipment->vehicles->count() }}
+                                    {{ __('units consolidated in container') }}.
                                 </div>
                             @endif
                         </td>

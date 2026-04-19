@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
-use App\Enums\InvoiceStatus;
-use App\Enums\ShipmentDocumentType;
 use App\Models\Invoice;
 use App\Models\Shipment;
 use App\Models\SystemSetting;
@@ -14,17 +12,15 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use Illuminate\Support\Facades\Storage;
 
-final class InvoiceStatusChangedNotification extends Notification implements ShouldQueue
+final class PaymentReceivedNotification extends Notification implements ShouldQueue
 {
     use Queueable, ShipmentPdfSupport;
 
     public function __construct(
         public readonly Shipment $shipment,
         public readonly Invoice $invoice,
-        public readonly InvoiceStatus $fromStatus,
-        public readonly InvoiceStatus $toStatus,
+        public readonly float $paidAmount,
     ) {}
 
     /**
@@ -32,17 +28,13 @@ final class InvoiceStatusChangedNotification extends Notification implements Sho
      */
     public function via(object $notifiable): array
     {
-        $channels = ['database'];
-
-        // If the notifiable is the shipper of the shipment, we also send an email if status is Completed
         $shipperUserId = $this->shipment->shipper?->user_id;
+
         if ($shipperUserId !== null && (int) $notifiable->getKey() === (int) $shipperUserId) {
-            if ($this->toStatus === InvoiceStatus::Completed) {
-                $channels[] = 'mail';
-            }
+            return ['mail', 'database'];
         }
 
-        return $channels;
+        return ['database'];
     }
 
     public function toMail(object $notifiable): MailMessage
@@ -55,14 +47,13 @@ final class InvoiceStatusChangedNotification extends Notification implements Sho
         $emailLogo = $setting->logoSrcForEmail();
 
         $mail = (new MailMessage)
-            ->mailer($setting->getMailerFor('operations'))
-            ->subject(__('Invoice Completed').' — '.$this->shipment->reference_no)
-            ->markdown('emails.invoice-status-changed', [
+            ->mailer($setting->getMailerFor('accounts'))
+            ->subject(__('Payment Received').' — '.$this->shipment->reference_no)
+            ->markdown('emails.payment-received', [
                 'notifiable' => $notifiable,
                 'shipment' => $this->shipment,
                 'invoice' => $this->invoice,
-                'fromStatus' => $this->fromStatus,
-                'toStatus' => $this->toStatus,
+                'paidAmount' => $this->paidAmount,
                 'setting' => $setting,
                 'companyName' => $companyName,
                 'location' => $location,
@@ -77,21 +68,6 @@ final class InvoiceStatusChangedNotification extends Notification implements Sho
             ]);
         }
 
-        // Attach latest Bill of Lading files
-        $blDocument = $this->shipment->documents()
-            ->where('document_type', ShipmentDocumentType::BillOfLading)
-            ->latest()
-            ->first();
-
-        if ($blDocument) {
-            foreach ($blDocument->files as $file) {
-                $mail->attach(Storage::disk('local')->path((string) $file->path), [
-                    'as' => (string) $file->original_name,
-                    'mime' => 'application/pdf',
-                ]);
-            }
-        }
-
         return $mail;
     }
 
@@ -101,17 +77,15 @@ final class InvoiceStatusChangedNotification extends Notification implements Sho
     public function toArray(object $notifiable): array
     {
         return [
-            'title' => __('Invoice Completed'),
-            'body' => __('Invoice for shipment :ref changed from :from to :to.', [
+            'title' => __('Payment Received'),
+            'body' => __('Payment of $:amount for shipment :ref has been received.', [
+                'amount' => number_format($this->paidAmount, 2),
                 'ref' => $this->shipment->reference_no,
-                'from' => $this->fromStatus->name,
-                'to' => $this->toStatus->name,
             ]),
             'shipment_id' => $this->shipment->id,
             'reference_no' => $this->shipment->reference_no,
             'invoice_id' => $this->invoice->id,
-            'from_status' => $this->fromStatus->value,
-            'to_status' => $this->toStatus->value,
+            'paid_amount' => $this->paidAmount,
             'url' => route('shipments.show', $this->shipment, absolute: true),
         ];
     }

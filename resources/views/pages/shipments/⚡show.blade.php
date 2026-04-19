@@ -23,9 +23,14 @@ use App\Services\Invoice\InvoiceLineAmountResolver;
 use App\Models\ShipmentTracking;
 use App\Models\User;
 use App\Models\Workshop;
+use App\Notifications\DriverAssignedNotification;
 use App\Notifications\InvoiceStatusChangedNotification;
+use App\Notifications\LogisticsBookingNotification;
 use App\Notifications\ShipmentDispatchedNotification;
 use App\Notifications\ShipmentDocumentAttachedNotification;
+use App\Notifications\ShipmentLoadedNotification;
+use App\Notifications\StampedDockReceiptNotification;
+use App\Notifications\TitleDocumentAttachedNotification;
 use App\Support\ShipmentActivityLogPresenter;
 use App\Support\ShipmentTrackingPresenter;
 use Illuminate\Support\Collection;
@@ -39,11 +44,15 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Spatie\Permission\Models\Role;
+use App\Concerns\HandlesShipmentPayments;
 use WireUi\Traits\WireUiActions;
 
 new #[Title('Shipment Details')] class extends Component {
     use WireUiActions;
+    use HandlesShipmentPayments;
     use WithFileUploads;
+
+    public bool $showMakePaymentModal = false;
 
     public function workflow(): \App\ShippingWorkflow\ShippingWorkflow
     {
@@ -222,6 +231,23 @@ new #[Title('Shipment Details')] class extends Component {
         $chargeItem = ChargeItem::query()->where('item', $this->item_description)->first();
 
         return (bool) ($chargeItem?->apply_customer_discount);
+    }
+
+    #[Computed]
+    public function dueShipmentDocumentType(): ?ShipmentDocumentType
+    {
+        $hasDockReceipt = $this->shipment->documents()->where('document_type', ShipmentDocumentType::StampDockReceipt)->exists();
+        $hasBL = $this->shipment->documents()->where('document_type', ShipmentDocumentType::BillOfLading)->exists();
+
+        if (!$hasDockReceipt && auth()->user()->can('workflow.attach_dock_receipt') && $this->workflow()->canAttachDockReceipt($this->shipment)) {
+            return ShipmentDocumentType::StampDockReceipt;
+        }
+
+        if (!$hasBL && auth()->user()->can('workflow.attach_bl') && $this->workflow()->canAttachBL($this->shipment)) {
+            return ShipmentDocumentType::BillOfLading;
+        }
+
+        return null;
     }
 
     public function addOrUpdateItem(): void
@@ -502,6 +528,14 @@ new #[Title('Shipment Details')] class extends Component {
             $invoice->save();
 
             $this->shipment->invoice_status = $newStatus;
+
+            if ($newStatus === InvoiceStatus::Completed) {
+                $this->shipment->payment_status = \App\Enums\PaymentStatus::AwaitingPayment;
+            } elseif ($fromStatus === InvoiceStatus::Completed) {
+                // Reversal: If it was completed and now it's not
+                $this->shipment->payment_status = \App\Enums\PaymentStatus::AwaitingBL;
+            }
+
             $this->shipment->save();
 
             ActivityLog::query()->create([
@@ -521,7 +555,11 @@ new #[Title('Shipment Details')] class extends Component {
         });
 
         $recipientIds = $this->staffAndAdminNotificationRecipientIds();
-        $recipients = User::query()->whereIn('id', $recipientIds)->get();
+        if ($this->shipment->shipper?->user_id !== null) {
+            $recipientIds->push($this->shipment->shipper->user_id);
+        }
+
+        $recipients = User::query()->whereIn('id', $recipientIds->unique()->values())->get();
 
         if ($recipients->isNotEmpty()) {
             $invoice->refresh();
@@ -669,6 +707,17 @@ new #[Title('Shipment Details')] class extends Component {
 
         $this->reloadShipmentPageData();
         $this->showAssignDriverModal = false;
+
+        $recipientIds = $this->staffAndAdminNotificationRecipientIds();
+        if ($this->shipment->shipper?->user_id !== null) {
+            $recipientIds->push($this->shipment->shipper->user_id);
+        }
+
+        $recipients = User::query()->whereIn('id', $recipientIds->unique()->values())->get();
+        if ($recipients->isNotEmpty()) {
+            Notification::send($recipients, new DriverAssignedNotification($this->shipment, $driver));
+        }
+
         $this->notification()->success(__('Action successful.'));
     }
 
@@ -717,6 +766,11 @@ new #[Title('Shipment Details')] class extends Component {
     public function openAttachDocumentModal(?int $vehicleId = null, ?string $documentType = null): void
     {
         $this->authorize('documents.manage');
+
+        if ($documentType === null) {
+            $documentType = $this->dueShipmentDocumentType?->value;
+        }
+
         $this->attachDocumentType = $documentType ?? '';
         $this->attachDocumentNotes = '';
         $this->attachFiles = [];
@@ -839,6 +893,30 @@ new #[Title('Shipment Details')] class extends Component {
         $this->reset(['attachDocumentType', 'attachDocumentNotes', 'attachFiles']);
         $this->attachTitleVehicleIs = 'runner';
 
+        $recipientIds = $this->staffAndAdminNotificationRecipientIds();
+
+        if ($documentType === ShipmentDocumentType::StampDockReceipt) {
+            if ($this->shipment->shipper?->user_id !== null) {
+                $recipientIds->push($this->shipment->shipper->user_id);
+            }
+            $recipients = User::query()->whereIn('id', $recipientIds->unique()->values())->get();
+            if ($recipients->isNotEmpty()) {
+                Notification::send($recipients, new StampedDockReceiptNotification($this->shipment, $document));
+            }
+        } else {
+            // Notify only staff for other document types (like BL)
+            $recipients = User::query()->whereIn('id', $recipientIds->unique()->values())->get();
+            if ($recipients->isNotEmpty()) {
+                Notification::send($recipients, new ShipmentDocumentAttachedNotification(
+                    $this->shipment,
+                    $document,
+                    $fileCount,
+                    $fromShipmentStatus,
+                    $this->shipment->shipment_status
+                ));
+            }
+        }
+
         $this->notification()->success(__('Document(s) attached.'));
     }
 
@@ -947,7 +1025,18 @@ new #[Title('Shipment Details')] class extends Component {
                 ? __('Title document attached.')
                 : ($documentType === VehicleDocumentType::PhotosAndVideos ? __('Vehicle photos uploaded.') : __('Vehicle document attached.'));
 
-            if ($this->shipment->shipping_mode === ShippingMode::Container) {
+            if ($documentType === VehicleDocumentType::TitleDocument) {
+                $recipientIds = $this->staffAndAdminNotificationRecipientIds();
+                if ($this->shipment->shipper?->user_id !== null) {
+                    $recipientIds->push($this->shipment->shipper->user_id);
+                }
+
+                $recipients = User::query()->whereIn('id', $recipientIds->unique()->values())->get();
+                if ($recipients->isNotEmpty()) {
+                    Notification::send($recipients, new TitleDocumentAttachedNotification($vehicle, $document));
+                }
+            }
+            if ($this->shipment->isContainer()) {
                 $vehicle->refresh();
                 if ($documentType === VehicleDocumentType::TitleDocument) {
                     $vehicle->updateStatus(VehicleStatus::Inland, $statusNote);
@@ -1136,6 +1225,20 @@ new #[Title('Shipment Details')] class extends Component {
         $this->showLogisticsModal = false;
         $this->notification()->success(__('Logistics updated successfully.'));
         $this->reloadShipmentPageData();
+
+        $recipientIds = $this->staffAndAdminNotificationRecipientIds();
+        if ($this->shipment->shipper?->user_id !== null) {
+            $recipientIds = $recipientIds->push($this->shipment->shipper->user_id);
+        }
+
+        $recipients = User::query()->whereIn('id', $recipientIds->unique()->values())->get();
+        if ($recipients->isNotEmpty()) {
+            Notification::send($recipients, new LogisticsBookingNotification($this->shipment));
+        }
+
+        if ($this->shipment->shipper?->default_driver_id) {
+            $this->shipment->shipper->defaultDriver->notify(new LogisticsBookingNotification($this->shipment));
+        }
     }
 
     public function markShipmentDelivered(): void
@@ -1205,6 +1308,17 @@ new #[Title('Shipment Details')] class extends Component {
         });
 
         $this->reloadShipmentPageData();
+
+        $recipientIds = $this->staffAndAdminNotificationRecipientIds();
+        if ($this->shipment->shipper?->user_id !== null) {
+            $recipientIds = $recipientIds->push($this->shipment->shipper->user_id);
+        }
+
+        $recipients = User::query()->whereIn('id', $recipientIds->unique()->values())->get();
+        if ($recipients->isNotEmpty()) {
+            Notification::send($recipients, new ShipmentLoadedNotification($this->shipment));
+        }
+
         $this->notification()->success(__('Shipment status updated to LOADED.'));
     }
 
@@ -1495,6 +1609,7 @@ new #[Title('Shipment Details')] class extends Component {
     {
         $this->shipment->refresh()->load([
             'shipper.user',
+            'shipper.wallet',
             'consignee',
             'vehicles',
             'originPort.state',
@@ -1511,6 +1626,14 @@ new #[Title('Shipment Details')] class extends Component {
             'trackings.workshop',
             'trackings' => static fn($query) => $query->orderByDesc('recorded_at'),
         ]);
+    }
+
+    public function payViaWallet(): void
+    {
+        if ($this->processShipmentPayment($this->shipment)) {
+            $this->showMakePaymentModal = false;
+            $this->shipment->refresh();
+        }
     }
 
     protected function authorizeStaffOrSuperAdmin(): void
@@ -1609,14 +1732,6 @@ new #[Title('Shipment Details')] class extends Component {
             </div>
 
             <div class="flex flex-wrap justify-end gap-2">
-                @if(!$shipment->isLocked())
-                    @if($shipment->shipment_status === \App\Enums\ShipmentStatus::Loaded)
-                        <flux:button variant="filled" color="emerald" icon="flag" wire:click="completeShipment">
-                            {{ __('Complete Shipment') }}
-                        </flux:button>
-                    @endif
-                @endif
-
                 <flux:dropdown align="end" position="bottom">
                     <flux:button variant="outline" icon="ellipsis-horizontal">
                         {{ __('Actions') }}
@@ -1632,20 +1747,24 @@ new #[Title('Shipment Details')] class extends Component {
                             </flux:menu.item>
                         @endcan
 
-                        @can('workflow.download_invoice')
-                            <flux:menu.item icon="document-arrow-down"
-                                :href="route('shipments.invoice.download', $shipment)">
-                                {{ __('Download Invoice') }}
-                            </flux:menu.item>
-                        @endcan
+                        @if($this->workflow()->canDownloadInvoice($shipment, auth()->user()))
+                            @can('workflow.download_invoice')
+                                <flux:menu.item icon="document-arrow-down"
+                                    :href="route('shipments.invoice.download', $shipment)">
+                                    {{ __('Download Invoice') }}
+                                </flux:menu.item>
+                            @endcan
+                        @endif
 
-                        @can('workflow.manage_logistics')
-                            <flux:menu.item icon="car-front" wire:click="editLogistics">
-                                {{ __('Booking & Logistics') }}
-                            </flux:menu.item>
-                        @endcan
+                        @if($shipment->shipment_status === \App\Enums\ShipmentStatus::Booking)
+                            @can('workflow.manage_logistics')
+                                <flux:menu.item icon="car-front" wire:click="editLogistics">
+                                    {{ __('Booking & Logistics') }}
+                                </flux:menu.item>
+                            @endcan
+                        @endif
 
-                        @if($this->workflow()->canDownloadDockReceipt($shipment))
+                        @if($this->workflow()->canDownloadDockReceipt($shipment, auth()->user()))
                             @can('workflow.download_dock_receipt')
                                 <flux:menu.item icon="document-duplicate"
                                     :href="route('shipments.dock-receipt.download', $shipment)">
@@ -1656,13 +1775,7 @@ new #[Title('Shipment Details')] class extends Component {
 
                         @can('documents.manage')
                             <flux:menu.item icon="paper-clip" wire:click="openAttachDocumentModal">
-                                {{ __('Attach documents') }}
-                            </flux:menu.item>
-                        @endcan
-
-                        @can('documents.manage')
-                            <flux:menu.item icon="paper-clip" wire:click="openAttachDocumentModal">
-                                {{ __('Attach documents') }}
+                                {{ $this->dueShipmentDocumentType ? __('Attach :type', ['type' => $this->dueShipmentDocumentType->label()]) : __('Attach documents') }}
                             </flux:menu.item>
                         @endcan
                         <flux:menu.item icon="eye" wire:click="openShipmentDocumentsModal">
@@ -1690,6 +1803,12 @@ new #[Title('Shipment Details')] class extends Component {
                         @endif
                     </flux:menu>
                 </flux:dropdown>
+
+                @if($shipment->payment_status === \App\Enums\PaymentStatus::AwaitingPayment && (auth()->user()->can('shipments.pay') || auth()->user()->hasRole('super_admin')))
+                    <flux:button variant="primary" icon="wallet" wire:click="$set('showMakePaymentModal', true)">
+                        {{ __('Make Payment') }}
+                    </flux:button>
+                @endif
             </div>
         </div>
 
@@ -1981,11 +2100,15 @@ new #[Title('Shipment Details')] class extends Component {
                 </div>
 
                 {{-- Invoice & Items --}}
-                @include('pages.shipments.partials.invoice-panel', ['shipment' => $shipment])
+                @if(!auth()->user()->hasRole('shipper'))
+                    @include('pages.shipments.partials.invoice-panel', ['shipment' => $shipment])
+                @endif
 
                 @include('pages.shipments.partials.timeline', ['shipment' => $shipment])
 
-                @include('pages.shipments.partials.activity-feed', ['shipment' => $shipment])
+                @can('shipments.view_activities')
+                    @include('pages.shipments.partials.activity-feed', ['shipment' => $shipment])
+                @endcan
             </div>
 
 
@@ -1993,4 +2116,55 @@ new #[Title('Shipment Details')] class extends Component {
     </div>
 
     @include('pages.shipments.partials.modals', ['shipment' => $shipment])
+
+    {{-- Make Payment Modal --}}
+    <flux:modal name="make-payment" wire:model="showMakePaymentModal" variant="filled" class="md:w-[500px]">
+        <div class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('Complete Payment') }}</flux:heading>
+                <flux:subheading>{{ __('Pay for your shipment using your wallet balance.') }}</flux:subheading>
+            </div>
+
+            <div
+                class="p-4 bg-zinc-50 dark:bg-zinc-800/60 rounded-xl border border-zinc-200 dark:border-zinc-700 space-y-3">
+                <div class="flex justify-between items-center">
+                    <flux:text>{{ __('Invoice Amount') }}</flux:text>
+                    <flux:text class="font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                        {{ '$' . number_format((float) ($shipment->invoice?->total_amount ?? 0), 2) }}
+                    </flux:text>
+                </div>
+                <div class="flex justify-between items-center">
+                    <flux:text>{{ __('Your Wallet Balance') }}</flux:text>
+                    <flux:text class="font-mono font-semibold">
+                        {{ '$' . number_format((float) ($shipment->shipper?->wallet?->balance ?? 0), 2) }}
+                    </flux:text>
+                </div>
+            </div>
+
+            @php
+                $balance = (float) ($shipment->shipper?->wallet?->balance ?? 0);
+                $total = (float) ($shipment->invoice?->total_amount ?? 0);
+                $canPay = $balance >= $total;
+            @endphp
+
+            @if(!$canPay)
+                <flux:callout variant="danger" icon="exclamation-circle">
+                    {{ __('Your balance is insufficient. Please top up your wallet to proceed.') }}
+                </flux:callout>
+            @else
+                <flux:callout variant="info" icon="information-circle">
+                    {{ __('Funds will be deducted immediately from your wallet.') }}
+                </flux:callout>
+            @endif
+
+            <div class="flex gap-2">
+                <flux:spacer />
+                <flux:button variant="ghost" wire:click="$set('showMakePaymentModal', false)">{{ __('Cancel') }}
+                </flux:button>
+                <flux:button variant="primary" icon="check" wire:click="payViaWallet" :disabled="!$canPay">
+                    {{ __('Confirm & Pay') }}
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </x-crud.page-shell>

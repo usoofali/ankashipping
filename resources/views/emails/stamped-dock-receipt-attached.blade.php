@@ -5,32 +5,22 @@
 </p>
 @endif
 
-# {{ $notificationTitle }}
+# {{ __('Stamped Dock Receipt Available') }}
 
 {{ __('Hello :name!', ['name' => $notifiable->name]) }}
 
-{{ __('Your shipment :ref has new file(s) attached.', ['ref' => $shipment->reference_no]) }}
+{{ __('A stamped dock receipt has been successfully attached to your shipment :ref.', [
+    'ref' => $shipment->reference_no,
+]) }}
 
-**{{ __('Details') }}**
+{{ __('Please find the attached document(s) for your records.') }}
+
+**{{ __('Shipment Details') }}**
 - **{{ __('Reference') }}:** {{ $shipment->reference_no }}
-- **{{ __('Document type') }}:** {{ $documentLabel }}
-- **{{ __('Files') }}:** {{ $fileCount }}
-
-@if ($fromShipmentStatus && $toShipmentStatus && $fromShipmentStatus !== $toShipmentStatus)
-- **{{ __('Shipment status') }}:** {{ $fromShipmentStatus->name }} → {{ $toShipmentStatus->name }}
-@endif
-
-@if ($downloadLinks !== [])
-**{{ __('Download') }}**
-@foreach ($downloadLinks as $link)
-<x-mail::button :url="$link['url']">
-{{ __('Download: :name', ['name' => $link['name']]) }}
-</x-mail::button>
-@endforeach
-@endif
+- **{{ __('Status') }}:** {{ $shipment->shipment_status?->name }}
 
 <x-mail::button :url="route('shipments.show', $shipment, absolute: true)">
-{{ __('View shipment') }}
+{{ __('View Shipment Details') }}
 </x-mail::button>
 
 ---

@@ -5,12 +5,19 @@ declare(strict_types=1);
 use App\Enums\ShipmentStatus;
 use App\Models\Shipment;
 use App\Models\Shipper;
+use App\Concerns\HandlesShipmentPayments;
+use WireUi\Traits\WireUiActions;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 new #[Title('Shipments')] class extends Component {
     use WithPagination;
+    use WireUiActions;
+    use HandlesShipmentPayments;
+
+    public bool $showMakePaymentModal = false;
+    public ?Shipment $selectedShipmentForPayment = null;
 
     public string $search = '';
     public string $filterMonth = '';
@@ -81,6 +88,20 @@ new #[Title('Shipments')] class extends Component {
             ->filter()
             ->unique()
             ->values();
+    }
+
+    public function openPaymentModal(int $shipmentId): void
+    {
+        $this->selectedShipmentForPayment = Shipment::with(['shipper.wallet', 'invoice'])->findOrFail($shipmentId);
+        $this->showMakePaymentModal = true;
+    }
+
+    public function payViaWallet(): void
+    {
+        if ($this->selectedShipmentForPayment && $this->processShipmentPayment($this->selectedShipmentForPayment)) {
+            $this->showMakePaymentModal = false;
+            $this->selectedShipmentForPayment = null;
+        }
     }
 }; ?>
 
@@ -236,9 +257,16 @@ new #[Title('Shipments')] class extends Component {
                             ${{ number_format((float) ($shipment->invoice?->total_amount ?? 0), 2) }}
                         </flux:table.cell>
                         <flux:table.cell>
-                            <flux:badge size="sm" color="emerald" variant="subtle">
-                                {{ $shipment->payment_status?->name ?? '—' }}
-                            </flux:badge>
+                            @if($shipment->payment_status === \App\Enums\PaymentStatus::AwaitingPayment && (auth()->user()->can('shipments.pay') || auth()->user()->hasRole('super_admin')))
+                                <flux:button size="sm" variant="ghost" icon="wallet"
+                                    wire:click="openPaymentModal({{ $shipment->id }})">
+                                    {{ __('Pay Now') }}
+                                </flux:button>
+                            @else
+                                <flux:badge size="sm" color="emerald" variant="subtle">
+                                    {{ $shipment->payment_status?->name ?? '—' }}
+                                </flux:badge>
+                            @endif
                         </flux:table.cell>
                         <flux:table.cell>
                             <flux:badge size="sm" color="zinc" variant="subtle">
@@ -255,4 +283,59 @@ new #[Title('Shipments')] class extends Component {
             </flux:table.rows>
         </flux:table>
     </x-crud.panel>
+
+    @if($selectedShipmentForPayment)
+        {{-- Make Payment Modal --}}
+        <flux:modal name="make-payment" wire:model="showMakePaymentModal" variant="filled" class="md:w-[500px]">
+            <div class="space-y-6">
+                <div>
+                    <flux:heading size="lg">{{ __('Complete Payment') }}</flux:heading>
+                    <flux:subheading>
+                        {{ __('Pay for shipment :ref using wallet balance.', ['ref' => $selectedShipmentForPayment->reference_no]) }}
+                    </flux:subheading>
+                </div>
+
+                <div
+                    class="p-4 bg-zinc-50 dark:bg-zinc-800/60 rounded-xl border border-zinc-200 dark:border-zinc-700 space-y-3">
+                    <div class="flex justify-between items-center">
+                        <flux:text>{{ __('Invoice Amount') }}</flux:text>
+                        <flux:text class="font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                            {{ '$' . number_format((float) ($selectedShipmentForPayment->invoice?->total_amount ?? 0), 2) }}
+                        </flux:text>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <flux:text>{{ __('Your Wallet Balance') }}</flux:text>
+                        <flux:text class="font-mono font-semibold">
+                            {{ '$' . number_format((float) ($selectedShipmentForPayment->shipper?->wallet?->balance ?? 0), 2) }}
+                        </flux:text>
+                    </div>
+                </div>
+
+                @php
+                    $balance = (float) ($selectedShipmentForPayment->shipper?->wallet?->balance ?? 0);
+                    $total = (float) ($selectedShipmentForPayment->invoice?->total_amount ?? 0);
+                    $canPay = $balance >= $total;
+                @endphp
+
+                @if(!$canPay)
+                    <flux:callout variant="danger" icon="exclamation-circle">
+                        {{ __('Your balance is insufficient. Please top up your wallet to proceed.') }}
+                    </flux:callout>
+                @else
+                    <flux:callout variant="info" icon="information-circle">
+                        {{ __('Funds will be deducted immediately from your wallet.') }}
+                    </flux:callout>
+                @endif
+
+                <div class="flex gap-2">
+                    <flux:spacer />
+                    <flux:button variant="ghost" wire:click="$set('showMakePaymentModal', false)">{{ __('Cancel') }}
+                    </flux:button>
+                    <flux:button variant="primary" icon="check" wire:click="payViaWallet" :disabled="!$canPay">
+                        {{ __('Confirm & Pay') }}
+                    </flux:button>
+                </div>
+            </div>
+        </flux:modal>
+    @endif
 </x-crud.page-shell>

@@ -16,9 +16,6 @@
                 @endphp
                 <div class="text-right">
                     @if($effectiveInvoiceStatus)
-                        <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 mb-1 block">
-                            {{ __('Status') }}
-                        </flux:text>
                         <flux:badge color="amber" variant="subtle" size="sm" icon="document-text">
                             {{ $effectiveInvoiceStatus->name }}
                         </flux:badge>
@@ -38,7 +35,7 @@
 
                 @if($showDropdown && !$shipment->isLocked())
                     <flux:dropdown align="end" position="bottom">
-                        <flux:button icon="ellipsis-vertical" size="sm" variant="ghost" />
+                        <flux:button icon="ellipsis-horizontal" size="sm" variant="outline">Actions</flux:button>
                         <flux:menu>
                             @foreach(\App\Enums\InvoiceStatus::cases() as $status)
                                 @php
@@ -155,6 +152,22 @@
                     @endif
                 </div>
             </form>
+        @endif
+
+        @if($shipment->payment_status === \App\Enums\PaymentStatus::AwaitingPayment && (auth()->user()->hasRole('shipper') || auth()->user()->hasRole('super_admin')))
+            <div class="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-700">
+                <flux:button variant="primary" icon="wallet" class="w-full" wire:click="$set('showMakePaymentModal', true)">
+                    {{ __('Make Payment via Wallet') }}
+                </flux:button>
+            </div>
+        @endif
+
+        @if($shipment->payment_status === \App\Enums\PaymentStatus::Paid)
+            <div class="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-700">
+                <flux:badge color="emerald" variant="subtle" size="md" icon="check-circle" class="w-full justify-center">
+                    {{ __('Paid via Wallet') }}
+                </flux:badge>
+            </div>
         @endif
     </x-crud.panel>
 @endif

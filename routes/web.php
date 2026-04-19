@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\RegisterGeoOptionsController;
 use App\Http\Controllers\DriverOptionsController;
 use App\Http\Controllers\ImportTemplateController;
 use App\Http\Controllers\ShipmentDockReceiptController;
+use App\Http\Controllers\ShipmentDockReceiptSignedDownloadController;
 use App\Http\Controllers\ShipmentDocumentFileDownloadController;
 use App\Http\Controllers\ShipmentDocumentFileSignedDownloadController;
 use App\Http\Controllers\ShipmentInvoiceController;
@@ -37,6 +38,10 @@ Route::middleware(['web', 'signed', 'throttle:60,1'])->group(function (): void {
         ->whereNumber('shipment')
         ->whereNumber('file')
         ->name('shipments.documents.files.download.signed');
+
+    Route::get('/shipments/{shipment}/dock-receipt/signed', ShipmentDockReceiptSignedDownloadController::class)
+        ->whereNumber('shipment')
+        ->name('shipments.dock-receipt.download.signed');
 
     Route::get('/vehicles/{vehicle}/documents/files/{file}/signed', VehicleDocumentFileSignedDownloadController::class)
         ->whereNumber('vehicle')

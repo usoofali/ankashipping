@@ -2366,6 +2366,8 @@ namespace App\Models {
      * @property int $id
      * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Shipment> $shipments
      * @property-read int|null $shipments_count
+     * @property-read \Illuminate\Database\Eloquent\Collection<int, \Illuminate\Notifications\DatabaseNotification> $notifications
+     * @property-read int|null $notifications_count
      * @method static \Illuminate\Database\Eloquent\Builder<Driver>|Driver whereId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Driver>|Driver wherePhone($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Driver>|Driver whereEmail($value)

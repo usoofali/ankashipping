@@ -1,7 +1,7 @@
 <x-mail::message>
 @if (! empty($emailLogo))
-<p style="text-align:center; margin-bottom: 16px;">
-    <img src="{{ $emailLogo }}" alt="{{ $companyName }}" style="max-height:64px; width:auto;">
+<p style="text-align:center; margin-bottom: 24px;">
+    <img src="{{ $emailLogo }}" alt="{{ $companyName }}" style="max-height:80px; width:auto;">
 </p>
 @endif
 
@@ -23,23 +23,14 @@
 - **{{ __('Destination Port') }}:** {{ $prealert->destinationPort?->name }} ({{ $prealert->destinationPort?->state?->name }})
 @endif
 
-@if (! empty($setting->address) || ! empty($setting->phone) || $location !== '')
-<br>
-{{ __('Company details:') }}
+---
+Thanks,
+**{{ $companyName }}**
 
-@if (! empty($setting->address))
-- {{ __('Address') }}: {{ $setting->address }}
+@if (! empty($setting->address) || ! empty($setting->phone) || ! empty($location))
+<p style="color: #718096; font-size: 0.75rem; line-height: 1.25rem;">
+    {{ $setting->address }} {{ $location }}<br>
+    {{ $setting->phone }}
+</p>
 @endif
-@if (! empty($setting->phone))
-- {{ __('Phone') }}: {{ $setting->phone }}
-@endif
-@if ($location !== '')
-- {{ __('Location') }}: {{ $location }}
-@endif
-@endif
-
-{{ __('Thank you for choosing :companyName.', ['companyName' => $companyName]) }}
-
-{{ __('Regards,') }}<br>
-{{ $companyName }}
 </x-mail::message>

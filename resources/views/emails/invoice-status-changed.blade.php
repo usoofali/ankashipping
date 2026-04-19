@@ -5,33 +5,33 @@
 </p>
 @endif
 
-# {{ $notificationTitle }}
+# {{ __('Invoice Completed') }}
 
 {{ __('Hello :name!', ['name' => $notifiable->name]) }}
 
-{{ __('Your shipment :ref has new file(s) attached.', ['ref' => $shipment->reference_no]) }}
+{{ __('The invoice for your shipment :ref has been :status.', [
+    'ref' => $shipment->reference_no,
+    'status' => $toStatus->name,
+]) }}
 
-**{{ __('Details') }}**
+{{ __('Please find the attached invoice and Bill of Lading for your reference.') }}
+
+**{{ __('Shipment Details') }}**
 - **{{ __('Reference') }}:** {{ $shipment->reference_no }}
-- **{{ __('Document type') }}:** {{ $documentLabel }}
-- **{{ __('Files') }}:** {{ $fileCount }}
+- **{{ __('Status') }}:** {{ $toStatus->name }}
+- **{{ __('Invoice #') }}:** {{ $invoice->invoice_number }}
 
-@if ($fromShipmentStatus && $toShipmentStatus && $fromShipmentStatus !== $toShipmentStatus)
-- **{{ __('Shipment status') }}:** {{ $fromShipmentStatus->name }} → {{ $toShipmentStatus->name }}
-@endif
-
-@if ($downloadLinks !== [])
-**{{ __('Download') }}**
-@foreach ($downloadLinks as $link)
-<x-mail::button :url="$link['url']">
-{{ __('Download: :name', ['name' => $link['name']]) }}
-</x-mail::button>
-@endforeach
-@endif
+@if($toStatus === \App\Enums\InvoiceStatus::Completed)
+{{ __('You can now proceed to make payment through your dashboard.') }}
 
 <x-mail::button :url="route('shipments.show', $shipment, absolute: true)">
-{{ __('View shipment') }}
+{{ __('View Shipment & Pay') }}
 </x-mail::button>
+@else
+<x-mail::button :url="route('shipments.show', $shipment, absolute: true)">
+{{ __('View Shipment') }}
+</x-mail::button>
+@endif
 
 ---
 Thanks,

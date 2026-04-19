@@ -176,7 +176,6 @@ new #[Title('Prealerts')] class extends Component {
                     <flux:table.column>{{ __('Vehicle') }}</flux:table.column>
                     <flux:table.column>{{ __('Auction / Location') }}</flux:table.column>
                     <flux:table.column>{{ __('Destination') }}</flux:table.column>
-                    <flux:table.column>{{ __('Created') }}</flux:table.column>
                     <flux:table.column>{{ __('Actions') }}</flux:table.column>
                 </flux:table.columns>
 
@@ -215,15 +214,23 @@ new #[Title('Prealerts')] class extends Component {
                             </flux:table.cell>
                             <flux:table.cell>
                                 @if ($prealert->vehicles->isNotEmpty())
-                                    <span class="text-zinc-600 dark:text-zinc-400">
-                                        @if($prealert->vehicles->count() === 1)
-                                            {{ $prealert->vehicles->first()->year }} {{ $prealert->vehicles->first()->make }}
-                                            {{ $prealert->vehicles->first()->model }}
-                                            <span class="text-xs text-zinc-400 ml-1">({{ $prealert->vehicles->first()->color }})</span>
-                                        @else
-                                            {{ $prealert->vehicles->first()->make }}... +{{ $prealert->vehicles->count() - 1 }}
-                                        @endif
-                                    </span>
+                                    <div class="flex flex-col">
+                                        
+                                            @if($prealert->vehicles->count() === 1)
+                                                <span class="font-medium text-zinc-900 dark:text-zinc-100">
+                                                    {{ $prealert->vehicles->first()->year }} {{ $prealert->vehicles->first()->make }}
+                                                    {{ $prealert->vehicles->first()->model }}
+                                                </span>
+                                                <span class="text-xs text-zinc-500 dark:text-zinc-400">
+                                                    ({{ $prealert->vehicles->first()->color }})
+                                                </span>
+                                            @else
+                                                <span class="text-zinc-600 dark:text-zinc-400">
+                                                    {{ $prealert->vehicles->first()->make }}... +{{ $prealert->vehicles->count() - 1 }}
+                                                </span>
+                                            @endif
+
+                                    </div>
                                 @else
                                     <span class="text-zinc-400 italic">{{ __('N/A') }}</span>
                                 @endif
@@ -249,9 +256,6 @@ new #[Title('Prealerts')] class extends Component {
                                 @else
                                     <span class="text-zinc-400 italic text-xs">—</span>
                                 @endif
-                            </flux:table.cell>
-                            <flux:table.cell class="text-zinc-500">
-                                {{ $prealert->created_at?->diffForHumans() ?: '—' }}
                             </flux:table.cell>
                             <flux:table.cell align="right">
                                 <flux:dropdown align="end" variant="ghost">

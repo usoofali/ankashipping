@@ -5,21 +5,22 @@
 </p>
 @endif
 
-# {{ __('Hello :name!', ['name' => $notifiable->name]) }}
+# {{ __('New Dock Receipt Available') }}
 
-{{ __('Your wallet funding request has been approved and your balance has been updated.') }}
+{{ __('Hello!') }}
 
-<x-mail::panel>
-**{{ __('Amount Credited') }}:** ${{ number_format((float) $topUp->amount, 2) }}
-</x-mail::panel>
+{{ __('A new Dock Receipt has been generated for shipment :ref.', [
+    'ref' => $shipment->reference_no,
+]) }}
 
-**{{ __('Details') }}:**
-- **{{ __('Reference') }}:** {{ $topUp->reference ?: 'N/A' }}
-- **{{ __('Date Approved') }}:** {{ $topUp->updated_at->format('M d, Y H:i') }}
+{{ __('You can download the document using the button below. This link will expire in 7 days.') }}
 
-<x-mail::button :url="$url">
-{{ __('View Wallet Balance') }}
+<x-mail::button :url="$signedUrl">
+{{ __('Download Dock Receipt') }}
 </x-mail::button>
+
+**{{ __('Shipment Details') }}**
+- **{{ __('Reference') }}:** {{ $shipment->reference_no }}
 
 ---
 Thanks,

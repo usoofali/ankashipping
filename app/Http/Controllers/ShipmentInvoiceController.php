@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Shipment;
 use App\Models\SystemSetting;
+use App\ShippingWorkflow\ShippingWorkflow;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Http;
@@ -19,6 +20,11 @@ final class ShipmentInvoiceController extends Controller
     {
         $this->authorize('shipments.view', $shipment);
         $this->authorize('workflow.download_invoice');
+
+        // Workflow Guard
+        if (! app(ShippingWorkflow::class)->canDownloadInvoice($shipment, auth()->user())) {
+            abort(403, __('Invoices can only be downloaded once they are marked as Completed.'));
+        }
 
         $shipment->load([
             'shipper.user',

@@ -22,7 +22,7 @@ final class ShipmentDockReceiptController extends Controller
         $this->authorize('workflow.download_dock_receipt');
 
         // Workflow Guard
-        if (! app(ShippingWorkflow::class)->canDownloadDockReceipt($shipment)) {
+        if (! app(ShippingWorkflow::class)->canDownloadDockReceipt($shipment, auth()->user())) {
             abort(403, __('Dock Receipt cannot be generated until logistics information is complete.'));
         }
 

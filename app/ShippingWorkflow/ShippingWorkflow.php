@@ -184,7 +184,25 @@ class ShippingWorkflow
             return $user->can('invoices.view_draft');
         }
 
-        return $user->can('invoices.view_cleared');
+        // Shippers can see Cleared/Completed invoices if they have invoices.view
+        return $user->can('invoices.view_cleared') || $user->can('invoices.view');
+    }
+
+    public function canDownloadInvoice(Shipment $shipment, User $user): bool
+    {
+        if ($shipment->shipment_status === ShipmentStatus::Cancelled) {
+            return false;
+        }
+
+        // Staff and Admins can download if invoice is generated
+        if ($user->hasRole('super_admin') || call_user_func([$user, 'staff'])->exists()) {
+            return $shipment->invoice !== null;
+        }
+
+        // Shippers: Only COMPLETED invoices
+        $status = $shipment->invoice?->status ?? $shipment->invoice_status;
+
+        return $status === InvoiceStatus::Completed;
     }
 
     public function canClearInvoice(Shipment $shipment, User $user): bool
@@ -258,13 +276,23 @@ class ShippingWorkflow
         return true;
     }
 
-    public function canDownloadDockReceipt(Shipment $shipment): bool
+    public function canDownloadDockReceipt(Shipment $shipment, User $user): bool
     {
         if ($shipment->shipment_status === ShipmentStatus::Cancelled) {
             return false;
         }
 
-        return $this->hasLogisticsInfo($shipment);
+        if ($user->hasRole('super_admin') || call_user_func([$user, 'staff'])->exists()) {
+            return $this->hasLogisticsInfo($shipment);
+        }
+
+        // For Shippers: Shipment must be Inland or beyond to download
+        return in_array($shipment->shipment_status, [
+            ShipmentStatus::Inland,
+            ShipmentStatus::Delivered,
+            ShipmentStatus::Loaded,
+            ShipmentStatus::Completed,
+        ], true) && $this->hasLogisticsInfo($shipment);
     }
 
     public function canTransitionToInland(Shipment $shipment): bool

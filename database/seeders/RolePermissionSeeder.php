@@ -97,6 +97,18 @@ final class RolePermissionSeeder extends Seeder
             'workflow.manage_logistics',
             'workflow.download_dock_receipt',
             'workflow.download_invoice',
+            'shipments.view_activities',
+            'shipments.pay',
+            'vehicles.view',
+            'vehicles.create',
+            'vehicles.update',
+            'vehicles.delete',
+            'newsletters.view',
+            'newsletters.manage',
+            'email_logs.view',
+            'failed_jobs.view',
+            'financials.wallets.view',
+            'financials.wallets.manage',
         ];
 
         foreach ($permissionNames as $name) {
@@ -189,6 +201,18 @@ final class RolePermissionSeeder extends Seeder
             'workflow.manage_logistics',
             'workflow.download_dock_receipt',
             'workflow.download_invoice',
+            'shipments.view_activities',
+            'shipments.pay',
+            'vehicles.view',
+            'vehicles.create',
+            'vehicles.update',
+            'vehicles.delete',
+            'newsletters.view',
+            'newsletters.manage',
+            'email_logs.view',
+            'failed_jobs.view',
+            'financials.wallets.view',
+            'financials.wallets.manage',
         ]);
 
         $staffOperator = Role::query()->firstOrCreate(
@@ -228,6 +252,16 @@ final class RolePermissionSeeder extends Seeder
             'workflow.manage_logistics',
             'workflow.download_dock_receipt',
             'workflow.download_invoice',
+            'shipments.view_activities',
+            'shipments.pay',
+            'vehicles.view',
+            'vehicles.create',
+            'vehicles.update',
+            'vehicles.delete',
+            'newsletters.view',
+            'newsletters.manage',
+            'email_logs.view',
+            'failed_jobs.view',
         ]);
 
         $shipper = Role::query()->firstOrCreate(
@@ -239,12 +273,14 @@ final class RolePermissionSeeder extends Seeder
             'prealerts.create',
             'shippers.view',
             'invoices.view',
+            'invoices.view_cleared',
             'payments.manage',
             'documents.manage',
             'wallets.view',
             'wallet_top_ups.view',
             'wallet_top_ups.create',
             'workflow.download_invoice',
+            'shipments.pay',
         ]);
     }
 }
