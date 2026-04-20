@@ -146,7 +146,7 @@ new #[Title('Create Shipment')] class extends Component {
             $this->reference_no = $prefix . '' . strtoupper(Str::random($system->tracking_random_digits ?: 8));
         } else {
             // Auto Increment Logic
-            $lastId = Shipment::max('id') ?? 0;
+            $lastId = Shipment::withTrashed()->max('id') ?? 0;
             $nextNumber = $lastId + 1;
             $digits = $system->tracking_digits ?: 5;
             $this->reference_no = $prefix . '' . str_pad((string) $nextNumber, $digits, '0', STR_PAD_LEFT);

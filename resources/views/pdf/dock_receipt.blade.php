@@ -343,8 +343,15 @@
         <table class="grid">
             <tr>
                 <td style="width:50%;">
-                    <span class="lbl">1. Shipper / Exporting Carrier</span>
-                    @if($shipment->shipper)
+                    <span class="lbl">1. Shipper / Exporter</span>
+                    @if($shipment->exporter_name)
+                        <div class="val">{{ $shipment->exporter_name }}</div>
+                        <span class="sub">
+                            {{ $shipment->exporter_address }}<br>
+                            {{ collect([$shipment->exporter_state, $shipment->exporter_country])->filter()->implode(', ') }}
+                            {{ $shipment->exporter_zipcode }}
+                        </span>
+                    @elseif($shipment->shipper)
                         <div class="val">{{ $shipment->shipper->company_name ?? $shipment->shipper->user?->name }}</div>
                         <span class="sub">{{ $shipment->shipper->address }}, {{ $shipment->shipper->city?->name }},
                             {{ $shipment->shipper->state?->code }} {{ $shipment->shipper->zip_code }}</span>
@@ -378,7 +385,8 @@
             <tr>
                 <td style="width:50%;" rowspan="2">
                     <span class="lbl">5. Forwarding Agent / Identity</span>
-                    <div class="val">{{ $settings->forwarding_agent_name ?: $settings->company_name }}</div>
+                    <div class="val">{{ $settings->forwarding_agent_name ?: $settings->company_name }}
+                        FMC# {{$settings->fmc_number }}</div>
                     <span class="sub">
                         {{ $settings->forwarding_agent_address ?: $settings->address }}<br>
                         Tel: {{ $settings->forwarding_agent_phone ?: $settings->phone }}

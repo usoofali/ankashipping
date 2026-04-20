@@ -62,6 +62,11 @@ final class Shipment extends Model
         'domestic_routing',
         'loading_pier',
         'notify_party_id',
+        'exporter_name',
+        'exporter_address',
+        'exporter_state',
+        'exporter_country',
+        'exporter_zipcode',
     ];
 
     protected function casts(): array

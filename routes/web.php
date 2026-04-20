@@ -10,6 +10,7 @@ use App\Http\Controllers\ShipmentDocumentFileSignedDownloadController;
 use App\Http\Controllers\ShipmentInvoiceController;
 use App\Http\Controllers\ShipperOptionsController;
 use App\Http\Controllers\VehicleDocumentFileSignedDownloadController;
+use App\Http\Controllers\WarehouseOptionsController;
 use App\Models\User;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
@@ -100,6 +101,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         ->name('shipments.documents.files.download');
 
     Route::get('/api/shippers/search', [ShipperOptionsController::class, 'index'])->name('api.shippers.search');
+    Route::get('/api/warehouses/search', [WarehouseOptionsController::class, 'index'])->name('api.warehouses.search');
 
     Route::get('/api/drivers/search', [DriverOptionsController::class, 'index'])->name('api.drivers.search');
     Route::get('/import-templates/geo/{entity}', [ImportTemplateController::class, 'geo'])->name('import-templates.geo');
@@ -118,6 +120,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     // Operations Master Data
     Route::livewire('/drivers', 'pages::drivers.index')->name('drivers.index');
+    Route::livewire('/warehouses', 'pages::warehouses.index')->name('warehouses.index');
     Route::livewire('/vehicles', 'pages::vehicles.index')->name('vehicles.index');
     Route::livewire('/vehicles/{vehicle}', 'pages::vehicles.show')
         ->whereNumber('vehicle')

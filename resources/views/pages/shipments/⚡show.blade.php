@@ -252,8 +252,8 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function addOrUpdateItem(): void
     {
-        if (!$this->workflow()->canEditInvoice($this->shipment, auth()->user())) {
-            $this->notification()->error(__('Access Denied'), __('You do not have permission to edit this invoice.'));
+        if (!auth()->user()->can('invoices.edit')) {
+            $this->notification()->error(__('Access Denied'), __('You do not have permission to edit invoice items.'));
 
             return;
         }
@@ -365,8 +365,8 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function editItem(int $itemId): void
     {
-        if (!$this->workflow()->canEditInvoice($this->shipment, auth()->user())) {
-            $this->notification()->error(__('Access Denied'), __('You do not have permission to edit this invoice.'));
+        if (!auth()->user()->can('invoices.edit')) {
+            $this->notification()->error(__('Access Denied'), __('You do not have permission to edit invoice items.'));
 
             return;
         }
@@ -421,8 +421,8 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function deleteItem(int $itemId): void
     {
-        if (!$this->workflow()->canEditInvoice($this->shipment, auth()->user())) {
-            $this->notification()->error(__('Access Denied'), __('You do not have permission to edit this invoice.'));
+        if (!auth()->user()->can('invoices.delete')) {
+            $this->notification()->error(__('Access Denied'), __('You do not have permission to delete invoice items.'));
 
             return;
         }
@@ -1075,14 +1075,15 @@ new #[Title('Shipment Details')] class extends Component {
         $this->authorize('shipments.update');
 
         if (!$force) {
+            $this->authorize('workflow.mark_filled');
             if (!$this->workflow()->canMarkFilled($this->shipment)) {
                 $this->notification()->error(__('Requirement missed'), __('Normal container filling requires at least 4 vehicles at warehouse status and status must be OPEN.'));
 
                 return;
             }
         } else {
-            $this->authorizeStaffOrSuperAdmin();
-            if (!auth()->user()->can('workflow.force_filled') || !$this->workflow()->canMarkFilled($this->shipment, true)) {
+            $this->authorize('workflow.force_filled');
+            if (!$this->workflow()->canMarkFilled($this->shipment, true)) {
                 $this->notification()->error(__('Invalid Action'), __('Cannot force fill in current status or insufficient permission.'));
 
                 return;
@@ -1142,6 +1143,11 @@ new #[Title('Shipment Details')] class extends Component {
             'arrival_date' => $this->shipment->arrival_date?->format('Y-m-d'),
             'domestic_routing' => $this->shipment->domestic_routing,
             'loading_pier' => $this->shipment->loading_pier,
+            'exporter_name' => $this->shipment->exporter_name ?: ($this->shipment->shipper?->company_name ?? $this->shipment->shipper?->user?->name),
+            'exporter_address' => $this->shipment->exporter_address ?: $this->shipment->shipper?->address,
+            'exporter_state' => $this->shipment->exporter_state ?: $this->shipment->shipper?->state?->name,
+            'exporter_country' => $this->shipment->exporter_country ?: $this->shipment->shipper?->country?->name,
+            'exporter_zipcode' => $this->shipment->exporter_zipcode ?: $this->shipment->shipper?->zip_code,
         ];
 
         $this->logisticsForm['vehicles'] = [];
@@ -1181,6 +1187,11 @@ new #[Title('Shipment Details')] class extends Component {
             'logisticsForm.shipment.arrival_date' => 'nullable|date',
             'logisticsForm.shipment.domestic_routing' => 'nullable|string',
             'logisticsForm.shipment.loading_pier' => 'nullable|string',
+            'logisticsForm.shipment.exporter_name' => 'required|string|max:255',
+            'logisticsForm.shipment.exporter_address' => 'required|string',
+            'logisticsForm.shipment.exporter_state' => 'nullable|string|max:255',
+            'logisticsForm.shipment.exporter_country' => 'nullable|string|max:255',
+            'logisticsForm.shipment.exporter_zipcode' => 'nullable|string|max:255',
             'logisticsForm.vehicles.*.value' => 'nullable|numeric|min:0',
             'logisticsForm.vehicles.*.weight' => 'nullable|numeric|min:0',
             'logisticsForm.vehicles.*.weight_unit' => 'required|string|in:KG,LBS',
@@ -1223,7 +1234,7 @@ new #[Title('Shipment Details')] class extends Component {
         });
 
         $this->showLogisticsModal = false;
-        $this->notification()->success(__('Logistics updated successfully.'));
+        $this->notification()->success(__('Shipment booked successfully.'));
         $this->reloadShipmentPageData();
 
         $recipientIds = $this->staffAndAdminNotificationRecipientIds();
@@ -1236,15 +1247,50 @@ new #[Title('Shipment Details')] class extends Component {
             Notification::send($recipients, new LogisticsBookingNotification($this->shipment));
         }
 
-        if ($this->shipment->shipper?->default_driver_id) {
-            $this->shipment->shipper->defaultDriver->notify(new LogisticsBookingNotification($this->shipment));
+        $shipper = $this->shipment->shipper;
+        $isTowing = $shipper?->towing ?? false;
+
+        if ($this->shipment->isContainer()) {
+            if (!$isTowing) {
+                // Not towing: Notify default driver
+                if ($shipper?->default_driver_id) {
+                    $shipper->defaultDriver?->notify(new LogisticsBookingNotification($this->shipment));
+                }
+            } else {
+                // Towing: Notify Warehouse
+                $warehouse = $this->shipment->originPort?->warehouse;
+                if ($warehouse) {
+                    $warehouse->notify(new LogisticsBookingNotification($this->shipment));
+                } else {
+                    $this->notification()->warning(
+                        title: __('No Warehouse Associated'),
+                        description: __('The origin port ":port" has no associated warehouse. Notification not sent.', [
+                            'port' => $this->shipment->originPort?->name ?? '—'
+                        ])
+                    );
+                }
+            }
+        } else {
+            // RoRo / Other
+            if (!$isTowing) {
+                // Not towing: Notify default driver
+                if ($shipper?->default_driver_id) {
+                    $shipper->defaultDriver?->notify(new LogisticsBookingNotification($this->shipment));
+                }
+            } else {
+                // Towing: Notify the driver assigned to the vehicle
+                $vehicle = $this->shipment->vehicles()->first();
+                if ($vehicle?->driver) {
+                    $vehicle->driver->notify(new LogisticsBookingNotification($this->shipment));
+                }
+            }
         }
     }
 
     public function markShipmentDelivered(): void
     {
         $this->authorize('shipments.update');
-        $this->authorizeStaffOrSuperAdmin();
+        $this->authorize('workflow.mark_delivered');
 
         if (!$this->workflow()->canMarkDelivered($this->shipment)) {
             $this->notification()->error(__('Invalid Action'), __('Shipment cannot be marked as delivered in current status.'));
@@ -1279,7 +1325,7 @@ new #[Title('Shipment Details')] class extends Component {
     public function markShipmentLoaded(): void
     {
         $this->authorize('shipments.update');
-        $this->authorizeStaffOrSuperAdmin();
+        $this->authorize('workflow.mark_loaded');
 
         if (!$this->workflow()->canMarkLoaded($this->shipment)) {
             $this->notification()->error(__('Invalid Action'), __('Shipment cannot be marked as loaded in current status.'));
@@ -1325,13 +1371,7 @@ new #[Title('Shipment Details')] class extends Component {
     public function completeShipment(): void
     {
         $this->authorize('shipments.update');
-        $this->authorizeStaffOrSuperAdmin();
-
-        if (!auth()->user()->can('workflow.complete')) {
-            $this->notification()->error(__('Access Denied'), __('You do not have permission to complete shipments.'));
-
-            return;
-        }
+        $this->authorize('workflow.complete');
 
         if (!$this->workflow()->canCompleteShipment($this->shipment)) {
             $this->notification()->error(__('Invalid Action'), __('Shipment must be in LOADED status to complete.'));
@@ -1370,7 +1410,7 @@ new #[Title('Shipment Details')] class extends Component {
     public function openToWorkshopModal(?int $vehicleId = null): void
     {
         $this->authorize('shipments.update');
-        $this->authorizeStaffOrSuperAdmin();
+        $this->authorize('workflow.to_workshop');
 
         $this->selectedVehicleId = $vehicleId;
 
@@ -1387,7 +1427,7 @@ new #[Title('Shipment Details')] class extends Component {
     public function saveToWorkshop(): void
     {
         $this->authorize('shipments.update');
-        $this->authorizeStaffOrSuperAdmin();
+        $this->authorize('workflow.to_workshop');
 
         $validated = $this->validate([
             'toWorkshopWorkshopId' => ['required', 'integer', 'exists:workshops,id'],
@@ -1438,7 +1478,7 @@ new #[Title('Shipment Details')] class extends Component {
     public function openFromWorkshopConfirmModal(?int $vehicleId = null): void
     {
         $this->authorize('shipments.update');
-        $this->authorizeStaffOrSuperAdmin();
+        $this->authorize('workflow.from_workshop');
 
         $this->selectedVehicleId = $vehicleId;
         $this->showFromWorkshopConfirmModal = true;
@@ -1447,7 +1487,7 @@ new #[Title('Shipment Details')] class extends Component {
     public function fromWorkshop(): void
     {
         $this->authorize('shipments.update');
-        $this->authorizeStaffOrSuperAdmin();
+        $this->authorize('workflow.from_workshop');
 
         $vehicleId = $this->selectedVehicleId;
 
@@ -1494,21 +1534,21 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function openDeleteDocumentConfirm(int $shipmentDocumentId): void
     {
-        $this->authorizeStaffOrSuperAdmin();
+        $this->authorize('documents.delete');
         $this->pendingDeleteShipmentDocumentId = $shipmentDocumentId;
         $this->showDeleteDocumentConfirmModal = true;
     }
 
     public function openDeleteFileConfirm(int $shipmentDocumentFileId): void
     {
-        $this->authorizeStaffOrSuperAdmin();
+        $this->authorize('documents.delete');
         $this->pendingDeleteShipmentDocumentFileId = $shipmentDocumentFileId;
         $this->showDeleteFileConfirmModal = true;
     }
 
     public function deleteShipmentDocumentConfirmed(): void
     {
-        $this->authorizeStaffOrSuperAdmin();
+        $this->authorize('documents.delete');
 
         if ($this->pendingDeleteShipmentDocumentId === null) {
             $this->showDeleteDocumentConfirmModal = false;
@@ -1556,7 +1596,7 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function deleteShipmentDocumentFileConfirmed(): void
     {
-        $this->authorizeStaffOrSuperAdmin();
+        $this->authorize('documents.delete');
 
         if ($this->pendingDeleteShipmentDocumentFileId === null) {
             $this->showDeleteFileConfirmModal = false;
@@ -1787,17 +1827,21 @@ new #[Title('Shipment Details')] class extends Component {
 
                         @if(!$shipment->isLocked())
                             @if($shipment->isContainer())
-                                @if($this->workflow()->canMarkFilled($shipment))
-                                    <flux:menu.item icon="check-circle" wire:click="markContainerFilled(false)">
-                                        {{ __('Mark Filled') }}
-                                    </flux:menu.item>
-                                @endif
-                                @if(auth()->user()?->hasRole('super_admin') && $this->workflow()->canMarkFilled($shipment, true))
-                                    <flux:menu.item icon="exclamation-triangle" wire:click="markContainerFilled(true)"
-                                        variant="danger">
-                                        {{ __('Force Fill') }}
-                                    </flux:menu.item>
-                                @endif
+                                @can('workflow.mark_filled')
+                                    @if($this->workflow()->canMarkFilled($shipment))
+                                        <flux:menu.item icon="check-circle" wire:click="markContainerFilled(false)">
+                                            {{ __('Mark Filled') }}
+                                        </flux:menu.item>
+                                    @endif
+                                @endcan
+                                @can('workflow.force_filled')
+                                    @if($this->workflow()->canMarkFilled($shipment, true))
+                                        <flux:menu.item icon="exclamation-triangle" wire:click="markContainerFilled(true)"
+                                            variant="danger">
+                                            {{ __('Force Fill') }}
+                                        </flux:menu.item>
+                                    @endif
+                                @endcan
                             @endif
 
                         @endif
@@ -1926,7 +1970,6 @@ new #[Title('Shipment Details')] class extends Component {
         </x-crud.panel>
 
         <div class="grid grid-cols-1 gap-8 mt-8">
-            {{-- Left rail --}}
             <div class="space-y-6">
                 {{-- Logistics & Routing --}}
                 <x-crud.panel class="p-6">

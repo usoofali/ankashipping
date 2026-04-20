@@ -37,7 +37,11 @@ new #[Title('Role Management')] class extends Component {
     #[Computed]
     public function allPermissions()
     {
-        return Permission::query()->orderBy('name')->get();
+        return Permission::query()
+            ->where('guard_name', 'web')
+            ->orderBy('name')
+            ->get()
+            ->groupBy(fn ($p) => str_replace('_', ' ', explode('.', $p->name)[0]));
     }
 
     public function openCreateModal(): void
@@ -181,16 +185,27 @@ new #[Title('Role Management')] class extends Component {
             <form wire:submit="saveRole" class="space-y-6">
                 <flux:input wire:model="name" :label="__('Role Name')" placeholder="{{ __('e.g. Manager') }}" required />
 
-                <div class="space-y-3">
-                    <flux:heading size="sm" weight="semibold">{{ __('Permissions') }}</flux:heading>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                        @foreach ($this->allPermissions as $permission)
-                            <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg border border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
-                                <input type="checkbox" wire:model="selectedPermissions" value="{{ $permission->name }}" class="rounded border-zinc-300 text-primary-600 shadow-sm focus:ring-primary-500 dark:border-zinc-700 dark:bg-zinc-900">
-                                <span class="text-xs text-zinc-700 dark:text-zinc-300">{{ $permission->name }}</span>
-                            </label>
-                        @endforeach
-                    </div>
+                <div class="space-y-6">
+                    @foreach ($this->allPermissions as $group => $permissions)
+                        <div class="space-y-3">
+                            <flux:heading size="sm" class="uppercase tracking-wider text-zinc-500 font-bold opacity-75">
+                                {{ $group }}
+                            </flux:heading>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                @foreach ($permissions as $permission)
+                                    <label class="group flex items-center gap-2 cursor-pointer p-2 rounded-lg border border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+                                        <input type="checkbox" wire:model="selectedPermissions" value="{{ $permission->name }}" class="rounded border-zinc-300 text-primary-600 shadow-sm focus:ring-primary-500 dark:border-zinc-700 dark:bg-zinc-900 cursor-pointer">
+                                        <span class="text-xs text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors">
+                                            {{ str_replace($group . '.', '', str_replace('_', ' ', $permission->name)) }}
+                                        </span>
+                                    </label>
+                                @endforeach
+                            </div>
+                            @if (!$loop->last)
+                                <flux:separator class="mt-4" />
+                            @endif
+                        </div>
+                    @endforeach
                 </div>
 
                 <div class="flex items-center justify-end gap-3 border-t border-zinc-100 pt-6 dark:border-zinc-800">

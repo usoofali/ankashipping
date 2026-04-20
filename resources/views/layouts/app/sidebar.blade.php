@@ -73,6 +73,13 @@
                             {{ __('Drivers') }}
                         </flux:sidebar.item>
                     @endcan
+                    @can('warehouses.view')
+                        <flux:sidebar.item icon="building-library" icon-class="text-amber-600"
+                            :href="route('warehouses.index')" :current="request()->routeIs('warehouses.*')"
+                            wire:navigate>
+                            {{ __('Warehouses') }}
+                        </flux:sidebar.item>
+                    @endcan
                     @can('workshops.view')
                         <flux:sidebar.item icon="wrench-screwdriver" icon-class="text-amber-500"
                             :href="route('workshops.index')" :current="request()->routeIs('workshops.*')" wire:navigate>

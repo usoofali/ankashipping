@@ -18,9 +18,15 @@ final class Port extends Model
     protected $fillable = [
         'country_id',
         'state_id',
+        'warehouse_id',
         'name',
         'type',
     ];
+
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
 
     public function country(): BelongsTo
     {

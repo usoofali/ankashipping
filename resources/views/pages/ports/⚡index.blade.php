@@ -7,6 +7,7 @@ use App\Models\City;
 use App\Models\Country;
 use App\Models\Port;
 use App\Models\State;
+use App\Models\Warehouse;
 use App\Support\CsvImportReader;
 use App\Support\ShipperGeoValidator;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -39,6 +40,7 @@ new #[Title('Ports')] class extends Component {
 
     public string $name = '';
     public string $type = 'origin';
+    public ?int $warehouse_id = null;
     public mixed $importFile = null;
 
     public function updatedSearch(): void
@@ -54,7 +56,7 @@ new #[Title('Ports')] class extends Component {
     public function openCreateModal(): void
     {
         $this->authorize('ports.create');
-        $this->reset(['name', 'type', 'country_id', 'state_id', 'editingPortId']);
+        $this->reset(['name', 'type', 'warehouse_id', 'country_id', 'state_id', 'editingPortId']);
         $this->showCreateModal = true;
     }
 
@@ -150,12 +152,14 @@ new #[Title('Ports')] class extends Component {
             [
                 'name' => $this->name,
                 'type' => $this->type,
+                'warehouse_id' => $this->warehouse_id,
                 'country_id' => $this->country_id,
                 'state_id' => $this->state_id,
             ],
             [
                 'name' => ['required', 'string', 'max:255', 'unique:ports,name'],
                 'type' => ['required', 'string', 'in:origin,destination'],
+                'warehouse_id' => ['nullable', 'integer', 'exists:warehouses,id'],
                 'country_id' => ['required', 'integer', 'exists:countries,id'],
                 'state_id' => ['required', 'integer', 'exists:states,id'],
             ]
@@ -178,6 +182,7 @@ new #[Title('Ports')] class extends Component {
         $this->editingPortId = $port->id;
         $this->name = $port->name;
         $this->type = $port->type;
+        $this->warehouse_id = $port->warehouse_id;
         $this->country_id = $port->country_id;
         $this->state_id = $port->state_id;
 
@@ -197,12 +202,14 @@ new #[Title('Ports')] class extends Component {
             [
                 'name' => $this->name,
                 'type' => $this->type,
+                'warehouse_id' => $this->warehouse_id,
                 'country_id' => $this->country_id,
                 'state_id' => $this->state_id,
             ],
             [
                 'name' => ['required', 'string', 'max:255', 'unique:ports,name,' . $port->id],
                 'type' => ['required', 'string', 'in:origin,destination'],
+                'warehouse_id' => ['nullable', 'integer', 'exists:warehouses,id'],
                 'country_id' => ['required', 'integer', 'exists:countries,id'],
                 'state_id' => ['required', 'integer', 'exists:states,id'],
             ]
@@ -256,7 +263,7 @@ new #[Title('Ports')] class extends Component {
     public function ports(): LengthAwarePaginator
     {
         return Port::query()
-            ->with(['country', 'state'])
+            ->with(['country', 'state', 'warehouse'])
             ->withCount(['originShipments', 'destinationShipments'])
             ->when($this->search, fn($q) => $q->where('name', 'like', "%{$this->search}%"))
             ->orderBy('name')
@@ -291,6 +298,7 @@ new #[Title('Ports')] class extends Component {
                     <flux:table.column icon="tag">{{ __('Type') }}</flux:table.column>
                     <flux:table.column icon="map-pin">{{ __('Name') }}</flux:table.column>
                     <flux:table.column icon="globe-alt">{{ __('Location') }}</flux:table.column>
+                    <flux:table.column icon="building-library">{{ __('Warehouse') }}</flux:table.column>
                     <flux:table.column icon="container">{{ __('Shipments') }}</flux:table.column>
                     <flux:table.column align="right">{{ __('Actions') }}</flux:table.column>
                 </flux:table.columns>
@@ -309,6 +317,9 @@ new #[Title('Ports')] class extends Component {
                             </flux:table.cell>
                             <flux:table.cell class="text-sm text-zinc-500">
                                 {{ $port->state?->name }}, {{ $port->country?->name }}
+                            </flux:table.cell>
+                            <flux:table.cell>
+                                {{ $port->warehouse?->name ?: '—' }}
                             </flux:table.cell>
                             <flux:table.cell class="text-xs text-zinc-500">
                                 {{ $port->origin_shipments_count + $port->destination_shipments_count }} {{ __('Total') }}
@@ -365,6 +376,12 @@ new #[Title('Ports')] class extends Component {
                     </flux:select>
                 </div>
 
+                <div class="sm:col-span-1">
+                    <x-select wire:model.live="warehouse_id" :label="__('Warehouse')" :placeholder="__('Select warehouse')"
+                        option-value="id" option-label="name" :async-data="route('api.warehouses.search')"
+                        searchable />
+                </div>
+
                 <div class="sm:col-span-2">
                     <x-select wire:model.live="country_id" :label="__('Country')" :placeholder="__('Select country')"
                         option-value="id" option-label="name" :async-data="route('register.geo.countries')"
@@ -408,6 +425,12 @@ new #[Title('Ports')] class extends Component {
                         <flux:select.option value="origin">{{ __('Origin') }}</flux:select.option>
                         <flux:select.option value="destination">{{ __('Destination') }}</flux:select.option>
                     </flux:select>
+                </div>
+
+                <div class="sm:col-span-1">
+                    <x-select wire:model.live="warehouse_id" :label="__('Warehouse')" :placeholder="__('Select warehouse')"
+                        option-value="id" option-label="name" :async-data="route('api.warehouses.search')"
+                        searchable />
                 </div>
 
                 <div class="sm:col-span-2">

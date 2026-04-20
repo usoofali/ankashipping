@@ -17,6 +17,9 @@ new #[Title('Vehicles')] class extends Component {
     #[Url(as: 'q')]
     public string $search = '';
 
+    #[Url(as: 'f')]
+    public string $filter = 'all';
+
     public bool $showCreateModal = false;
     public bool $showEditModal = false;
     public bool $showDeleteModal = false;
@@ -82,12 +85,37 @@ new #[Title('Vehicles')] class extends Component {
         $this->resetPage();
     }
 
+    public function updatedFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    #[Computed]
+    public function isShipper(): bool
+    {
+        return auth()->user()->shipper()->exists();
+    }
+
     #[Computed]
     public function vehicles()
     {
+        $isShipper = $this->isShipper;
+        $shipperId = auth()->user()->shipper?->id;
+
         return Vehicle::query()
-            ->whereNull('prealert_id')
-            ->whereNull('shipment_id')
+            ->with(['shipment.shipper', 'prealert.shipper'])
+            // Visibility scoping
+            ->when($isShipper, function ($q) use ($shipperId) {
+                $q->where(function ($sq) use ($shipperId) {
+                    $sq->whereHas('shipment', fn($sqq) => $sqq->where('shipper_id', $shipperId))
+                        ->orWhereHas('prealert', fn($sqq) => $sqq->where('shipper_id', $shipperId));
+                });
+            })
+            // Filter scoping
+            ->when($this->filter === 'shipment', fn($q) => $q->whereNotNull('shipment_id'))
+            ->when($this->filter === 'prealert', fn($q) => $q->whereNotNull('prealert_id'))
+            ->when($this->filter === 'none', fn($q) => $q->whereNull('shipment_id')->whereNull('prealert_id'))
+            // Search
             ->when($this->search, fn($q) => $q->where(fn($sq) => $sq->where('vin', 'like', "%{$this->search}%")
                 ->orWhere('make', 'like', "%{$this->search}%")
                 ->orWhere('model', 'like', "%{$this->search}%")
@@ -215,20 +243,29 @@ new #[Title('Vehicles')] class extends Component {
             @endcan
         </div>
 
-        <div class="mb-1">
+        <div class="mb-1 flex gap-2">
             <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass"
-                :placeholder="__('Search by VIN, Make, Model or Lot...')" clearable />
+                :placeholder="__('Search by VIN, Make, Model or Lot...')" clearable class="w-full" />
+
+            <flux:select wire:model.live="filter" class="w-full">
+                <flux:select.option value="all">{{ __('All Vehicles') }}</flux:select.option>
+                <flux:select.option value="shipment">{{ __('With Shipment') }}</flux:select.option>
+                <flux:select.option value="prealert">{{ __('With Prealert') }}</flux:select.option>
+                @if(auth()->user()->hasAnyRole(['super_admin', 'staff_admin', 'staff_operator']))
+                    <flux:select.option value="none">{{ __('None (Unlinked)') }}</flux:select.option>
+                @endif
+            </flux:select>
         </div>
 
         <x-crud.panel class="p-6">
             <flux:table :paginate="$this->vehicles">
                 <flux:table.columns sticky class="bg-white dark:bg-zinc-900">
+                    @if (!$this->isShipper)
+                        <flux:table.column icon="building-office-2">{{ __('Shipper') }}</flux:table.column>
+                    @endif
                     <flux:table.column icon="hashtag">{{ __('VIN') }}</flux:table.column>
                     <flux:table.column>{{ __('Preview') }}</flux:table.column>
-                    <flux:table.column icon="calendar">{{ __('Year') }}</flux:table.column>
-                    <flux:table.column icon="tag">{{ __('Make') }}</flux:table.column>
-                    <flux:table.column icon="car-front">{{ __('Model') }}</flux:table.column>
-                    <flux:table.column icon="paint-brush">{{ __('Color') }}</flux:table.column>
+                    <flux:table.column icon="car-front">{{ __('Vehicle') }}</flux:table.column>
                     <flux:table.column icon="banknotes">{{ __('Est. Value') }}</flux:table.column>
                     <flux:table.column align="right">{{ __('Actions') }}</flux:table.column>
                 </flux:table.columns>
@@ -236,23 +273,38 @@ new #[Title('Vehicles')] class extends Component {
                 <flux:table.rows>
                     @forelse ($this->vehicles as $vehicle)
                         <flux:table.row :key="$vehicle->id">
-                            <flux:table.cell class="font-mono text-xs">{{ $vehicle->vin ?: '—' }}</flux:table.cell>
+                            @if (!$this->isShipper)
+                                <flux:table.cell>
+                                    <div class="flex flex-col">
+                                        <span class="font-medium text-zinc-900 dark:text-white">
+                                            {{ $vehicle->shipment?->shipper?->company_name ?? $vehicle->prealert?->shipper?->company_name ?? '—' }}
+                                        </span>
+                                        <span class="text-xs text-zinc-500">
+                                            {{ $vehicle->shipment?->shipper?->phone ?? $vehicle->prealert?->shipper?->phone ?? '' }}
+                                        </span>
+                                    </div>
+                                </flux:table.cell>
+                            @endif
+                             <flux:table.cell>
+                                <div class="flex flex-col">
+                                    <span class="font-mono text-xs">{{ $vehicle->vin ?: '—' }}</span>
+                                    <span class="text-xs text-zinc-500">{{ $vehicle->lot_number ?: '' }}</span>
+                                </div>
+                            </flux:table.cell>
                             <flux:table.cell>
                                 @php $photo = $vehicle->copartCarPhotoUrls()[0] ?? 'https://placehold.co/100x75?text=No+Photo'; @endphp
                                 <img src="{{ $photo }}" alt="Vehicle"
                                     class="h-10 w-16 object-cover rounded shadow-sm border border-zinc-200 dark:border-zinc-700">
                             </flux:table.cell>
-                            <flux:table.cell>{{ $vehicle->year ?: '—' }}</flux:table.cell>
-                            <flux:table.cell>{{ $vehicle->make ?: '—' }}</flux:table.cell>
-                            <flux:table.cell>{{ $vehicle->model ?: '—' }}</flux:table.cell>
                             <flux:table.cell>
-                                @if($vehicle->color)
-                                    <div class="flex items-center gap-2">
-                                        {{ $vehicle->color }}
-                                    </div>
-                                @else
-                                    —
-                                @endif
+                                <div class="flex flex-col">
+                                    <span class="font-medium text-zinc-900 dark:text-white">
+                                        {{ $vehicle->year ?: '' }} {{ $vehicle->make ?: '' }} {{ $vehicle->model ?: '' }}
+                                    </span>
+                                    <span class="text-xs text-zinc-500">
+                                        {{ $vehicle->color ?: 'No color' }}
+                                    </span>
+                                </div>
                             </flux:table.cell>
                             <flux:table.cell class="text-sm text-zinc-500">
                                 {{ $vehicle->est_retail_value ? number_format((float) $vehicle->est_retail_value, 2) : '—' }}
@@ -267,10 +319,13 @@ new #[Title('Vehicles')] class extends Component {
                                             </flux:menu.item>
                                         @endcan
                                         @can('vehicles.delete')
-                                            <flux:menu.separator />
-                                            <flux:menu.item icon="trash" variant="danger"
-                                                wire:click="openDeleteModal({{ $vehicle->id }})">{{ __('Delete') }}
-                                            </flux:menu.item>
+                                            @if (!$vehicle->shipment_id && !$vehicle->prealert_id)
+                                                <flux:menu.separator />
+                                                <flux:menu.item icon="trash" variant="danger"
+                                                    wire:click="openDeleteModal({{ $vehicle->id }})">
+                                                    {{ __('Delete') }}
+                                                </flux:menu.item>
+                                            @endif
                                         @endcan
                                     </flux:menu>
                                 </flux:dropdown>

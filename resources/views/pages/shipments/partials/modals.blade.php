@@ -549,6 +549,22 @@
             </flux:subheading>
         </div>
 
+        <div class="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-200 dark:border-zinc-800 space-y-4">
+            <div class="flex items-center gap-2">
+                <flux:icon.building-office class="size-5 text-zinc-400" />
+                <flux:heading size="sm" class="font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-tight">{{ __('Exporter Details') }}</flux:heading>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <flux:input wire:model="logisticsForm.shipment.exporter_name" label="{{ __('Exporter Name') }}" required icon="user" />
+                <flux:input wire:model="logisticsForm.shipment.exporter_address" label="{{ __('Exporter Address') }}" required icon="map-pin" />
+                <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <flux:input wire:model="logisticsForm.shipment.exporter_state" label="{{ __('State') }}" />
+                    <flux:input wire:model="logisticsForm.shipment.exporter_country" label="{{ __('Country') }}" />
+                    <flux:input wire:model="logisticsForm.shipment.exporter_zipcode" label="{{ __('Zipcode') }}" />
+                </div>
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <!-- Shipment Fields -->
             <flux:input wire:model="logisticsForm.shipment.vessel_name" label="{{ __('Vessel Name') }}"

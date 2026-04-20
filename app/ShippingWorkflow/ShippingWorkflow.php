@@ -266,7 +266,6 @@ class ShippingWorkflow
             $required[] = 'container_type';
             $required[] = 'booking_number';
         }
-
         foreach ($required as $field) {
             if (empty($shipment->{$field})) {
                 return false;

@@ -8,6 +8,7 @@ use App\Models\Driver;
 use App\Models\Shipment;
 use App\Models\SystemSetting;
 use App\Models\User;
+use App\Models\Warehouse;
 use App\Support\ShipmentPdfSupport;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -30,13 +31,18 @@ final class LogisticsBookingNotification extends Notification implements ShouldQ
     {
         $channels = ['database'];
 
-        // Shipper & Super Admin get Mail
-        if ($notifiable instanceof User && ($notifiable->hasRole('super_admin') || (int) $notifiable->getKey() === (int) $this->shipment->shipper?->user_id)) {
+        // Shipper
+        if ($notifiable instanceof User && (int) $notifiable->getKey() === (int) $this->shipment->shipper?->user_id) {
             $channels[] = 'mail';
         }
 
-        // Driver get Mail (if they are the default driver and the notifiable is that driver)
-        if ($notifiable instanceof Driver && (int) $notifiable->getKey() === (int) $this->shipment->shipper?->default_driver_id) {
+        // Any notified Driver gets Mail
+        if ($notifiable instanceof Driver) {
+            $channels[] = 'mail';
+        }
+
+        // Warehouse get Mail
+        if ($notifiable instanceof Warehouse) {
             $channels[] = 'mail';
         }
 
