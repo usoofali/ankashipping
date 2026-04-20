@@ -15,6 +15,7 @@ new #[Title('Role Management')] class extends Component {
 
     public bool $showEditModal = false;
     public bool $showDeleteModal = false;
+    public bool $showViewModal = false;
 
     public ?int $roleEditingId = null;
     public string $name = '';
@@ -22,6 +23,8 @@ new #[Title('Role Management')] class extends Component {
 
     public ?int $rolePendingDeleteId = null;
     public string $rolePendingDeleteName = '';
+
+    public ?int $viewingRoleId = null;
 
     public function mount(): void
     {
@@ -42,6 +45,22 @@ new #[Title('Role Management')] class extends Component {
             ->orderBy('name')
             ->get()
             ->groupBy(fn ($p) => str_replace('_', ' ', explode('.', $p->name)[0]));
+    }
+
+    #[Computed]
+    public function viewingRole(): ?Role
+    {
+        if ($this->viewingRoleId === null) {
+            return null;
+        }
+
+        return Role::query()->with('permissions')->find($this->viewingRoleId);
+    }
+
+    public function openViewModal(int $roleId): void
+    {
+        $this->viewingRoleId = $roleId;
+        $this->showViewModal = true;
     }
 
     public function openCreateModal(): void
@@ -125,7 +144,7 @@ new #[Title('Role Management')] class extends Component {
                 <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
                     <thead class="bg-zinc-50 dark:bg-zinc-800/60">
                         <tr>
-                            <th scope="col" class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">{{ __('Role Name') }}</th>
+                            <th scope="col" class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">{{ __('Role') }}</th>
                             <th scope="col" class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">{{ __('Permissions') }}</th>
                             <th scope="col" class="whitespace-nowrap px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-500">{{ __('Actions') }}</th>
                         </tr>
@@ -133,20 +152,38 @@ new #[Title('Role Management')] class extends Component {
                     <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
                         @foreach ($this->roles as $role)
                             <tr wire:key="role-row-{{ $role->id }}" class="bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-                                <td class="whitespace-nowrap px-4 py-4 align-middle font-semibold text-zinc-900 dark:text-zinc-100">
-                                    {{ $role->name }}
+                                <td class="whitespace-nowrap px-4 py-4 align-middle">
+                                    <div class="flex items-center gap-3">
+                                        <div class="size-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center shrink-0">
+                                            <flux:icon.shield-check class="size-4 text-indigo-500" />
+                                        </div>
+                                        <span class="font-semibold text-zinc-900 dark:text-zinc-100 capitalize">
+                                            {{ str_replace('_', ' ', $role->name) }}
+                                        </span>
+                                    </div>
                                 </td>
                                 <td class="px-4 py-4 align-middle">
-                                    <div class="flex flex-wrap gap-1">
-                                        @forelse ($role->permissions as $permission)
-                                            <flux:badge size="sm" variant="subtle" color="zinc" class="text-[10px]">{{ $permission->name }}</flux:badge>
-                                        @empty
-                                            <span class="text-zinc-400 italic text-xs">{{ __('No permissions assigned') }}</span>
-                                        @endforelse
-                                    </div>
+                                    @php $count = $role->permissions->count(); @endphp
+                                    @if ($count > 0)
+                                        <button type="button"
+                                            wire:click="openViewModal({{ $role->id }})"
+                                            class="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 transition-colors group">
+                                            <flux:icon.key class="size-3.5 opacity-70 group-hover:opacity-100" />
+                                            {{ $count }} {{ Str::plural('permission', $count) }}
+                                        </button>
+                                    @else
+                                        <span class="text-zinc-400 italic text-xs">{{ __('No permissions') }}</span>
+                                    @endif
                                 </td>
                                 <td class="whitespace-nowrap px-4 py-4 text-end align-middle">
                                     <div class="flex items-center justify-end gap-1">
+                                        <flux:button
+                                            size="sm"
+                                            variant="ghost"
+                                            icon="eye"
+                                            wire:click="openViewModal({{ $role->id }})"
+                                            :tooltip="__('View Permissions')"
+                                        />
                                         <flux:button
                                             size="sm"
                                             variant="ghost"
@@ -173,6 +210,65 @@ new #[Title('Role Management')] class extends Component {
             </x-crud.panel>
         </div>
     </x-pages::settings.layout>
+
+    {{-- View Role Modal --}}
+    <flux:modal wire:model.self="showViewModal" class="max-w-xl">
+        @if ($this->viewingRole)
+            <div class="space-y-6">
+                <div class="flex items-center gap-3">
+                    <div class="size-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center shrink-0">
+                        <flux:icon.shield-check class="size-5 text-indigo-500" />
+                    </div>
+                    <div>
+                        <flux:heading size="lg" class="capitalize">{{ str_replace('_', ' ', $this->viewingRole->name) }}</flux:heading>
+                        <flux:subheading>
+                            {{ $this->viewingRole->permissions->count() }} {{ Str::plural('permission', $this->viewingRole->permissions->count()) }} {{ __('assigned') }}
+                        </flux:subheading>
+                    </div>
+                </div>
+
+                @php
+                    $grouped = $this->viewingRole->permissions
+                        ->groupBy(fn ($p) => str_replace('_', ' ', Str::before($p->name, '.')))
+                        ->sortKeys();
+                @endphp
+
+                <div class="space-y-5 max-h-[55vh] overflow-y-auto pr-1 -mr-1">
+                    @forelse ($grouped as $group => $permissions)
+                        <div class="space-y-2">
+                            <flux:text size="xs" class="uppercase tracking-widest font-bold text-zinc-400 dark:text-zinc-500">
+                                {{ $group }}
+                            </flux:text>
+                            <div class="flex flex-wrap gap-1.5">
+                                @foreach ($permissions as $permission)
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800">
+                                        {{ Str::after($permission->name, '.') }}
+                                    </span>
+                                @endforeach
+                            </div>
+                        </div>
+                        @if (!$loop->last)
+                            <flux:separator />
+                        @endif
+                    @empty
+                        <div class="flex flex-col items-center justify-center py-10 text-zinc-400">
+                            <flux:icon.shield-exclamation class="size-10 mb-2 opacity-30" />
+                            <flux:text size="sm">{{ __('No permissions assigned to this role.') }}</flux:text>
+                        </div>
+                    @endforelse
+                </div>
+
+                <div class="flex items-center justify-between pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                    <flux:button variant="ghost" icon="pencil-square" wire:click="openEditModal({{ $this->viewingRole->id }}); $set('showViewModal', false)">
+                        {{ __('Edit Role') }}
+                    </flux:button>
+                    <flux:modal.close>
+                        <flux:button variant="primary">{{ __('Close') }}</flux:button>
+                    </flux:modal.close>
+                </div>
+            </div>
+        @endif
+    </flux:modal>
 
     {{-- Edit/Create Modal --}}
     <flux:modal wire:model.self="showEditModal" class="max-w-2xl">
