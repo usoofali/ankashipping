@@ -103,6 +103,7 @@ final class RolePermissionSeeder extends Seeder
             'workflow.from_workshop',
             'shipments.view_activities',
             'shipments.pay',
+            'invoices.edit',
             'invoices.delete',
             'documents.delete',
             'warehouses.view',
