@@ -199,9 +199,15 @@ new #[Title('Create Shipment')] class extends Component {
 
         try {
             DB::transaction(function () {
+                $shipper = Shipper::find($this->shipper_id);
+                $isDispatched = $shipper && !$shipper->towing;
+
                 if ($this->targetShipment) {
                     $shipment = $this->targetShipment;
                 } else {
+                    $isShipmentDispatched = $isDispatched && $this->shipping_mode === ShippingMode::Roro->value;
+                    $shipmentStatus = $isShipmentDispatched ? ShipmentStatus::Dispatched->value : $this->shipment_status;
+
                     $shipment = Shipment::create([
                         'reference_no' => $this->reference_no,
                         'shipper_id' => $this->shipper_id,
@@ -212,7 +218,7 @@ new #[Title('Create Shipment')] class extends Component {
                         'destination_port_id' => $this->destination_port_id,
                         'logistics_service' => $this->logistics_service,
                         'shipping_mode' => $this->shipping_mode,
-                        'shipment_status' => $this->shipment_status,
+                        'shipment_status' => $shipmentStatus,
                         'invoice_status' => $this->invoice_status,
                         'payment_status' => $this->payment_status,
                         'payment_method_id' => $this->payment_method_id,
@@ -233,17 +239,17 @@ new #[Title('Create Shipment')] class extends Component {
                 }
 
                 // 2. Link Vehicles to Shipment
-                $shipper = Shipper::find($this->shipper_id);
-
                 foreach ($this->vehicles as $vData) {
                     $vehicle = Vehicle::find($vData['id']);
                     if ($vehicle) {
+                        $vehicleStatus = $isDispatched ? VehicleStatus::Dispatched->value : $this->initial_vehicle_status;
+
                         $updateData = [
                             'shipment_id' => $shipment->id,
-                            'tracking_status' => $this->initial_vehicle_status,
+                            'tracking_status' => $vehicleStatus,
                         ];
 
-                        if ($shipper && !$shipper->towing && $shipper->default_driver_id) {
+                        if ($isDispatched && $shipper->default_driver_id) {
                             $updateData['driver_id'] = $shipper->default_driver_id;
                         }
 
@@ -251,7 +257,7 @@ new #[Title('Create Shipment')] class extends Component {
 
                         VehicleTracking::create([
                             'vehicle_id' => $vehicle->id,
-                            'status' => $this->initial_vehicle_status,
+                            'status' => $vehicleStatus,
                             'note' => __('Initial tracking status set on shipment creation.'),
                             'metadata' => [
                                 'source' => 'shipment_create',
@@ -264,9 +270,13 @@ new #[Title('Create Shipment')] class extends Component {
                 }
 
                 // 3. Create Initial Tracking
+                $finalShipmentStatus = ($this->targetShipment) 
+                    ? $shipment->shipment_status->value
+                    : ($isDispatched && $this->shipping_mode === ShippingMode::Roro->value ? ShipmentStatus::Dispatched->value : $this->shipment_status);
+
                 ShipmentTracking::create([
                     'shipment_id' => $shipment->id,
-                    'status' => $this->shipment_status,
+                    'status' => $finalShipmentStatus,
                     'note' => __('Initial record created.'),
                     'metadata' => [
                         'source' => 'shipment_create',

@@ -541,6 +541,25 @@
     </flux:modal>
 @endif
 
+<flux:modal wire:model.self="showForceFillConfirmModal" class="max-w-md">
+    <div class="space-y-4">
+        <div>
+            <flux:heading size="lg">{{ __('Force Fill Container') }}</flux:heading>
+            <flux:subheading>
+                {{ __('Are you sure you want to force mark this container as filled? This bypasses the minimum vehicle requirement.') }}
+            </flux:subheading>
+        </div>
+        <div class="flex justify-end gap-2">
+            <flux:modal.close>
+                <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+            </flux:modal.close>
+            <flux:button variant="danger" wire:click="markContainerFilled(true)" wire:loading.attr="disabled">
+                {{ __('Confirm Force Fill') }}
+            </flux:button>
+        </div>
+    </div>
+</flux:modal>
+
 <flux:modal wire:model="showLogisticsModal" class="md:max-w-4xl" variant="flyout">
     <form wire:submit="saveLogistics" class="space-y-8">
         <div>
@@ -644,6 +663,35 @@
                 <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
             </flux:modal.close>
             <flux:button type="submit" variant="primary" wire:loading.attr="disabled">{{ __('Save Logistics') }}
+            </flux:button>
+        </div>
+    </form>
+</flux:modal>
+
+<flux:modal wire:model.self="showDeleteShipmentConfirmModal" class="max-w-md">
+    <form wire:submit="deleteShipment" class="space-y-6">
+        <div>
+            <flux:heading size="lg" class="text-red-600 dark:text-red-400">
+                {{ __('Permanently Delete Shipment?') }}
+            </flux:heading>
+            <flux:subheading>
+                {{ __('This action is permanent and cannot be undone. All invoices, documents, and logs will be deleted. Associated vehicles will be detached.') }}
+            </flux:subheading>
+        </div>
+
+        <div class="space-y-3">
+            <flux:text size="sm">
+                {{ __('Please type') }} <span class="font-mono font-bold text-zinc-900 dark:text-zinc-100 select-all">{{ $shipment->reference_no }}</span> {{ __('to confirm.') }}
+            </flux:text>
+            <flux:input wire:model.live="deleteConfirmationReference" :placeholder="$shipment->reference_no" required />
+        </div>
+
+        <div class="flex justify-end gap-2">
+            <flux:modal.close>
+                <flux:button variant="ghost" type="button">{{ __('Cancel') }}</flux:button>
+            </flux:modal.close>
+            <flux:button type="submit" variant="danger" icon="trash" :disabled="$deleteConfirmationReference !== $shipment->reference_no" wire:loading.attr="disabled">
+                {{ __('Permanently Delete') }}
             </flux:button>
         </div>
     </form>

@@ -108,9 +108,10 @@ new #[Title('Shipment Details')] class extends Component {
     public ?int $toWorkshopWorkshopId = null;
 
     public bool $showFromWorkshopConfirmModal = false;
-
+    public bool $showForceFillConfirmModal = false;
     public bool $showDeleteDocumentConfirmModal = false;
-
+    public bool $showDeleteShipmentConfirmModal = false;
+    public string $deleteConfirmationReference = '';
     public ?int $pendingDeleteShipmentDocumentId = null;
 
     public bool $showVehicleDocumentsModal = false;
@@ -1117,6 +1118,7 @@ new #[Title('Shipment Details')] class extends Component {
         });
 
         $this->reloadShipmentPageData();
+        $this->showForceFillConfirmModal = false;
         $this->notification()->success(__('Container status updated to BOOKING.'));
     }
 
@@ -1645,6 +1647,54 @@ new #[Title('Shipment Details')] class extends Component {
         $this->notification()->success(__('File removed.'));
     }
 
+    public function deleteShipment(): void
+    {
+        $this->authorize('shipments.delete');
+
+        if ($this->deleteConfirmationReference !== $this->shipment->reference_no) {
+            $this->notification()->error(__('Mismatched Reference'), __('You must type the correct reference number to confirm deletion.'));
+
+            return;
+        }
+
+        DB::transaction(function (): void {
+            // 1. Detach Vehicles
+            $this->shipment->vehicles()->update(['shipment_id' => null]);
+
+            // 2. Cascade Delete Documents & Files
+            $documents = $this->shipment->documents()->with('files')->get();
+            foreach ($documents as $doc) {
+                foreach ($doc->files as $file) {
+                    if ($file->path) {
+                        Storage::disk('local')->delete($file->path);
+                    }
+                    $file->delete();
+                }
+                $doc->delete();
+            }
+
+            // 3. Cascade Delete Invoices & Payment & Items
+            $invoice = $this->shipment->invoice()->first();
+            if ($invoice) {
+                $invoice->payment()->delete();
+                $invoice->items()->delete();
+                $invoice->delete();
+            }
+
+            // 4. Cascade Delete Tracking
+            $this->shipment->trackings()->delete();
+
+            // 5. Cascade Delete Activity Logs
+            $this->shipment->activityLogs()->delete();
+
+            // 6. Force Delete Shipment
+            $this->shipment->forceDelete();
+        });
+
+        $this->notification()->success(__('Shipment deleted permanently.'));
+        $this->redirect(route('shipments.index'), navigate: true);
+    }
+
     protected function reloadShipmentPageData(): void
     {
         $this->shipment->refresh()->load([
@@ -1836,7 +1886,7 @@ new #[Title('Shipment Details')] class extends Component {
                                 @endcan
                                 @can('workflow.force_filled')
                                     @if($this->workflow()->canMarkFilled($shipment, true))
-                                        <flux:menu.item icon="exclamation-triangle" wire:click="markContainerFilled(true)"
+                                        <flux:menu.item icon="exclamation-triangle" wire:click="$set('showForceFillConfirmModal', true)"
                                             variant="danger">
                                             {{ __('Force Fill') }}
                                         </flux:menu.item>
@@ -2151,6 +2201,36 @@ new #[Title('Shipment Details')] class extends Component {
 
                 @can('shipments.view_activities')
                     @include('pages.shipments.partials.activity-feed', ['shipment' => $shipment])
+                @endcan
+
+                @can('shipments.delete')
+                    <div class="mt-10 pt-8 border-t border-zinc-200 dark:border-zinc-800">
+                        <div class="rounded-xl border border-red-200 dark:border-red-900/40 bg-white dark:bg-zinc-900 overflow-hidden">
+                            {{-- Header --}}
+                            <div class="px-6 py-4 border-b border-red-100 dark:border-red-900/30 bg-red-50/50 dark:bg-red-950/20 flex items-center gap-2">
+                                <flux:icon.exclamation-triangle class="size-4 text-red-600 dark:text-red-400 shrink-0" />
+                                <flux:heading size="sm" class="text-red-700 dark:text-red-400 font-semibold uppercase tracking-wider">
+                                    {{ __('Danger Zone') }}
+                                </flux:heading>
+                            </div>
+
+                            {{-- Body --}}
+                            <div class="px-6 py-5 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                <div class="space-y-1 min-w-0">
+                                    <flux:text class="font-semibold text-zinc-900 dark:text-zinc-100">
+                                        {{ __('Permanently delete this shipment') }}
+                                    </flux:text>
+                                    <flux:text size="sm" class="text-zinc-500 dark:text-zinc-400">
+                                        {{ __('Once deleted, all invoices, tracking history, and documents are wiped. Linked vehicles will be detached and returned to the vehicle pool. This action cannot be undone.') }}
+                                    </flux:text>
+                                </div>
+
+                                <flux:button variant="danger" icon="trash" class="shrink-0" wire:click="$set('showDeleteShipmentConfirmModal', true)">
+                                    {{ __('Delete Shipment') }}
+                                </flux:button>
+                            </div>
+                        </div>
+                    </div>
                 @endcan
             </div>
 
