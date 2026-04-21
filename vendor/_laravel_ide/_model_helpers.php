@@ -342,12 +342,14 @@ namespace App\Models {
 	 * @property \Illuminate\Support\Carbon|null $updated_at
 	 * @property \Illuminate\Support\Carbon|null $created_at
 	 * @property string|null $description
+	 * @property string|null $fmc_no
 	 * @property string $name
 	 * @property int $id
 	 * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Shipment> $shipments
 	 * @property-read int|null $shipments_count
 	 * @method static \Illuminate\Database\Eloquent\Builder<Carrier>|Carrier whereId($value)
 	 * @method static \Illuminate\Database\Eloquent\Builder<Carrier>|Carrier whereName($value)
+	 * @method static \Illuminate\Database\Eloquent\Builder<Carrier>|Carrier whereFmcNo($value)
 	 * @method static \Illuminate\Database\Eloquent\Builder<Carrier>|Carrier whereDescription($value)
 	 * @method static \Illuminate\Database\Eloquent\Builder<Carrier>|Carrier whereCreatedAt($value)
 	 * @method static \Illuminate\Database\Eloquent\Builder<Carrier>|Carrier whereUpdatedAt($value)
@@ -5741,6 +5743,11 @@ namespace App\Models {
 	/**
 	 * App\Models\Shipment
 	 *
+	 * @property string|null $exporter_zipcode
+	 * @property string|null $exporter_country
+	 * @property string|null $exporter_state
+	 * @property string|null $exporter_address
+	 * @property string|null $exporter_name
 	 * @property mixed $notify_party_id
 	 * @property \Illuminate\Support\Carbon|null $arrival_date
 	 * @property \Illuminate\Support\Carbon|null $departure_date
@@ -5771,6 +5778,9 @@ namespace App\Models {
 	 * @property mixed $carrier_id
 	 * @property mixed $consignee_id
 	 * @property mixed $shipper_id
+	 * @property string|null $domestic_routing
+	 * @property string|null $loading_pier
+	 * @property string|null $export_references
 	 * @property string $reference_no
 	 * @property int $id
 	 * @property-read \App\Models\Shipper $shipper
@@ -5794,6 +5804,9 @@ namespace App\Models {
 	 * @property-read \App\Models\Workshop $workshop
 	 * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereId($value)
 	 * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereReferenceNo($value)
+	 * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereExportReferences($value)
+	 * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereLoadingPier($value)
+	 * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereDomesticRouting($value)
 	 * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereShipperId($value)
 	 * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereConsigneeId($value)
 	 * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereCarrierId($value)
@@ -5824,6 +5837,11 @@ namespace App\Models {
 	 * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereDepartureDate($value)
 	 * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereArrivalDate($value)
 	 * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereNotifyPartyId($value)
+	 * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereExporterName($value)
+	 * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereExporterAddress($value)
+	 * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereExporterState($value)
+	 * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereExporterCountry($value)
+	 * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereExporterZipcode($value)
 	 * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment newModelQuery()
 	 * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment newQuery()
 	 * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment query()

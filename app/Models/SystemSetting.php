@@ -181,8 +181,14 @@ final class SystemSetting extends Model
             return 'google';
         }
 
+        if ($purpose === 'newsletter') {
+            $pool = ['news1', 'news2', 'news3'];
+            $index = \Illuminate\Support\Facades\Cache::increment('newsletter_mailer_index') - 1;
+            return $pool[$index % count($pool)];
+        }
+
         // Hostinger stack (or default): use the purpose-specific mailer name directly.
-        // This resolves to one of: operations, booking, services, accounts, noreply, newsletter
+        // This resolves to one of: operations, booking, services, accounts, noreply
         return $purpose;
     }
 }
