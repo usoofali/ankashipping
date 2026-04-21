@@ -407,34 +407,31 @@ new #[Title('Submit Prealert')] class extends Component {
     : 'bg-rose-50/40 dark:bg-rose-950/10 border-rose-200/50 dark:border-rose-800/50' }} p-4 sm:p-8 transition-colors duration-500">
                     <div class="space-y-8">
                         {{-- Mode Header --}}
-                        <div
-                            class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200/50 dark:border-zinc-700/50 pb-6">
+                        <div class="flex flex-col gap-4 border-b border-zinc-200/50 dark:border-zinc-700/50 pb-6">
                             <div class="flex items-center gap-4">
                                 <div
                                     class="shrink-0 p-3 rounded-2xl {{ $shipping_mode === 'roro' ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400' : 'bg-rose-100 dark:bg-rose-900 text-rose-600 dark:text-rose-400' }}">
                                     <flux:icon :name="$shipping_mode === 'roro' ? 'car-front' : 'container'"
                                         class="size-8" />
                                 </div>
-                                <div>
-                                    <flux:heading size="xl" class="font-bold tracking-tight">
-                                        {{ $shipping_mode === 'roro' ? __('RoRo Prealert') : __('Container Prealert') }}
-                                    </flux:heading>
-                                    <div class="flex items-center gap-2 mt-1">
-                                        @if(count($vehicles) <= 1)
-                                            <flux:radio.group wire:model.live="shipping_mode" variant="segmented" size="xs">
-                                                <flux:radio :label="__('RoRo')" value="roro" icon="car-front" />
-                                                <flux:radio :label="__('Container')" value="container" icon="container" />
-                                            </flux:radio.group>
-                                        @else
-                                            <flux:badge color="rose" variant="subtle" size="sm" icon="container">
-                                                {{ __('Container Mode (Auto)') }}
-                                            </flux:badge>
-                                        @endif
-                                    </div>
-                                </div>
+                                <flux:heading size="xl" class="font-bold tracking-tight">
+                                    {{ $shipping_mode === 'roro' ? __('RoRo Prealert') : __('Container Prealert') }}
+                                </flux:heading>
                             </div>
 
-
+                            <div class="w-full">
+                                @if(count($vehicles) <= 1)
+                                    <flux:radio.group wire:model.live="shipping_mode" variant="segmented" size="sm"
+                                        class="w-full sm:w-auto">
+                                        <flux:radio :label="__('RoRo')" value="roro" icon="car-front" />
+                                        <flux:radio :label="__('Container')" value="container" icon="container" />
+                                    </flux:radio.group>
+                                @else
+                                    <flux:badge color="rose" variant="subtle" size="sm" icon="container">
+                                        {{ __('Container Mode (Auto)') }}
+                                    </flux:badge>
+                                @endif
+                            </div>
                         </div>
 
                         {{-- 1. VIN & Lookup --}}
@@ -677,10 +674,10 @@ new #[Title('Submit Prealert')] class extends Component {
                                             required />
                                     @else
                                         <flux:input :label="__('Shipper')" :value="sprintf(
-                                                            '%s(%s)',
-                                                            Auth::user()?->name ?? '',
-                                                            Auth::user()?->shipper?->company_name ?? '-'
-                                                        )" disabled />
+                                                                '%s(%s)',
+                                                                Auth::user()?->name ?? '',
+                                                                Auth::user()?->shipper?->company_name ?? '-'
+                                                            )" disabled />
                                         <input type="hidden" wire:model="shipper_id">
                                     @endif
                                 </div>
@@ -712,8 +709,7 @@ new #[Title('Submit Prealert')] class extends Component {
                                     <flux:error name="consignee_id" />
                                 </flux:field>
 
-                                <flux:select wire:model="notify_party_id"
-                                    :label="__('Notify Party / Intermediate Consignee (Optional)')"
+                                <flux:select wire:model="notify_party_id" :label="__('Notify Party (Optional)')"
                                     :placeholder="__('Same as Consignee')">
                                     <flux:select.option value="">{{ __('Same as Consignee') }}</flux:select.option>
                                     @foreach($this->consignees as $consignee)
