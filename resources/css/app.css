@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import '../../node_modules/intl-tel-input/dist/css/intlTelInput.css';
 @import '../../vendor/livewire/flux/dist/flux.css';
 
 /* WireUI (Tailwind v4) — https://wireui.dev/getting-started */

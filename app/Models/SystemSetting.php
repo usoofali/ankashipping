@@ -8,6 +8,7 @@ use Database\Factories\SystemSettingFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -184,14 +185,15 @@ final class SystemSetting extends Model
             if ($purpose === 'booking') {
                 return 'google_booking';
             }
-            
+
             // Default fallback for any other operations/system mail when using Google
             return 'google_operations';
         }
 
         if ($purpose === 'newsletter') {
             $pool = ['news1', 'news2', 'news3'];
-            $index = \Illuminate\Support\Facades\Cache::increment('newsletter_mailer_index') - 1;
+            $index = Cache::increment('newsletter_mailer_index') - 1;
+
             return $pool[$index % count($pool)];
         }
 

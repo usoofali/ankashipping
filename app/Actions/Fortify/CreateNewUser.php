@@ -6,6 +6,7 @@ use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Models\City;
 use App\Models\Consignee;
+use App\Models\Driver;
 use App\Models\Shipper;
 use App\Models\State;
 use App\Models\User;
@@ -33,7 +34,7 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $this->passwordRules(),
             'terms' => ['accepted'],
             'company_name' => ['nullable', 'string', 'max:255'],
-            'phone' => ['required', 'string', 'max:50'],
+            'phone' => ['required', 'phone:AUTO'],
             'address' => ['required', 'string', 'max:500'],
             'country_id' => ['required', 'integer', 'exists:countries,id'],
             'state_id' => ['required', 'integer', 'exists:states,id'],
@@ -73,7 +74,7 @@ class CreateNewUser implements CreatesNewUsers
                 'country_id' => $input['country_id'],
                 'state_id' => $input['state_id'],
                 'city_id' => $input['city_id'],
-                'towing' => !empty($input['towing']),
+                'towing' => ! empty($input['towing']),
             ]);
 
             Wallet::create([
@@ -96,7 +97,7 @@ class CreateNewUser implements CreatesNewUsers
             ]);
 
             if (! $shipper->towing) {
-                $driver = \App\Models\Driver::create([
+                $driver = Driver::create([
                     'phone' => $input['phone'],
                     'email' => $input['email'],
                     'company' => $companyName,

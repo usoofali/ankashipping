@@ -62,15 +62,11 @@
                     class="[&_[data-flux-icon]]:text-sky-600 dark:[&_[data-flux-icon]]:text-cyan-300"
                 />
 
-                <flux:input
+                <x-phone-input
                     name="phone"
                     :label="__('Phone')"
-                    type="tel"
                     required
                     :value="old('phone')"
-                    autocomplete="tel"
-                    icon:leading="phone"
-                    class="[&_[data-flux-icon]]:text-sky-600 dark:[&_[data-flux-icon]]:text-cyan-300"
                 />
 
                 <flux:input

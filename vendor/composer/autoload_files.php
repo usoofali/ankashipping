@@ -130,5 +130,6 @@ return array(
     'ce9671a430e4846b44e1c68c7611f9f5' => $vendorDir . '/mockery/mockery/library/Mockery.php',
     'd634523d799d97a8ab4807b650bf5cea' => $vendorDir . '/pestphp/pest-plugin-laravel/src/Autoload.php',
     '523b8272119ce94ffd0ff5740e5e6893' => $vendorDir . '/power-components/livewire-powergrid/src/functions.php',
+    '017b24472353920ed42bb364f7653c43' => $vendorDir . '/propaganistas/laravel-phone/src/helpers.php',
     '377b22b161c09ed6e5152de788ca020a' => $vendorDir . '/spatie/laravel-permission/src/helpers.php',
 );
