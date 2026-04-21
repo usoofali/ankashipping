@@ -511,26 +511,26 @@ new #[Title('Submit Prealert')] class extends Component {
 
                                                 {{-- Vehicle Details Grid --}}
                                                 <div class="lg:w-[55%] w-full p-4 lg:p-5 flex flex-col">
-                                                    <div class="flex items-start justify-between mb-4">
-                                                        <div>
+                                                    <div class="flex items-start justify-between gap-2 mb-4">
+                                                        <div class="min-w-0 flex-1">
                                                             <h4
-                                                                class="font-bold text-xl text-zinc-900 dark:text-white leading-tight">
+                                                                class="font-bold text-xl text-zinc-900 dark:text-white leading-tight truncate">
                                                                 {{ $v['details']['year'] ?? '' }}
                                                                 {{ $v['details']['make'] ?? '' }}
                                                                 {{ $v['details']['model'] ?? '' }}
                                                             </h4>
-                                                            <div class="flex items-center gap-4 mt-2 mb-1">
-                                                                <div>
+                                                            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 mb-1">
+                                                                <div class="min-w-0">
                                                                     <p
                                                                         class="text-[8px] text-zinc-500 uppercase tracking-widest font-bold">
                                                                         {{ __('VIN') }}
                                                                     </p>
                                                                     <p
-                                                                        class="font-mono text-zinc-700 dark:text-zinc-300 font-medium text-sm mt-0.5">
+                                                                        class="font-mono text-zinc-700 dark:text-zinc-300 font-medium text-sm mt-0.5 truncate">
                                                                         {{ $v['vin'] }}
                                                                     </p>
                                                                 </div>
-                                                                <div class="pl-4 border-l border-zinc-200 dark:border-zinc-700">
+                                                                <div class="pl-4 border-l border-zinc-200 dark:border-zinc-700 shrink-0">
                                                                     <p
                                                                         class="text-[8px] text-zinc-500 uppercase tracking-widest font-bold">
                                                                         {{ __('Lot Number') }}
@@ -545,7 +545,7 @@ new #[Title('Submit Prealert')] class extends Component {
                                                         <button type="button" wire:click="removeVehicle({{ $v['id'] }})"
                                                             class="p-2 text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-colors shrink-0"
                                                             title="{{ __('Remove vehicle') }}">
-                                                            <flux:icon.x-mark class="size-6 sm:size-5" />
+                                                            <flux:icon.x-mark class="size-5" />
                                                         </button>
                                                     </div>
 
