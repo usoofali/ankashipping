@@ -178,7 +178,15 @@ final class SystemSetting extends Model
     public function getMailerFor(string $purpose): string
     {
         if ($this->preferred_mailer === 'google') {
-            return 'google';
+            if ($purpose === 'newsletter') {
+                return 'google_newsletter';
+            }
+            if ($purpose === 'booking') {
+                return 'google_booking';
+            }
+            
+            // Default fallback for any other operations/system mail when using Google
+            return 'google_operations';
         }
 
         if ($purpose === 'newsletter') {

@@ -123,16 +123,44 @@ return [
             ],
         ],
 
-        'google' => [
+        'google_operations' => [
             'transport' => 'smtp',
             'scheme' => 'smtps',
             'host' => 'smtp.gmail.com',
             'port' => 465,
-            'username' => env('MAIL_GOOGLE_USERNAME'),
-            'password' => env('MAIL_GOOGLE_PASSWORD'),
+            'username' => env('MAIL_GOOGLE_OPERATIONS_USERNAME'),
+            'password' => env('MAIL_GOOGLE_OPERATIONS_PASSWORD'),
             'timeout' => null,
             'from' => [
-                'address' => env('MAIL_GOOGLE_FROM_ADDRESS', env('MAIL_GOOGLE_USERNAME')),
+                'address' => env('MAIL_GOOGLE_OPERATIONS_FROM_ADDRESS', env('MAIL_GOOGLE_OPERATIONS_USERNAME')),
+                'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
+            ],
+        ],
+
+        'google_newsletter' => [
+            'transport' => 'smtp',
+            'scheme' => 'smtps',
+            'host' => 'smtp.gmail.com',
+            'port' => 465,
+            'username' => env('MAIL_GOOGLE_NEWSLETTER_USERNAME'),
+            'password' => env('MAIL_GOOGLE_NEWSLETTER_PASSWORD'),
+            'timeout' => null,
+            'from' => [
+                'address' => env('MAIL_GOOGLE_NEWSLETTER_FROM_ADDRESS', env('MAIL_GOOGLE_NEWSLETTER_USERNAME')),
+                'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
+            ],
+        ],
+
+        'google_booking' => [
+            'transport' => 'smtp',
+            'scheme' => 'smtps',
+            'host' => 'smtp.gmail.com',
+            'port' => 465,
+            'username' => env('MAIL_GOOGLE_BOOKING_USERNAME'),
+            'password' => env('MAIL_GOOGLE_BOOKING_PASSWORD'),
+            'timeout' => null,
+            'from' => [
+                'address' => env('MAIL_GOOGLE_BOOKING_FROM_ADDRESS', env('MAIL_GOOGLE_BOOKING_USERNAME')),
                 'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
             ],
         ],
