@@ -624,7 +624,10 @@ new #[Title('Submit Prealert')] class extends Component {
                                                                         class="size-4 shrink-0 text-zinc-400" />
                                                                     @if(isset($receipt_files[$index]))
                                                                         <span
-                                                                            class="text-indigo-600 dark:text-indigo-400 whitespace-normal break-words text-center">{{ $receipt_files[$index]->getClientOriginalName() }}</span>
+                                                                            class="text-indigo-600 dark:text-indigo-400 truncate text-center"
+                                                                            title="{{ $receipt_files[$index]->getClientOriginalName() }}">
+                                                                            {{ Str::limit($receipt_files[$index]->getClientOriginalName(), 15) }}
+                                                                        </span>
                                                                     @else
                                                                         <span
                                                                             class="text-zinc-500 shrink-0">{{ __('Choose File') }}</span>
