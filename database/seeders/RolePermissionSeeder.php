@@ -123,6 +123,19 @@ final class RolePermissionSeeder extends Seeder
             'whatsapp.view_inbox',
             'whatsapp.manage_conversations',
             'whatsapp.send_messages',
+            'dashboard.view.stats.total_shipments',
+            'dashboard.view.stats.total_prealerts',
+            'dashboard.view.stats.delivered',
+            'dashboard.view.stats.undelivered',
+            'dashboard.view.stats.loaded',
+            'dashboard.view.stats.paid_invoices',
+            'dashboard.view.stats.due_invoices',
+            'dashboard.view.stats.wallet_balance',
+            'dashboard.view.stats.topup_requests',
+            'dashboard.view.stats.user_summary',
+            'dashboard.view.stats.roro',
+            'dashboard.view.stats.container',
+            'dashboard.view.shipment_table',
         ];
 
         foreach ($permissionNames as $name) {
@@ -241,6 +254,19 @@ final class RolePermissionSeeder extends Seeder
             'whatsapp.view_inbox',
             'whatsapp.manage_conversations',
             'whatsapp.send_messages',
+            'dashboard.view.stats.total_shipments',
+            'dashboard.view.stats.total_prealerts',
+            'dashboard.view.stats.delivered',
+            'dashboard.view.stats.undelivered',
+            'dashboard.view.stats.loaded',
+            'dashboard.view.stats.paid_invoices',
+            'dashboard.view.stats.due_invoices',
+            'dashboard.view.stats.wallet_balance',
+            'dashboard.view.stats.topup_requests',
+            'dashboard.view.stats.user_summary',
+            'dashboard.view.stats.roro',
+            'dashboard.view.stats.container',
+            'dashboard.view.shipment_table',
         ]);
 
         $staffOperator = Role::query()->firstOrCreate(
@@ -302,6 +328,17 @@ final class RolePermissionSeeder extends Seeder
             'failed_jobs.view',
             'whatsapp.view_inbox',
             'whatsapp.send_messages',
+            'dashboard.view.stats.total_shipments',
+            'dashboard.view.stats.total_prealerts',
+            'dashboard.view.stats.delivered',
+            'dashboard.view.stats.undelivered',
+            'dashboard.view.stats.loaded',
+            'dashboard.view.stats.paid_invoices',
+            'dashboard.view.stats.due_invoices',
+            'dashboard.view.stats.wallet_balance',
+            'dashboard.view.stats.topup_requests',
+            'dashboard.view.stats.user_summary',
+            'dashboard.view.shipment_table',
         ]);
 
         $shipper = Role::query()->firstOrCreate(
