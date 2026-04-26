@@ -158,7 +158,12 @@ Thank you!";
 
     protected function sendGreeting(WhatsAppConversation $conversation): void
     {
-        $conversation->loadMissing('contact.user');
+        $conversation->loadMissing(['contact' => function (\Illuminate\Database\Eloquent\Relations\MorphTo $morphTo) {
+            $morphTo->morphWith([
+                \App\Models\Staff::class => ['user'],
+                \App\Models\Shipper::class => ['user'],
+            ]);
+        }]);
         if ($conversation->contact_type === Staff::class) {
             $this->staffService->sendGreeting($conversation);
 
