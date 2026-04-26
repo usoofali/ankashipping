@@ -14,8 +14,7 @@ use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Title('WhatsApp Inbox')] class extends Component
-{
+new #[Title('WhatsApp Inbox')] class extends Component {
     public ?int $selectedConversationId = null;
 
     public string $messageText = '';
@@ -39,14 +38,14 @@ new #[Title('WhatsApp Inbox')] class extends Component
         $this->validate(['messageText' => 'required|string']);
 
         $conversation = WhatsAppConversation::findOrFail($this->selectedConversationId);
-        
-        if (! $conversation->agent_id) {
+
+        if (!$conversation->agent_id) {
             $this->claimConversation($conversation->id);
         }
 
         // Inline Bot Chat: Check for Approve/Reject commands for escalated driver flows
         $lowerText = strtolower(trim($this->messageText));
-        
+
         if ($conversation->status === 'escalated' && $conversation->menuState) {
             $payload = $conversation->menuState->data_payload ?? [];
             if (isset($payload['receipt_path']) && isset($payload['shipment_id'])) {
@@ -55,7 +54,7 @@ new #[Title('WhatsApp Inbox')] class extends Component
                     $this->messageText = '';
                     return;
                 }
-                
+
                 if (str_starts_with($lowerText, 'reject')) {
                     $reason = trim(substr(trim($this->messageText), 6), " :\t\n\r\0\x0B");
                     $this->handleAgentRejection($conversation, $payload, $reason);
@@ -86,15 +85,15 @@ new #[Title('WhatsApp Inbox')] class extends Component
     {
         $shipmentId = $payload['shipment_id'];
         $tempPath = $payload['receipt_path'];
-        
+
         $shipment = \App\Models\Shipment::find($shipmentId);
-        if (! $shipment) {
+        if (!$shipment) {
             return;
         }
 
         // 1. Move file to permanent storage (already on public disk, just move/copy to final location)
         $permanentPath = 'shipments/documents/' . basename($tempPath);
-        
+
         if (\Illuminate\Support\Facades\Storage::disk('public')->exists($tempPath)) {
             \Illuminate\Support\Facades\Storage::disk('public')->move($tempPath, $permanentPath);
         } else {
@@ -139,7 +138,7 @@ new #[Title('WhatsApp Inbox')] class extends Component
                 'shipment_id' => $shipment->id,
                 'status' => \App\Enums\ShipmentStatus::Delivered,
                 'note' => __('Document attached: :type. Status moved to :s', [
-                    'type' => \App\Enums\ShipmentDocumentType::StampDockReceipt->label(), 
+                    'type' => \App\Enums\ShipmentDocumentType::StampDockReceipt->label(),
                     's' => \App\Enums\ShipmentStatus::Delivered->name
                 ]),
                 'recorded_at' => now(),
@@ -184,14 +183,14 @@ new #[Title('WhatsApp Inbox')] class extends Component
             'message_text' => '✅ Agent ' . auth()->user()->name . ' approved the Stamped Dock Receipt.',
             'status' => 'sent',
         ]);
-        
+
         $this->selectedConversationId = null;
     }
 
     protected function handleAgentRejection(WhatsAppConversation $conversation, array $payload, string $reason): void
     {
         $tempPath = $payload['receipt_path'];
-        
+
         if (\Illuminate\Support\Facades\Storage::disk('local')->exists($tempPath)) {
             \Illuminate\Support\Facades\Storage::disk('local')->delete($tempPath);
         } elseif (\Illuminate\Support\Facades\Storage::disk('public')->exists($tempPath)) {
@@ -218,7 +217,7 @@ new #[Title('WhatsApp Inbox')] class extends Component
             'message_text' => '❌ Agent ' . auth()->user()->name . ' rejected the Stamped Dock Receipt' . ($reason ? " (Reason: $reason)" : '') . '.',
             'status' => 'sent',
         ]);
-        
+
         $this->selectedConversationId = null;
     }
 
@@ -238,16 +237,16 @@ new #[Title('WhatsApp Inbox')] class extends Component
     public function resolveConversation(int $id): void
     {
         $conversation = WhatsAppConversation::findOrFail($id);
-        
+
         $conversation->menuState()->delete();
-        
+
         $conversation->update([
             'status' => 'bot',
             'agent_id' => null,
         ]);
 
         app(\App\Modules\WhatsApp\Services\WhatsAppService::class)->sendMessage(
-            $conversation->phone_number, 
+            $conversation->phone_number,
             "This conversation has been marked as resolved. If you need further assistance, please reply 'Hi' to start over."
         );
 
@@ -256,7 +255,7 @@ new #[Title('WhatsApp Inbox')] class extends Component
 
     public function clearConversation(): void
     {
-        if (! $this->selectedConversationId) {
+        if (!$this->selectedConversationId) {
             return;
         }
 
@@ -285,8 +284,8 @@ new #[Title('WhatsApp Inbox')] class extends Component
     public function downloadAttachment(int $messageId)
     {
         $message = WhatsAppMessage::findOrFail($messageId);
-        
-        if (! $message->media_url) {
+
+        if (!$message->media_url) {
             $this->dialog()->error('No attachment found', 'This message does not contain a valid media attachment.');
             return;
         }
@@ -299,7 +298,7 @@ new #[Title('WhatsApp Inbox')] class extends Component
         $waService = app(WhatsAppService::class);
         $media = $waService->streamMedia($message->media_url);
 
-        if (! $media) {
+        if (!$media) {
             $this->dialog()->error('Download Failed', 'The attachment could not be downloaded from WhatsApp. It may have expired.');
             return;
         }
@@ -323,16 +322,16 @@ new #[Title('WhatsApp Inbox')] class extends Component
         $categoryIds = $staff ? $staff->whatsappCategories->pluck('id')->toArray() : [];
 
         return WhatsAppConversation::with([
-                'contact' => function (MorphTo $morphTo) {
-                    $morphTo->morphWith([
-                        Staff::class => ['user'],
-                        Shipper::class => ['user'],
-                    ]);
-                }, 
-                'category', 
-                'messages' => fn ($q) => $q->latest()->limit(1)
-            ])
-            ->when(! auth()->user()->hasRole('super_admin'), function ($query) use ($categoryIds) {
+            'contact' => function (MorphTo $morphTo) {
+                $morphTo->morphWith([
+                    Staff::class => ['user'],
+                    Shipper::class => ['user'],
+                ]);
+            },
+            'category',
+            'messages' => fn($q) => $q->latest()->limit(1)
+        ])
+            ->when(!auth()->user()->hasRole('super_admin'), function ($query) use ($categoryIds) {
                 $query->whereIn('category_id', $categoryIds);
             })
             ->when($this->filter === 'unassigned', function ($query) {
@@ -350,7 +349,7 @@ new #[Title('WhatsApp Inbox')] class extends Component
 
     public function getChatMessages(): Collection
     {
-        if (! $this->selectedConversationId) {
+        if (!$this->selectedConversationId) {
             return new Collection;
         }
 
@@ -365,20 +364,22 @@ new #[Title('WhatsApp Inbox')] class extends Component
     public function selectedConversation(): ?WhatsAppConversation
     {
         return $this->selectedConversationId
-            ? WhatsAppConversation::with(['contact' => function (MorphTo $morphTo) {
-                $morphTo->morphWith([
-                    Staff::class => ['user'],
-                    Shipper::class => ['user'],
-                ]);
-            }])->find($this->selectedConversationId)
+            ? WhatsAppConversation::with([
+                'contact' => function (MorphTo $morphTo) {
+                    $morphTo->morphWith([
+                        Staff::class => ['user'],
+                        Shipper::class => ['user'],
+                    ]);
+                }
+            ])->find($this->selectedConversationId)
             : null;
     }
 }; ?>
 
 <x-crud.page-shell class="h-dvh overflow-hidden pb-12">
-    <div class="flex h-full gap-6 overflow-hidden min-h-0" wire:poll.5s>
+    <div class="flex h-full lg:gap-6 overflow-hidden min-h-0" wire:poll.5s>
         <!-- Sidebar: Conversation List -->
-        <div class="w-1/3 flex flex-col bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden h-full">
+        <div class="flex-[2] flex-col bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden h-full {{ $this->selectedConversationId ? 'hidden lg:flex' : 'flex' }}">
             <div class="p-4 border-b border-zinc-200 dark:border-zinc-800 space-y-4">
                 <div class="flex items-center justify-between">
                     <flux:heading size="lg">{{ __('Conversations') }}</flux:heading>
@@ -400,9 +401,9 @@ new #[Title('WhatsApp Inbox')] class extends Component
                 @foreach($this->getConversations() as $conv)
                     <div wire:click="selectConversation({{ $conv->id }})" 
                         class="mx-3 my-2.5 p-4 rounded-xl border transition-all cursor-pointer group relative overflow-hidden
-                        {{ $selectedConversationId === $conv->id 
-                            ? 'bg-indigo-50/50 dark:bg-indigo-500/5 border-indigo-200 dark:border-indigo-800 shadow-sm ring-1 ring-indigo-200/50 dark:ring-indigo-800/30' 
-                            : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 hover:shadow-lg hover:-translate-y-0.5' 
+                        {{ $selectedConversationId === $conv->id
+        ? 'bg-indigo-50/50 dark:bg-indigo-500/5 border-indigo-200 dark:border-indigo-800 shadow-sm ring-1 ring-indigo-200/50 dark:ring-indigo-800/30'
+        : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 hover:shadow-lg hover:-translate-y-0.5' 
                         }}">
                         
                         @if($selectedConversationId === $conv->id)
@@ -414,8 +415,8 @@ new #[Title('WhatsApp Inbox')] class extends Component
                             <div class="relative shrink-0">
                                 <div class="size-11 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700 flex items-center justify-center text-sm font-bold text-zinc-600 dark:text-zinc-400 group-hover:scale-105 transition-transform">
                                     @php
-                                        $name = $conv->contact?->user?->name ?? $conv->phone_number;
-                                        $initials = preg_match('/^\+?[0-9]+$/', $name) ? '?' : strtoupper(mb_substr($name, 0, 2));
+    $name = $conv->contact?->user?->name ?? $conv->phone_number;
+    $initials = preg_match('/^\+?[0-9]+$/', $name) ? '?' : strtoupper(mb_substr($name, 0, 2));
                                     @endphp
                                     {{ $initials }}
                                 </div>
@@ -446,7 +447,7 @@ new #[Title('WhatsApp Inbox')] class extends Component
                                     @if($conv->category)
                                         <span class="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-300 text-[10px] font-bold border border-zinc-200/60 dark:border-zinc-700/60 shadow-sm transition-all group-hover:border-indigo-200 dark:group-hover:border-indigo-900">#{{ $conv->category->hashtag }}</span>
                                     @endif
-                                    @if(! $conv->agent_id)
+                                    @if(!$conv->agent_id)
                                         <span class="px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-900/10 text-rose-600 dark:text-rose-400 text-[10px] font-bold border border-rose-100 dark:border-rose-900/30 shadow-sm animate-pulse-slow">Unassigned</span>
                                     @endif
                                     @if($conv->status === 'escalated')
@@ -461,25 +462,27 @@ new #[Title('WhatsApp Inbox')] class extends Component
         </div>
 
         <!-- Main Area: Chat -->
-        <div class="flex-1 flex flex-col bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden h-full min-h-0">
+        <div class="flex-1 lg:flex-1 flex-col bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden h-full min-h-0 {{ $this->selectedConversationId ? 'flex' : 'hidden lg:flex' }}">
             @if($this->selectedConversationId)
                 <!-- Chat Header (Fixed Height) -->
                 <div class="shrink-0 p-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-white dark:bg-zinc-900">
                     <div class="flex items-center gap-3">
-                        <div class="size-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold">
+                        <flux:button variant="ghost" icon="chevron-left" size="sm" class="lg:hidden" wire:click="$set('selectedConversationId', null)" />
+
+                        <div class="size-10 shrink-0 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold">
                             {{ substr($this->selectedConversation()->contact?->user?->name ?? $this->selectedConversation()->phone_number, 0, 1) }}
                         </div>
-                        <div>
+                        <div class="hidden lg:block">
                             <div class="flex items-center gap-2">
                                 <flux:heading size="md">{{ $this->selectedConversation()->contact?->user?->name ?? $this->selectedConversation()->phone_number }}</flux:heading>
                                 @php
-                                    $type = str_replace('App\\Models\\', '', $this->selectedConversation()->contact_type ?? 'Unknown');
-                                    $color = match($type) {
-                                        'Customer' => 'blue',
-                                        'Driver' => 'orange',
-                                        'Staff' => 'teal',
-                                        default => 'zinc'
-                                    };
+    $type = str_replace('App\\Models\\', '', $this->selectedConversation()->contact_type ?? 'Unknown');
+    $color = match ($type) {
+        'Customer' => 'blue',
+        'Driver' => 'orange',
+        'Staff' => 'teal',
+        default => 'zinc'
+    };
                                 @endphp
                                 <flux:badge :color="$color" size="sm" inset="top bottom" class="uppercase text-[10px]">{{ $type }}</flux:badge>
                             </div>
@@ -489,16 +492,16 @@ new #[Title('WhatsApp Inbox')] class extends Component
                     
                     <div class="flex items-center gap-2">
                         <flux:button variant="ghost" color="rose" icon="trash" size="sm" wire:click="$set('showClearModal', true)">
-                            {{ __('Clear') }}
+                            <span class=" lg:inline">{{ __('Clear') }}</span>
                         </flux:button>
-
-                        @if(! $this->selectedConversation()->agent_id)
+ 
+                        @if(!$this->selectedConversation()->agent_id)
                             <flux:button variant="primary" icon="hand-raised" wire:click="claimConversation({{ $this->selectedConversationId }})">
-                                {{ __('Claim Conversation') }}
+                                <span class=" lg:inline">{{ __('Claim') }}</span>
                             </flux:button>
                         @else
                             <flux:button variant="filled" color="zinc" icon="check-circle" wire:click="resolveConversation({{ $this->selectedConversationId }})" wire:loading.attr="disabled">
-                                {{ __('Resolve') }}
+                                <span class=" lg:inline">{{ __('Done') }}</span>
                             </flux:button>
                         @endif
                     </div>
@@ -508,8 +511,8 @@ new #[Title('WhatsApp Inbox')] class extends Component
                 <div class="flex-1 overflow-y-auto p-6 space-y-4 !bg-[#f0f2f5] dark:!bg-[#0b141a] min-h-0">
                     @foreach($this->getChatMessages() as $msg)
                         @php
-                            $isCustomer = $msg->sender_type === 'customer';
-                            $isInternal = $msg->sender_type === 'bot' && str_contains($msg->message_text, 'Agent Review Needed');
+        $isCustomer = $msg->sender_type === 'customer';
+        $isInternal = $msg->sender_type === 'bot' && str_contains($msg->message_text, 'Agent Review Needed');
                         @endphp
 
                         <div class="flex {{ $isCustomer ? 'justify-start' : 'justify-end' }} mb-2">
@@ -543,13 +546,13 @@ new #[Title('WhatsApp Inbox')] class extends Component
                                 <!-- Time & Status in Footer -->
                                 <x-slot name="footer" class="flex items-center justify-end gap-1 !bg-transparent border-t border-black/5 dark:border-white/5 !px-2 !py-0.5">
                                     <span class="text-[10px] {{ $isInternal ? 'text-amber-700/70 dark:text-amber-300/70' : 'text-[#667781] dark:text-[#8696a0]' }} leading-none">{{ $msg->created_at->format('H:i') }}</span>
-                                    @if(! $isCustomer)
+                                    @if(!$isCustomer)
                                         <x-heroicons::solid.check-badge class="w-5 h-5 {{ $msg->status === 'read' ? 'text-info-600' : 'text-secondary-400' }}" />
                                     @endif
                                 </x-slot>
                             </x-card>
 
-                            @if(! $isCustomer)
+                            @if(!$isCustomer)
                                 <!-- Agent Avatar -->
                                 <div class="size-8 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-xs font-medium text-zinc-600 dark:text-zinc-300 shrink-0 ml-2 mt-auto">
                                     {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
@@ -561,11 +564,11 @@ new #[Title('WhatsApp Inbox')] class extends Component
 
                 <!-- Window Status Warning -->
                 @php
-                    $lastMessageAt = $this->selectedConversation()->last_message_at;
-                    $isWindowOpen = $lastMessageAt && $lastMessageAt->diffInHours(now()) < 24;
+    $lastMessageAt = $this->selectedConversation()->last_message_at;
+    $isWindowOpen = $lastMessageAt && $lastMessageAt->diffInHours(now()) < 24;
                 @endphp
 
-                @if(! $isWindowOpen)
+                @if(!$isWindowOpen)
                     <div class="px-4 py-2 bg-amber-50 dark:bg-amber-900/30 border-t border-amber-200 dark:border-amber-800/50 text-amber-800 dark:text-amber-400 text-[11px] flex items-center gap-2 shrink-0">
                         <flux:icon.exclamation-triangle variant="mini" class="size-4" />
                         <span>{{ __('24-hour window is closed. Free-form messages will not be delivered.') }}</span>
