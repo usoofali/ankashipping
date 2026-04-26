@@ -9,6 +9,7 @@ use App\Models\Shipper;
 use App\Models\Staff;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -19,6 +20,7 @@ new #[Title('WhatsApp Inbox')] class extends Component
 
     public string $messageText = '';
     public string $filter = 'all';
+    public bool $showClearModal = false;
 
     public function selectConversation(int $id): void
     {
@@ -259,6 +261,34 @@ new #[Title('WhatsApp Inbox')] class extends Component
         $this->selectedConversationId = null;
     }
 
+    public function clearConversation(): void
+    {
+        if (! $this->selectedConversationId) {
+            return;
+        }
+
+        $conversation = WhatsAppConversation::findOrFail($this->selectedConversationId);
+
+        DB::transaction(function () use ($conversation) {
+            // Delete all messages
+            $conversation->messages()->delete();
+
+            // Delete menu state
+            $conversation->menuState()->delete();
+
+            // Reset conversation
+            $conversation->update([
+                'status' => 'bot',
+                'agent_id' => null,
+                'category_id' => null,
+                'last_message_at' => now(),
+            ]);
+        });
+
+        $this->selectedConversationId = null;
+        $this->showClearModal = false;
+    }
+
     public function downloadAttachment(int $messageId)
     {
         $message = WhatsAppMessage::findOrFail($messageId);
@@ -459,15 +489,21 @@ new #[Title('WhatsApp Inbox')] class extends Component
                         </div>
                     </div>
                     
-                    @if(! $this->selectedConversation()->agent_id)
-                        <flux:button variant="primary" icon="hand-raised" wire:click="claimConversation({{ $this->selectedConversationId }})">
-                            {{ __('Claim Conversation') }}
+                    <div class="flex items-center gap-2">
+                        <flux:button variant="ghost" color="rose" icon="trash" size="sm" wire:click="$set('showClearModal', true)">
+                            {{ __('Clear') }}
                         </flux:button>
-                    @else
-                        <flux:button variant="filled" color="zinc" icon="check-circle" wire:click="resolveConversation({{ $this->selectedConversationId }})" wire:loading.attr="disabled">
-                            {{ __('Resolve') }}
-                        </flux:button>
-                    @endif
+
+                        @if(! $this->selectedConversation()->agent_id)
+                            <flux:button variant="primary" icon="hand-raised" wire:click="claimConversation({{ $this->selectedConversationId }})">
+                                {{ __('Claim Conversation') }}
+                            </flux:button>
+                        @else
+                            <flux:button variant="filled" color="zinc" icon="check-circle" wire:click="resolveConversation({{ $this->selectedConversationId }})" wire:loading.attr="disabled">
+                                {{ __('Resolve') }}
+                            </flux:button>
+                        @endif
+                    </div>
                 </div>
 
                 <!-- Messages Area (Scrollable, takes all remaining space) -->
@@ -553,4 +589,19 @@ new #[Title('WhatsApp Inbox')] class extends Component
             @endif
         </div>
     </div>
+
+    <flux:modal name="clear-conversation-modal" wire:model="showClearModal" class="md:w-[400px]">
+        <div class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('Clear Conversation?') }}</flux:heading>
+                <flux:subheading>{{ __('This will permanently delete all messages and reset the bot state for this contact. This action cannot be undone.') }}</flux:subheading>
+            </div>
+
+            <div class="flex gap-2">
+                <flux:spacer />
+                <flux:button variant="ghost" wire:click="$set('showClearModal', false)">{{ __('Cancel') }}</flux:button>
+                <flux:button wire:click="clearConversation" variant="filled" color="rose">{{ __('Clear Everything') }}</flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </x-crud.page-shell>
