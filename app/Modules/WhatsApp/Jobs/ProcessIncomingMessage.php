@@ -49,8 +49,17 @@ class ProcessIncomingMessage implements ShouldQueue
 
         $phoneNumber = $messageData['from']; // This is the wa_id (phone number)
         $messageId = $messageData['id'];
-        $messageText = $messageData['text']['body'] ?? '';
+        $messageText = $messageData['text']['body']
+            ?? $messageData['image']['caption']
+            ?? $messageData['document']['caption']
+            ?? $messageData['video']['caption']
+            ?? '';
         $messageType = $messageData['type'] ?? 'text';
+        $mediaId = $messageData['image']['id']
+            ?? $messageData['document']['id']
+            ?? $messageData['audio']['id']
+            ?? $messageData['video']['id']
+            ?? null;
 
         // 1. Find or Create Conversation
         $conversation = WhatsAppConversation::firstOrCreate(
@@ -77,6 +86,7 @@ class ProcessIncomingMessage implements ShouldQueue
                 'sender_type' => 'customer',
                 'message_text' => $messageText,
                 'message_type' => $messageType,
+                'media_url' => $mediaId,
                 'status' => 'delivered',
             ]
         );
@@ -126,8 +136,9 @@ class ProcessIncomingMessage implements ShouldQueue
         // Apply Deduplication Logic (Latest Status Only per Entity)
         $deduplicated = $pendingMessages->groupBy(function ($msg) {
             if (! $msg->related_entity_id) {
-                return 'msg_' . $msg->id; // Don't deduplicate if no entity is linked
+                return 'msg_'.$msg->id; // Don't deduplicate if no entity is linked
             }
+
             return $msg->related_entity_type.':'.$msg->related_entity_id;
         })->map(function ($group) {
             return $group->last(); // Keep only the latest for each entity

@@ -29,6 +29,7 @@ new #[Title('Staff')] class extends Component {
     public ?int $editingStaffId = null;
     public ?int $staffPendingDeleteId = null;
     public string $staffPendingDeleteLabel = '';
+    public bool $phoneExistsWarning = false;
 
     // User + Staff fields
     public string $name = '';
@@ -47,6 +48,28 @@ new #[Title('Staff')] class extends Component {
     public function updatedSearch(): void
     {
         $this->resetPage();
+    }
+
+    public function updatedPhone(string $value): void
+    {
+        if (empty($value)) {
+            $this->phoneExistsWarning = false;
+            return;
+        }
+
+        $query = Staff::where('phone', $value);
+
+        if ($this->editingStaffId) {
+            $query->where('id', '!=', $this->editingStaffId);
+        }
+
+        $exists = $query->exists();
+
+        if ($exists && !$this->phoneExistsWarning) {
+            $this->notification()->warning(__('Warning: This phone number is already registered to another staff member.'));
+        }
+
+        $this->phoneExistsWarning = $exists;
     }
 
     public function updatedFilterRole(): void
@@ -82,7 +105,7 @@ new #[Title('Staff')] class extends Component {
     public function openCreateModal(): void
     {
         $this->authorize('staff.create');
-        $this->reset(['name', 'email', 'password', 'role', 'job_title', 'phone', 'editingStaffId', 'whatsapp_categories']);
+        $this->reset(['name', 'email', 'password', 'role', 'job_title', 'phone', 'editingStaffId', 'whatsapp_categories', 'phoneExistsWarning']);
         $this->showCreateModal = true;
     }
 
@@ -133,6 +156,7 @@ new #[Title('Staff')] class extends Component {
         $this->phone = $staff->phone ?? '';
         $this->role = $staff->user?->roles->first()?->name ?? '';
         $this->whatsapp_categories = $staff->whatsappCategories->pluck('id')->toArray();
+        $this->phoneExistsWarning = false;
 
         $this->showEditModal = true;
     }
@@ -309,7 +333,7 @@ new #[Title('Staff')] class extends Component {
                 </flux:select>
                 <flux:input wire:model="job_title" :label="__('Job Title')" icon="briefcase"
                     placeholder="e.g. Operations Manager" />
-                <flux:input wire:model="phone" :label="__('Phone')" icon="phone" placeholder="+1 555 000 0000" />
+                <x-phone-input wire:key="create-staff-phone" name="phone" x-on:input="$wire.phone = (() => { try { return window.intlTelInput.getInstance($el).getNumber(); } catch(e) { return $el.value; } })()" x-on:countrychange="$wire.phone = (() => { try { return window.intlTelInput.getInstance($el).getNumber(); } catch(e) { return $el.value; } })()" :label="__('Phone')" :value="$phone" />
             </div>
 
             <div class="space-y-3">
@@ -354,7 +378,7 @@ new #[Title('Staff')] class extends Component {
                     @endforeach
                 </flux:select>
                 <flux:input wire:model="job_title" :label="__('Job Title')" icon="briefcase" />
-                <flux:input wire:model="phone" :label="__('Phone')" icon="phone" />
+                <x-phone-input :wire:key="'edit-staff-phone-'.$editingStaffId" name="phone" x-on:input="$wire.phone = (() => { try { return window.intlTelInput.getInstance($el).getNumber(); } catch(e) { return $el.value; } })()" x-on:countrychange="$wire.phone = (() => { try { return window.intlTelInput.getInstance($el).getNumber(); } catch(e) { return $el.value; } })()" :label="__('Phone')" :value="$phone" />
             </div>
 
             <div class="space-y-3">

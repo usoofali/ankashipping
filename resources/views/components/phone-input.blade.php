@@ -52,10 +52,6 @@
         />
     </div>
 
-    <div class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-        {{ __('Format: Select country code and enter number (e.g. +234 801 234 5678)') }}
-    </div>
-
     <flux:error :name="$name" />
 </flux:field>
 

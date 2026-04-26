@@ -259,6 +259,30 @@ new #[Title('WhatsApp Inbox')] class extends Component
         $this->selectedConversationId = null;
     }
 
+    public function downloadAttachment(int $messageId)
+    {
+        $message = WhatsAppMessage::findOrFail($messageId);
+        
+        if (! $message->media_url) {
+            $this->dialog()->error('No attachment found', 'This message does not contain a valid media attachment.');
+            return;
+        }
+
+        $waService = app(WhatsAppService::class);
+        $media = $waService->streamMedia($message->media_url);
+
+        if (! $media) {
+            $this->dialog()->error('Download Failed', 'The attachment could not be downloaded from WhatsApp. It may have expired.');
+            return;
+        }
+
+        return response()->streamDownload(function () use ($media) {
+            echo $media['content'];
+        }, $media['filename'], [
+            'Content-Type' => $media['mime_type'],
+        ]);
+    }
+
     #[On('echo-private:whatsapp,WhatsAppMessageReceived')]
     public function onMessageReceived(): void
     {
@@ -464,13 +488,20 @@ new #[Title('WhatsApp Inbox')] class extends Component
 
                             <!-- Bubble -->
                             <x-card padding="p-1.5 px-2" class="w-fit max-w-[75%] !rounded-[7.5px] {{ $isCustomer ? '!rounded-tl-none' : '!rounded-tr-none' }} {{ $isInternal ? '!bg-[#fff4ce] dark:!bg-[#5c4b00] !border-0' : ($isCustomer ? '!bg-white dark:!bg-[#202c33] !border-0' : '!bg-[#d9fdd3] dark:!bg-[#005c4b] !border-0') }} shadow-[0_1px_0.5px_rgba(11,20,26,0.13)] dark:shadow-[0_1px_0.5px_rgba(0,0,0,0.4)]">
-                                @if($msg->message_type === 'image')
-                                    <img src="{{ $msg->media_url }}" class="rounded-[6px] mb-1 max-h-60 object-cover">
-                                @elseif($msg->message_type === 'document')
-                                    <div class="flex items-center gap-2 mb-1 p-2 bg-black/5 dark:bg-white/5 rounded-[6px]">
-                                        <flux:icon.document class="size-6 text-zinc-500" />
-                                        <span class="text-sm truncate font-medium {{ $isInternal ? 'text-amber-900 dark:text-amber-100' : 'text-[#111b21] dark:text-[#e9edef]' }}">{{ basename($msg->media_url) }}</span>
-                                    </div>
+                                @if($msg->media_url && in_array($msg->message_type, ['image', 'document', 'audio', 'video']))
+                                    @if(!str_starts_with($msg->media_url, 'http'))
+                                        <div class="mb-2">
+                                            <flux:button size="sm" icon="arrow-down-tray" wire:click="downloadAttachment({{ $msg->id }})" class="w-full justify-start">
+                                                {{ __('Download Attachment') }} ({{ ucfirst($msg->message_type) }})
+                                            </flux:button>
+                                        </div>
+                                    @else
+                                        <div class="mb-2">
+                                            <flux:button size="sm" icon="arrow-top-right-on-square" href="{{ $msg->media_url }}" target="_blank" class="w-full justify-start">
+                                                {{ __('View Attachment') }} ({{ ucfirst($msg->message_type) }})
+                                            </flux:button>
+                                        </div>
+                                    @endif
                                 @endif
                                 
                                 <p class="text-[14.2px] leading-[19px] whitespace-pre-wrap {{ $isInternal ? 'text-amber-900 dark:text-amber-100' : 'text-[#111b21] dark:text-[#e9edef]' }} break-words">{{ $msg->message_text }}</p>

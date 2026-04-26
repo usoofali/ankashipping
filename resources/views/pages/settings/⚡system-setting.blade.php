@@ -227,7 +227,7 @@ new #[Title('System settings')] class extends Component {
         <form wire:submit="save" class="my-6 w-full max-w-3xl space-y-8">
             <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <flux:input wire:model="company_name" :label="__('Company name')" />
-                <flux:input wire:model="phone" :label="__('Phone')" />
+                <x-phone-input wire:key="setting-phone" name="phone" x-on:input="$wire.phone = (() => { try { return window.intlTelInput.getInstance($el).getNumber(); } catch(e) { return $el.value; } })()" x-on:countrychange="$wire.phone = (() => { try { return window.intlTelInput.getInstance($el).getNumber(); } catch(e) { return $el.value; } })()" :label="__('Phone')" :value="$phone" />
                 <flux:input wire:model="email" type="email" :label="__('Email')" />
                 <flux:input wire:model="zipcode" :label="__('Zip code')" />
                 <flux:input wire:model="logo_file" type="file" accept="image/*" :label="__('Company logo file')" />
@@ -281,7 +281,7 @@ new #[Title('System settings')] class extends Component {
                     <div class="md:col-span-2">
                         <flux:textarea wire:model="forwarding_agent_address" :label="__('Forwarding Agent Address')" rows="2" />
                     </div>
-                    <flux:input wire:model="forwarding_agent_phone" :label="__('Forwarding Agent Phone')" />
+                    <x-phone-input wire:key="setting-forwarding-phone" name="forwarding_agent_phone" x-on:input="$wire.forwarding_agent_phone = (() => { try { return window.intlTelInput.getInstance($el).getNumber(); } catch(e) { return $el.value; } })()" x-on:countrychange="$wire.forwarding_agent_phone = (() => { try { return window.intlTelInput.getInstance($el).getNumber(); } catch(e) { return $el.value; } })()" :label="__('Forwarding Agent Phone')" :value="$forwarding_agent_phone" />
                 </div>
             </div>
 

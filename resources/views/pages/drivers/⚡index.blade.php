@@ -23,6 +23,7 @@ new #[Title('Drivers')] class extends Component {
     public ?int $editingDriverId = null;
     public ?int $driverPendingDeleteId = null;
     public string $driverPendingDeleteLabel = '';
+    public bool $phoneExistsWarning = false;
 
     public string $phone = '';
     public string $email = '';
@@ -36,6 +37,28 @@ new #[Title('Drivers')] class extends Component {
     public function updatedSearch(): void
     {
         $this->resetPage();
+    }
+
+    public function updatedPhone(string $value): void
+    {
+        if (empty($value)) {
+            $this->phoneExistsWarning = false;
+            return;
+        }
+
+        $query = Driver::where('phone', $value);
+
+        if ($this->editingDriverId) {
+            $query->where('id', '!=', $this->editingDriverId);
+        }
+
+        $exists = $query->exists();
+
+        if ($exists && !$this->phoneExistsWarning) {
+            $this->notification()->warning(__('Warning: This phone number is already registered to another driver.'));
+        }
+
+        $this->phoneExistsWarning = $exists;
     }
 
     #[Computed]
@@ -54,7 +77,7 @@ new #[Title('Drivers')] class extends Component {
     public function openCreateModal(): void
     {
         $this->authorize('drivers.create');
-        $this->reset(['phone', 'email', 'company', 'editingDriverId']);
+        $this->reset(['phone', 'email', 'company', 'editingDriverId', 'phoneExistsWarning']);
         $this->showCreateModal = true;
     }
 
@@ -83,6 +106,7 @@ new #[Title('Drivers')] class extends Component {
         $this->phone = $driver->phone ?? '';
         $this->email = $driver->email ?? '';
         $this->company = $driver->company ?? '';
+        $this->phoneExistsWarning = false;
 
         $this->showEditModal = true;
     }
@@ -213,8 +237,10 @@ new #[Title('Drivers')] class extends Component {
             </div>
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <flux:input wire:model="phone" :label="__('Phone')" icon="phone" required
-                    placeholder="+1 555 000 0000" />
+                <x-phone-input wire:key="create-driver-phone" name="phone"
+                    x-on:input="$wire.phone = (() => { try { return window.intlTelInput.getInstance($el).getNumber(); } catch(e) { return $el.value; } })()"
+                    x-on:countrychange="$wire.phone = (() => { try { return window.intlTelInput.getInstance($el).getNumber(); } catch(e) { return $el.value; } })()"
+                    :label="__('Phone')" required :value="$phone" />
                 <flux:input wire:model="email" :label="__('Email')" icon="envelope" type="email"
                     placeholder="john@example.com" />
                 <flux:input wire:model="company" :label="__('Company')" icon="building-office"
@@ -242,7 +268,10 @@ new #[Title('Drivers')] class extends Component {
             </div>
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <flux:input wire:model="phone" :label="__('Phone')" icon="phone" required />
+                <x-phone-input :wire:key="'edit-driver-phone-'.$editingDriverId" name="phone"
+                    x-on:input="$wire.phone = (() => { try { return window.intlTelInput.getInstance($el).getNumber(); } catch(e) { return $el.value; } })()"
+                    x-on:countrychange="$wire.phone = (() => { try { return window.intlTelInput.getInstance($el).getNumber(); } catch(e) { return $el.value; } })()"
+                    :label="__('Phone')" required :value="$phone" />
                 <flux:input wire:model="email" :label="__('Email')" icon="envelope" type="email" />
                 <flux:input wire:model="company" :label="__('Company')" icon="building-office" />
             </div>

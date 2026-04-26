@@ -74,8 +74,7 @@
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <flux:input wire:model="new_driver_company" :label="__('Company')" icon="building-office"
                 placeholder="e.g. Danmazari Transport LTD" />
-            <flux:input wire:model="new_driver_phone" :label="__('Phone')" icon="phone" required
-                placeholder="+2348167768410" />
+            <x-phone-input wire:key="shipment-new-driver-phone" name="new_driver_phone" x-on:input="$wire.new_driver_phone = (() => { try { return window.intlTelInput.getInstance($el).getNumber(); } catch(e) { return $el.value; } })()" x-on:countrychange="$wire.new_driver_phone = (() => { try { return window.intlTelInput.getInstance($el).getNumber(); } catch(e) { return $el.value; } })()" :label="__('Phone')" required :value="$new_driver_phone" />
             <flux:input wire:model="new_driver_email" :label="__('Email')" icon="envelope" type="email"
                 placeholder="driver@example.com" />
         </div>

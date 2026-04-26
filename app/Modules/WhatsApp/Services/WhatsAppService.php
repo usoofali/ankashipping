@@ -87,6 +87,42 @@ class WhatsAppService
         return $filename;
     }
 
+    /**
+     * Download media from Meta and return content directly without saving to disk.
+     */
+    public function streamMedia(string $mediaId): ?array
+    {
+        $url = "https://graph.facebook.com/{$this->version}/{$mediaId}";
+
+        $response = Http::withToken($this->token)->get($url);
+
+        if ($response->failed()) {
+            return null;
+        }
+
+        $mediaUrl = $response->json('url');
+        $mimeType = $response->json('mime_type');
+
+        if (! $mediaUrl) {
+            return null;
+        }
+
+        $fileResponse = Http::withToken($this->token)->get($mediaUrl);
+
+        if ($fileResponse->failed()) {
+            return null;
+        }
+
+        $extension = $this->getExtension($mimeType ?? $fileResponse->header('Content-Type'));
+        $filename = 'attachment_'.$mediaId.'.'.$extension;
+
+        return [
+            'content' => $fileResponse->body(),
+            'mime_type' => $mimeType ?? $fileResponse->header('Content-Type'),
+            'filename' => $filename,
+        ];
+    }
+
     protected function getExtension(string $mimeType): string
     {
         return match ($mimeType) {
