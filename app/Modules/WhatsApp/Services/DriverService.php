@@ -159,13 +159,19 @@ class DriverService
 
         $internalMessage = "🔔 *Agent Review Needed* Driver has submitted a Stamped Dock Receipt for Shipment #{$shipment->reference_no}. Please review the document above. Reply with `Approve` or `Reject: [reason]` to process.";
 
+        // Determine message type for UI rendering
+        $extension = pathinfo($tempPath, PATHINFO_EXTENSION);
+        $messageType = in_array(strtolower($extension), ['jpg', 'jpeg', 'png']) ? 'image' : 'document';
+
         // Save the internal message to the chat
         WhatsAppMessage::create([
             'conversation_id' => $conversation->id,
             'category_id' => $conversation->category_id,
             'sender_type' => 'bot',
             'message_text' => $internalMessage,
-            'status' => 'sent', // Or delivered to show it internally
+            'media_url' => $tempPath, // Local path for the agent to download
+            'message_type' => $messageType,
+            'status' => 'sent', 
         ]);
 
         $this->waService->sendMessage($conversation->phone_number, '✅ Document received! An agent will review and verify your submission shortly.');

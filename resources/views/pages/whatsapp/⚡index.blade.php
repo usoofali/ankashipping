@@ -92,20 +92,13 @@ new #[Title('WhatsApp Inbox')] class extends Component
             return;
         }
 
-        // 1. Move file to permanent storage (from local to public disk)
+        // 1. Move file to permanent storage (already on public disk, just move/copy to final location)
         $permanentPath = 'shipments/documents/' . basename($tempPath);
         
-        if (\Illuminate\Support\Facades\Storage::disk('local')->exists($tempPath)) {
-            $fileContent = \Illuminate\Support\Facades\Storage::disk('local')->get($tempPath);
-            \Illuminate\Support\Facades\Storage::disk('public')->put($permanentPath, $fileContent);
-            \Illuminate\Support\Facades\Storage::disk('local')->delete($tempPath);
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($tempPath)) {
+            \Illuminate\Support\Facades\Storage::disk('public')->move($tempPath, $permanentPath);
         } else {
-            // Fallback in case it was somehow saved to public disk
-            if (\Illuminate\Support\Facades\Storage::disk('public')->exists($tempPath)) {
-                \Illuminate\Support\Facades\Storage::disk('public')->move($tempPath, $permanentPath);
-            } else {
-                return; // File lost
-            }
+            return; // File lost or already moved
         }
 
         // 2. Attach to shipment
@@ -296,6 +289,11 @@ new #[Title('WhatsApp Inbox')] class extends Component
         if (! $message->media_url) {
             $this->dialog()->error('No attachment found', 'This message does not contain a valid media attachment.');
             return;
+        }
+
+        // Check if it's a local file (e.g. downloaded by the bot for review)
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($message->media_url)) {
+            return \Illuminate\Support\Facades\Storage::disk('public')->download($message->media_url);
         }
 
         $waService = app(WhatsAppService::class);

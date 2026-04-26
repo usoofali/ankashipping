@@ -112,17 +112,14 @@ class WalletService
 
         // 1. Download Media
         $localPath = $this->waService->downloadMedia($mediaId);
-        if (! $localPath || ! Storage::disk('local')->exists($localPath)) {
-            $this->waService->sendMessage($conversation->phone_number, '❌ Failed to download receipt. Please try again.');
-
+        if (! $localPath || ! Storage::disk('public')->exists($localPath)) {
+            $this->waService->sendMessage($conversation->phone_number, '❌ Failed to download your receipt. Please try again.');
             return;
         }
 
-        // 2. Move to Temporary Storage
-        $extension = pathinfo($localPath, PATHINFO_EXTENSION);
-        $tmpFilename = 'receipts/tmp/'.uniqid().'.'.$extension;
-        Storage::disk('public')->put($tmpFilename, Storage::disk('local')->get($localPath));
-        Storage::disk('local')->delete($localPath);
+        $tmpFilename = 'receipts/tmp/' . basename($localPath);
+        Storage::disk('public')->copy($localPath, $tmpFilename);
+        Storage::disk('public')->delete($localPath);
 
         /** @var Shipper $shipper */
         $shipper = Shipper::find($conversation->contact_id);

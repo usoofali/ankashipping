@@ -82,7 +82,7 @@ class WhatsAppService
         $extension = $this->getExtension($fileResponse->header('Content-Type'));
         $filename = 'whatsapp/'.uniqid().'.'.$extension;
 
-        Storage::disk('local')->put($filename, $fileResponse->body());
+        Storage::disk('public')->put($filename, $fileResponse->body());
 
         return $filename;
     }

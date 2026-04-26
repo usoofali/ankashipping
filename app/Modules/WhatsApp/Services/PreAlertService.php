@@ -117,12 +117,10 @@ class PreAlertService
                 $id = $payload['current_vehicle_id'];
                 $localPath = $this->waService->downloadMedia($mediaId);
 
-                if ($localPath && Storage::disk('local')->exists($localPath)) {
-                    $extension = pathinfo($localPath, PATHINFO_EXTENSION);
-                    $tmpFilename = 'receipts/tmp/'.uniqid().'.'.$extension;
-                    Storage::disk('public')->put($tmpFilename, Storage::disk('local')->get($localPath));
-                    Storage::disk('local')->delete($localPath);
-
+                if ($localPath && Storage::disk('public')->exists($localPath)) {
+                    $tmpFilename = 'receipts/tmp/' . basename($localPath);
+                    Storage::disk('public')->copy($localPath, $tmpFilename);
+                    Storage::disk('public')->delete($localPath);
                     $payload['vehicle_data'][$id]['auction_receipt_tmp'] = $tmpFilename;
                 } else {
                     $this->waService->sendMessage($conversation->phone_number, '⚠️ Failed to process receipt. Please try uploading it again.');

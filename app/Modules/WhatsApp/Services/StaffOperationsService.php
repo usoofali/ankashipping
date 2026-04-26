@@ -589,8 +589,10 @@ class StaffOperationsService
 
         $filename = basename($localPath);
         $finalPath = ($vehicleId ? 'vehicle-documents/' . $vehicleId : 'shipment-documents/' . $shipment->id) . '/' . $filename;
-        Storage::disk('public')->put($finalPath, Storage::disk('local')->get($localPath));
-        Storage::disk('local')->delete($localPath);
+        if (Storage::disk('public')->exists($localPath)) {
+            Storage::disk('public')->copy($localPath, $finalPath);
+            Storage::disk('public')->delete($localPath);
+        }
 
         $fromShipmentStatus = $shipment->shipment_status;
         $document = null;
