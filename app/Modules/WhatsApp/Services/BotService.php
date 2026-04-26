@@ -268,6 +268,8 @@ Please choose an option:
                 $this->driverService->handleStep($conversation, $state, $text, $mediaId);
                 break;
             case 'staff_awaiting_vehicle_selection':
+            case 'staff_awaiting_other_scope':
+            case 'staff_awaiting_vehicle_condition':
             case 'staff_awaiting_document_media':
                 $this->staffService->handleStep($conversation, $state, $text, $mediaId);
                 break;

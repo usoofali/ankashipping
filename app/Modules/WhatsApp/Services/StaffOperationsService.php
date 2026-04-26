@@ -300,7 +300,7 @@ class StaffOperationsService
         $this->waService->sendMessage($conversation->phone_number, $message);
     }
 
-    protected function handleRoutingDirective(WhatsAppConversation $conversation, string $tag): void
+    protected function handleInvoiceDirective(WhatsAppConversation $conversation, string $content): void
     {
         $parts = preg_split('/\s+/', $content, 2);
         if (count($parts) < 2) {
