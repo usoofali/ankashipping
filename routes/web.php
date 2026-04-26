@@ -128,6 +128,14 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::livewire('/staff', 'pages::staff.index')->name('staff.index');
     Route::livewire('/workshops', 'pages::workshops.index')->name('workshops.index');
 
+    // WhatsApp
+    Route::livewire('/whatsapp', 'pages::whatsapp.index')
+        ->middleware('permission:whatsapp.view_inbox')
+        ->name('whatsapp.index');
+    Route::livewire('/whatsapp/categories', 'pages::whatsapp.categories.index')
+        ->middleware('permission:whatsapp.manage_conversations')
+        ->name('whatsapp.categories.index');
+
     // Shipper Wallet
     Route::livewire('/shipper/wallet', 'pages::shipper.wallet.index')
         ->middleware('permission:wallets.view')

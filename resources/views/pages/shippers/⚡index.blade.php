@@ -127,6 +127,7 @@ new #[Title('Shippers')] class extends Component {
             ],
             [
                 ...app(UpdateShipperRequest::class)->rules(),
+                'phone' => ['required', 'string', 'max:50', 'unique:shippers,phone,' . $this->shipperEditingId],
                 'discount_amount' => ['required', 'numeric', 'min:0', 'max:999999.99'],
             ],
         );

@@ -19,6 +19,10 @@ final class ShipmentDocumentAttachedNotification extends Notification implements
 {
     use Queueable;
 
+    public int $timeout = 80;
+
+    public int $tries = 2;
+
     public function __construct(
         public readonly Shipment $shipment,
         public readonly ShipmentDocument $shipmentDocument,
@@ -43,6 +47,7 @@ final class ShipmentDocumentAttachedNotification extends Notification implements
 
     public function toMail(object $notifiable): MailMessage
     {
+        ini_set('memory_limit', '512M');
         $this->shipment->refresh();
         $this->shipmentDocument->refresh();
         $this->shipmentDocument->loadMissing('files');

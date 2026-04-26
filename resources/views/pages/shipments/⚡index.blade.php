@@ -35,7 +35,7 @@ new #[Title('Shipments')] class extends Component {
     public function shipments(): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
         return Shipment::query()
-            ->with(['shipper.user', 'vehicles', 'driver', 'invoice', 'originPort.state', 'originPort.country', 'workshop'])
+            ->with(['shipper.user', 'vehicles.driver', 'invoice', 'originPort.state', 'originPort.country', 'workshop'])
             ->when($this->search !== '', function ($query): void {
                 $query->where(function ($searchQuery): void {
                     $term = '%' . trim($this->search) . '%';

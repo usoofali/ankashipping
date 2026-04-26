@@ -22,6 +22,10 @@
 {{ __('View Wallet Dashboard') }}
 </x-mail::button>
 
+<x-mail::button :url="$setting->getWhatsAppUrl('Hi! I have a question about the debit on my wallet for shipment ' . $shipment->reference_no)" color="success">
+{{ __('Chat on WhatsApp') }}
+</x-mail::button>
+
 ---
 Thanks,
 **{{ $companyName }}**

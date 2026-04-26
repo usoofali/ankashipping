@@ -102,11 +102,6 @@ final class Shipment extends Model
         return $this->belongsTo(Consignee::class, 'notify_party_id');
     }
 
-    public function driver(): BelongsTo
-    {
-        return $this->belongsTo(Driver::class);
-    }
-
     public function carrier(): BelongsTo
     {
         return $this->belongsTo(Carrier::class);

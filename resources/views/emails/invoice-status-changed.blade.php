@@ -33,6 +33,10 @@
 </x-mail::button>
 @endif
 
+<x-mail::button :url="$setting->getWhatsAppUrl('Hi! I have a question about my invoice for shipment ' . $shipment->reference_no)" color="success">
+{{ __('Chat on WhatsApp') }}
+</x-mail::button>
+
 ---
 Thanks,
 **{{ $companyName }}**

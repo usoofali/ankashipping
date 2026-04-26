@@ -15,6 +15,10 @@ final class WalletDebitNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
+    public int $timeout = 80;
+
+    public int $tries = 2;
+
     public function __construct(
         public readonly Shipment $shipment,
         public readonly float $debitedAmount,
@@ -37,6 +41,7 @@ final class WalletDebitNotification extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
+        ini_set('memory_limit', '512M');
         $setting = SystemSetting::current()->loadMissing(['city', 'state']);
         $companyName = $setting->company_name ?: config('app.name');
         $cityName = $setting->city?->name;

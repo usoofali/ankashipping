@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\ChargeItem;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -13,17 +14,24 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->call(RolePermissionSeeder::class);
+        $this->call([
+            RolePermissionSeeder::class,
+            WhatsAppCategorySeeder::class,
+        ]);
 
         ChargeItem::query()->firstOrCreate(
             ['item' => 'Storage'],
             ['description' => 'Per-day vehicle storage'],
         );
 
-        $admin = User::factory()->create([
-            'name' => 'Super Admin',
-            'email' => 'admin@example.com',
-        ]);
+        $admin = User::updateOrCreate(
+            ['email' => 'admin@example.com'],
+            [
+                'name' => 'Super Admin',
+                'password' => Hash::make('password'), // or use a specific password
+                'email_verified_at' => now(),
+            ]
+        );
         $admin->assignRole('super_admin');
 
         if (app()->environment('local')) {

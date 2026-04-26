@@ -34,7 +34,7 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $this->passwordRules(),
             'terms' => ['accepted'],
             'company_name' => ['nullable', 'string', 'max:255'],
-            'phone' => ['required', 'phone:AUTO'],
+            'phone' => ['required', 'phone:AUTO', 'unique:shippers,phone'],
             'address' => ['required', 'string', 'max:500'],
             'country_id' => ['required', 'integer', 'exists:countries,id'],
             'state_id' => ['required', 'integer', 'exists:states,id'],
@@ -98,7 +98,7 @@ class CreateNewUser implements CreatesNewUsers
 
             if (! $shipper->towing) {
                 $driver = Driver::create([
-                    'phone' => $input['phone'],
+                    'phone' => $input['phone'].'01',  // Added to make shipper phone unique from driver phone
                     'email' => $input['email'],
                     'company' => $companyName,
                 ]);

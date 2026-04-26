@@ -159,7 +159,7 @@ new #[Title('Shipment Details')] class extends Component {
             'destinationPort.country',
             'carrier',
             'paymentMethod',
-            'driver',
+            'vehicles.driver',
             'workshop',
             'invoice.items',
             'documents.files',
@@ -851,7 +851,7 @@ new #[Title('Shipment Details')] class extends Component {
             $attachedFileNames = [];
 
             foreach ($this->attachFiles as $uploaded) {
-                $path = $uploaded->store('shipment-documents/' . $this->shipment->id, 'local');
+                $path = $uploaded->store('shipment-documents/' . $this->shipment->id, 'public');
                 $createdFile = ShipmentDocumentFile::query()->create([
                     'shipment_document_id' => $document->id,
                     'path' => $path,
@@ -1000,7 +1000,7 @@ new #[Title('Shipment Details')] class extends Component {
             ]);
 
             foreach ($this->attachVehicleFiles as $uploaded) {
-                $path = $uploaded->store('vehicle-documents/' . $vehicle->id, 'local');
+                $path = $uploaded->store('vehicle-documents/' . $vehicle->id, 'public');
                 VehicleDocumentFile::query()->create([
                     'vehicle_document_id' => $document->id,
                     'path' => $path,
@@ -1570,7 +1570,7 @@ new #[Title('Shipment Details')] class extends Component {
             $documentId = $document->id;
 
             foreach ($document->files as $file) {
-                Storage::disk('local')->delete($file->path);
+                Storage::disk('public')->delete($file->path);
                 $file->delete();
             }
 
@@ -1621,7 +1621,7 @@ new #[Title('Shipment Details')] class extends Component {
             $path = $file->path;
             $document = $file->shipmentDocument;
 
-            Storage::disk('local')->delete($path);
+            Storage::disk('public')->delete($path);
             $file->delete();
 
             if ($document->files()->count() === 0) {
@@ -1666,7 +1666,7 @@ new #[Title('Shipment Details')] class extends Component {
             foreach ($documents as $doc) {
                 foreach ($doc->files as $file) {
                     if ($file->path) {
-                        Storage::disk('local')->delete($file->path);
+                        Storage::disk('public')->delete($file->path);
                     }
                     $file->delete();
                 }
@@ -1708,7 +1708,7 @@ new #[Title('Shipment Details')] class extends Component {
             'destinationPort.country',
             'carrier',
             'paymentMethod',
-            'driver',
+            'vehicles.driver',
             'workshop',
             'invoice.items',
             'documents.files',

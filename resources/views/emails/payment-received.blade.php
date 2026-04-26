@@ -22,6 +22,10 @@
 {{ __('View Shipment Details') }}
 </x-mail::button>
 
+<x-mail::button :url="$setting->getWhatsAppUrl('Hi! I have a question about my payment for shipment ' . $shipment->reference_no)" color="success">
+{{ __('Chat on WhatsApp') }}
+</x-mail::button>
+
 ---
 Thanks,
 **{{ $companyName }}**

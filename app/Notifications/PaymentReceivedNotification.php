@@ -17,6 +17,10 @@ final class PaymentReceivedNotification extends Notification implements ShouldQu
 {
     use Queueable, ShipmentPdfSupport;
 
+    public int $timeout = 80;
+
+    public int $tries = 2;
+
     public function __construct(
         public readonly Shipment $shipment,
         public readonly Invoice $invoice,
@@ -28,17 +32,30 @@ final class PaymentReceivedNotification extends Notification implements ShouldQu
      */
     public function via(object $notifiable): array
     {
+        $channels = ['database'];
         $shipperUserId = $this->shipment->shipper?->user_id;
 
         if ($shipperUserId !== null && (int) $notifiable->getKey() === (int) $shipperUserId) {
-            return ['mail', 'database'];
+            $channels[] = 'mail';
+            $channels[] = \App\Modules\WhatsApp\Channels\WhatsAppChannel::class;
         }
 
-        return ['database'];
+        return $channels;
+    }
+
+    public function toWhatsApp(object $notifiable): array
+    {
+        $amount = number_format($this->paidAmount, 2);
+
+        return [
+            'body' => "💳 *Payment Received:* We have confirmed your payment of *\${$amount}* for shipment *{$this->shipment->reference_no}*. Thank you!",
+            'related_entity' => $this->shipment,
+        ];
     }
 
     public function toMail(object $notifiable): MailMessage
     {
+        ini_set('memory_limit', '512M');
         $setting = SystemSetting::current()->loadMissing(['city', 'state']);
         $companyName = $setting->company_name ?: config('app.name');
         $cityName = $setting->city?->name;

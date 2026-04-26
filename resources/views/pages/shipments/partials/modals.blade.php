@@ -623,7 +623,7 @@
             <div class="space-y-4">
                 @foreach($shipment->vehicles as $v)
                     <div wire:key="log-v-{{ $v->id }}"
-                        class="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800 grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                        class="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800 grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                         <div class="md:col-span-1">
                             <flux:text size="sm" class="font-bold truncate"
                                 title="{{ $v->year }} {{ $v->make }} {{ $v->model }}">
@@ -635,7 +635,7 @@
                         </div>
                         <flux:input type="number" step="0.01" wire:model="logisticsForm.vehicles.{{ $v->id }}.value"
                             label="{{ __('Value ($)') }}" />
-                        <div class="flex gap-2 items-end">
+                        <div class="flex gap-2 items-end md:col-span-full">
                             <flux:input type="number" step="0.01"
                                 wire:model="logisticsForm.vehicles.{{ $v->id }}.weight" label="{{ __('Weight') }}"
                                 class="flex-1" />
@@ -644,7 +644,7 @@
                                 <flux:select.option value="LBS">LBS</flux:select.option>
                             </flux:select>
                         </div>
-                        <div class="flex gap-2 items-end md:col-span-1">
+                        <div class="flex gap-2 items-end md:col-span-full">
                             <flux:input type="number" step="0.01"
                                 wire:model="logisticsForm.vehicles.{{ $v->id }}.measurement" label="{{ __('Measure') }}"
                                 class="flex-1" />

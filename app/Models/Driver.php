@@ -16,13 +16,18 @@ final class Driver extends Model
     use HasFactory, Notifiable;
 
     protected $fillable = [
-        'phone',
+        'phone', // unique
         'email',
         'company',
     ];
 
-    public function shipments(): HasMany
+    public function vehicles(): HasMany
     {
-        return $this->hasMany(Shipment::class);
+        return $this->hasMany(Vehicle::class);
+    }
+
+    public function shipments()
+    {
+        return $this->hasManyThrough(Shipment::class, Vehicle::class, 'driver_id', 'id', 'id', 'shipment_id');
     }
 }

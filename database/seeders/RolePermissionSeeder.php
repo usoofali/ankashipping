@@ -120,6 +120,9 @@ final class RolePermissionSeeder extends Seeder
             'failed_jobs.view',
             'financials.wallets.view',
             'financials.wallets.manage',
+            'whatsapp.view_inbox',
+            'whatsapp.manage_conversations',
+            'whatsapp.send_messages',
         ];
 
         foreach ($permissionNames as $name) {
@@ -235,6 +238,9 @@ final class RolePermissionSeeder extends Seeder
             'failed_jobs.view',
             'financials.wallets.view',
             'financials.wallets.manage',
+            'whatsapp.view_inbox',
+            'whatsapp.manage_conversations',
+            'whatsapp.send_messages',
         ]);
 
         $staffOperator = Role::query()->firstOrCreate(
@@ -294,6 +300,8 @@ final class RolePermissionSeeder extends Seeder
             'newsletters.manage',
             'email_logs.view',
             'failed_jobs.view',
+            'whatsapp.view_inbox',
+            'whatsapp.send_messages',
         ]);
 
         $shipper = Role::query()->firstOrCreate(
@@ -313,6 +321,15 @@ final class RolePermissionSeeder extends Seeder
             'wallet_top_ups.create',
             'workflow.download_invoice',
             'shipments.pay',
+        ]);
+
+        $whatsAppAgent = Role::query()->firstOrCreate(
+            ['name' => 'whatsapp_agent', 'guard_name' => 'web'],
+        );
+        $whatsAppAgent->syncPermissions([
+            'whatsapp.view_inbox',
+            'whatsapp.manage_conversations',
+            'whatsapp.send_messages',
         ]);
     }
 }

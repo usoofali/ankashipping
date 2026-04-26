@@ -19,7 +19,7 @@ final class VehicleDocumentFileDownloadResponder
             abort(404);
         }
 
-        if (! Storage::disk('local')->exists($file->path)) {
+        if (! Storage::disk('public')->exists($file->path)) {
             abort(404);
         }
 
@@ -27,6 +27,6 @@ final class VehicleDocumentFileDownloadResponder
             ? (string) $file->original_name
             : basename($file->path);
 
-        return Storage::disk('local')->download($file->path, $downloadName);
+        return Storage::disk('public')->download($file->path, $downloadName);
     }
 }

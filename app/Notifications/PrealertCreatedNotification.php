@@ -16,6 +16,12 @@ final class PrealertCreatedNotification extends Notification implements ShouldQu
 {
     use Queueable;
 
+    /** @var int Maximum seconds this job may run before timing out. */
+    public int $timeout = 80;
+
+    /** @var int Number of times to attempt the job. */
+    public int $tries = 2;
+
     public function __construct(
         private readonly Prealert $prealert,
     ) {}
@@ -36,6 +42,8 @@ final class PrealertCreatedNotification extends Notification implements ShouldQu
 
     public function toMail(object $notifiable): MailMessage
     {
+        ini_set('memory_limit', '512M');
+
         $setting = SystemSetting::current()->loadMissing(['city', 'state']);
         $companyName = $setting->company_name ?: config('app.name');
         $cityName = $setting->city?->name;

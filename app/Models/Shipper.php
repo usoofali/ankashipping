@@ -19,7 +19,7 @@ final class Shipper extends Model
     protected $fillable = [
         'user_id',
         'company_name',
-        'phone',
+        'phone', // unique
         'address',
         'country_id',
         'state_id',

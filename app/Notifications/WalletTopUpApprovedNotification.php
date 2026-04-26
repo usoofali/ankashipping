@@ -15,6 +15,10 @@ final class WalletTopUpApprovedNotification extends Notification implements Shou
 {
     use Queueable;
 
+    public int $timeout = 80;
+
+    public int $tries = 2;
+
     public function __construct(
         private readonly WalletTopUp $topUp,
     ) {}
@@ -24,17 +28,31 @@ final class WalletTopUpApprovedNotification extends Notification implements Shou
      */
     public function via(object $notifiable): array
     {
+        $channels = ['database'];
         $shipperUserId = $this->topUp->shipper?->user_id;
 
         if ($shipperUserId !== null && (int) $notifiable->getKey() === (int) $shipperUserId) {
-            return ['mail', 'database'];
+            $channels[] = 'mail';
+            $channels[] = \App\Modules\WhatsApp\Channels\WhatsAppChannel::class;
         }
 
-        return ['database'];
+        return $channels;
+    }
+
+    public function toWhatsApp(object $notifiable): array
+    {
+        $amount = number_format((float) $this->topUp->amount, 2);
+        $balance = number_format((float) ($this->topUp->shipper->wallet_balance ?? 0), 2);
+
+        return [
+            'body' => "✅ *Top-up Approved:* \${$amount} has been added to your wallet.\n\nNew Balance: *\${$balance}*",
+            'related_entity' => $this->topUp,
+        ];
     }
 
     public function toMail(object $notifiable): MailMessage
     {
+        ini_set('memory_limit', '512M');
         $this->topUp->refresh();
 
         $setting = SystemSetting::current()->loadMissing(['city', 'state']);

@@ -156,7 +156,7 @@ class WireUiConfig
     public static function icon(array $options = []): array
     {
         return self::mix([
-            'variant' => Packs\Icon::OUTLINE,
+            'variant' => Packs\Icon::SOLID,
         ], $options);
     }
 

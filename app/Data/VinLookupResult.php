@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Data;
 
 use App\Enums\VinLookupOutcome;
+use App\Models\Prealert;
 use App\Models\Shipment;
 use App\Models\Vehicle;
 
@@ -14,6 +15,7 @@ final class VinLookupResult
         public readonly VinLookupOutcome $outcome,
         public readonly ?Vehicle $vehicle = null,
         public readonly ?Shipment $shipment = null,
+        public readonly ?Prealert $prealert = null,
         public readonly ?string $message = null,
         public readonly ?int $apiRequestsLeft = null,
         public readonly bool $belongsToAnotherShipper = false,
@@ -29,6 +31,21 @@ final class VinLookupResult
             outcome: VinLookupOutcome::AlreadyOnShipment,
             vehicle: $vehicle,
             shipment: $shipment,
+            message: $message,
+            belongsToAnotherShipper: $belongsToAnotherShipper,
+        );
+    }
+
+    public static function alreadyOnPrealert(
+        Vehicle $vehicle,
+        Prealert $prealert,
+        bool $belongsToAnotherShipper = false,
+        ?string $message = null,
+    ): self {
+        return new self(
+            outcome: VinLookupOutcome::AlreadyOnPrealert,
+            vehicle: $vehicle,
+            prealert: $prealert,
             message: $message,
             belongsToAnotherShipper: $belongsToAnotherShipper,
         );

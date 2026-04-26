@@ -7,6 +7,7 @@ namespace App\Enums;
 enum VinLookupOutcome: string
 {
     case AlreadyOnShipment = 'already_on_shipment';
+    case AlreadyOnPrealert = 'already_on_prealert';
     case VehicleReady = 'vehicle_ready';
     case FetchedFromApi = 'fetched_from_api';
     case VinInvalid = 'vin_invalid';

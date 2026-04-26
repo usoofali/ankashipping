@@ -37,6 +37,7 @@ new #[Title('Staff')] class extends Component {
     public string $role = '';
     public string $job_title = '';
     public string $phone = '';
+    public array $whatsapp_categories = [];
 
     public function mount(): void
     {
@@ -72,10 +73,16 @@ new #[Title('Staff')] class extends Component {
         return Role::whereNotIn('name', ['shipper'])->orderBy('name')->get();
     }
 
+    #[Computed]
+    public function waCategories()
+    {
+        return \App\Modules\WhatsApp\Models\WhatsAppCategory::orderBy('name')->get();
+    }
+
     public function openCreateModal(): void
     {
         $this->authorize('staff.create');
-        $this->reset(['name', 'email', 'password', 'role', 'job_title', 'phone', 'editingStaffId']);
+        $this->reset(['name', 'email', 'password', 'role', 'job_title', 'phone', 'editingStaffId', 'whatsapp_categories']);
         $this->showCreateModal = true;
     }
 
@@ -89,7 +96,7 @@ new #[Title('Staff')] class extends Component {
             'password' => 'required|string|min:8',
             'role' => 'required|exists:roles,name',
             'job_title' => 'nullable|string|max:255',
-            'phone' => 'nullable|string|max:50',
+            'phone' => 'nullable|string|max:50|unique:staff,phone',
         ]);
 
         $user = User::create([
@@ -101,11 +108,13 @@ new #[Title('Staff')] class extends Component {
 
         $user->syncRoles([$this->role]);
 
-        Staff::create([
+        $staff = Staff::create([
             'user_id' => $user->id,
             'job_title' => $this->job_title ?: null,
             'phone' => $this->phone ?: null,
         ]);
+
+        $staff->whatsappCategories()->sync($this->whatsapp_categories);
 
         $this->showCreateModal = false;
         $this->notification()->success(__('Staff member created successfully.'));
@@ -123,6 +132,7 @@ new #[Title('Staff')] class extends Component {
         $this->job_title = $staff->job_title ?? '';
         $this->phone = $staff->phone ?? '';
         $this->role = $staff->user?->roles->first()?->name ?? '';
+        $this->whatsapp_categories = $staff->whatsappCategories->pluck('id')->toArray();
 
         $this->showEditModal = true;
     }
@@ -139,7 +149,7 @@ new #[Title('Staff')] class extends Component {
             'password' => 'nullable|string|min:8',
             'role' => 'required|exists:roles,name',
             'job_title' => 'nullable|string|max:255',
-            'phone' => 'nullable|string|max:50',
+            'phone' => 'nullable|string|max:50|unique:staff,phone,' . $staff->id,
         ]);
 
         $userData = [
@@ -157,6 +167,8 @@ new #[Title('Staff')] class extends Component {
             'job_title' => $this->job_title ?: null,
             'phone' => $this->phone ?: null,
         ]);
+
+        $staff->whatsappCategories()->sync($this->whatsapp_categories);
 
         $this->showEditModal = false;
         $this->notification()->success(__('Staff member updated successfully.'));
@@ -300,6 +312,15 @@ new #[Title('Staff')] class extends Component {
                 <flux:input wire:model="phone" :label="__('Phone')" icon="phone" placeholder="+1 555 000 0000" />
             </div>
 
+            <div class="space-y-3">
+                <flux:heading size="sm">{{ __('WhatsApp Responsibilities') }}</flux:heading>
+                <div class="grid grid-cols-2 gap-2">
+                    @foreach($this->waCategories as $cat)
+                        <flux:checkbox wire:model="whatsapp_categories" value="{{ $cat->id }}" :label="$cat->name" />
+                    @endforeach
+                </div>
+            </div>
+
             <div class="flex justify-end gap-2">
                 <flux:modal.close>
                     <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
@@ -334,6 +355,15 @@ new #[Title('Staff')] class extends Component {
                 </flux:select>
                 <flux:input wire:model="job_title" :label="__('Job Title')" icon="briefcase" />
                 <flux:input wire:model="phone" :label="__('Phone')" icon="phone" />
+            </div>
+
+            <div class="space-y-3">
+                <flux:heading size="sm">{{ __('WhatsApp Responsibilities') }}</flux:heading>
+                <div class="grid grid-cols-2 gap-2">
+                    @foreach($this->waCategories as $cat)
+                        <flux:checkbox wire:model="whatsapp_categories" value="{{ $cat->id }}" :label="$cat->name" />
+                    @endforeach
+                </div>
             </div>
 
             <div class="flex justify-end gap-2">

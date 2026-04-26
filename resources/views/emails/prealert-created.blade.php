@@ -23,6 +23,10 @@
 - **{{ __('Destination Port') }}:** {{ $prealert->destinationPort?->name }} ({{ $prealert->destinationPort?->state?->name }})
 @endif
 
+<x-mail::button :url="$setting->getWhatsAppUrl('Hi! I have a question about my pre-alert.')" color="success">
+{{ __('Chat on WhatsApp') }}
+</x-mail::button>
+
 ---
 Thanks,
 **{{ $companyName }}**

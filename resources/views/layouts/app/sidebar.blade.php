@@ -114,6 +114,30 @@
                 </flux:sidebar.group>
             @endcanany
 
+            {{-- WhatsApp: Chat & Categories --}}
+            @canany(['whatsapp.view_inbox', 'whatsapp.manage_conversations'])
+                <flux:sidebar.group :heading="__('WhatsApp')" class="grid" expandable expanded="false">
+                    @can('whatsapp.view_inbox')
+                        @php
+                            $unreadCount = \App\Modules\WhatsApp\Models\WhatsAppMessage::where('sender_type', 'customer')
+                                ->where('status', '!=', 'read')
+                                ->count();
+                        @endphp
+                        <flux:sidebar.item icon="chat-bubble-left-right" icon-class="text-green-500"
+                            :href="route('whatsapp.index')" :current="request()->routeIs('whatsapp.index')" wire:navigate
+                            :badge="$unreadCount > 0 ? $unreadCount : null">
+                            {{ __('Inbox') }}
+                        </flux:sidebar.item>
+                    @endcan
+                    @can('whatsapp.manage_conversations')
+                        <flux:sidebar.item icon="hashtag" icon-class="text-indigo-500"
+                            :href="route('whatsapp.categories.index')" :current="request()->routeIs('whatsapp.categories.*')" wire:navigate>
+                            {{ __('Categories') }}
+                        </flux:sidebar.item>
+                    @endcan
+                </flux:sidebar.group>
+            @endcanany
+
             {{-- Financials: Wallet & Transaction Management --}}
             @canany(['financials.wallets.view', 'wallet_top_ups.view', 'wallets.view'])
                 <flux:sidebar.group :heading="__('Financials')" class="grid" expandable="true" expanded="false">

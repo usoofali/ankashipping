@@ -7,6 +7,7 @@ namespace App\Notifications;
 use App\Enums\ShippingMode;
 use App\Models\Shipment;
 use App\Models\SystemSetting;
+use App\Notifications\Traits\HasWhatsAppNotification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -14,7 +15,7 @@ use Illuminate\Notifications\Notification;
 
 final class ShipmentCreatedNotification extends Notification implements ShouldQueue
 {
-    use Queueable;
+    use Queueable, HasWhatsAppNotification;
 
     public function __construct(
         public readonly Shipment $shipment,
@@ -27,13 +28,33 @@ final class ShipmentCreatedNotification extends Notification implements ShouldQu
      */
     public function via(object $notifiable): array
     {
-        // Shipper receives both mail and database notifications
+        $channels = ['database'];
+
+        // Shipper receives mail and whatsapp
         if ($notifiable->shipper && (int) $notifiable->shipper->id === (int) $this->shipment->shipper_id) {
-            return ['mail', 'database'];
+            $channels[] = 'mail';
+            $channels = $this->viaWithWhatsApp($channels, $notifiable, (int) $this->shipment->shipper_id);
         }
 
-        // Staff/Admins only receive database notifications
-        return ['database'];
+        return $channels;
+    }
+
+    public function toWhatsApp(object $notifiable): array
+    {
+        $body = $this->isMerge 
+            ? "✨ Vehicles added to your shipment [{$this->shipment->reference_no}]. Total: {$this->shipment->vehicles->count()}."
+            : "🚢 New Shipment Created: *{$this->shipment->reference_no}*.";
+        
+        if ($this->shipment->shipping_mode === ShippingMode::Roro) {
+            $vehicle = $this->shipment->vehicles->first();
+            $body .= "\n🚗 {$vehicle->year} {$vehicle->make} {$vehicle->model}";
+            $body .= "\nVIN: *{$vehicle->vin}*";
+        }
+
+        return [
+            'body' => $body,
+            'related_entity' => $this->shipment,
+        ];
     }
 
     public function toMail(object $notifiable): MailMessage

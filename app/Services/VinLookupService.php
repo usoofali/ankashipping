@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Data\VinLookupResult;
+use App\Models\Prealert;
 use App\Models\Shipment;
 use App\Models\Vehicle;
 use App\Support\MapCopartApiVehicleItemToVehicleAttributes;
@@ -37,18 +38,31 @@ class VinLookupService
         $shipment = $vehicle instanceof Vehicle ? $vehicle->shipment : null;
 
         if ($vehicle instanceof Vehicle && $shipment instanceof Shipment) {
-            if ($shipment instanceof Shipment) {
-                $other = $shipment->shipper_id !== $shipperId;
+            $other = $shipment->shipper_id !== $shipperId;
 
-                return VinLookupResult::alreadyOnShipment(
-                    vehicle: $vehicle,
-                    shipment: $shipment,
-                    belongsToAnotherShipper: $other,
-                    message: $other
-                        ? __('This VIN is already linked to an active shipment.')
-                        : __('This vehicle is already registered on a shipment.'),
-                );
-            }
+            return VinLookupResult::alreadyOnShipment(
+                vehicle: $vehicle,
+                shipment: $shipment,
+                belongsToAnotherShipper: $other,
+                message: $other
+                    ? __('This VIN is already linked to an active shipment.')
+                    : __('This vehicle is already registered on a shipment.'),
+            );
+        }
+
+        $prealert = $vehicle instanceof Vehicle ? $vehicle->prealert : null;
+
+        if ($vehicle instanceof Vehicle && $prealert instanceof Prealert) {
+            $other = $prealert->shipper_id !== $shipperId;
+
+            return VinLookupResult::alreadyOnPrealert(
+                vehicle: $vehicle,
+                prealert: $prealert,
+                belongsToAnotherShipper: $other,
+                message: $other
+                    ? __('This VIN is already linked to a pending pre-alert.')
+                    : __('This vehicle is already registered on a pre-alert.'),
+            );
         }
 
         if ($vehicle instanceof Vehicle) {

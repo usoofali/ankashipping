@@ -11,6 +11,10 @@
 
 {{ __('Welcome to :companyName.', ['companyName' => $companyName]) }}
 
+<x-mail::button :url="$setting->getWhatsAppUrl('Hi! I just joined and have a question.')" color="success">
+{{ __('Chat on WhatsApp') }}
+</x-mail::button>
+
 ---
 Thanks,
 **{{ $companyName }}**

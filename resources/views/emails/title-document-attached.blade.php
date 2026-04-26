@@ -23,6 +23,10 @@
 {{ __('View Shipment Details') }}
 </x-mail::button>
 
+<x-mail::button :url="$setting->getWhatsAppUrl('Hi! I have a question about the title document for vehicle ' . $vehicle->vin)" color="success">
+{{ __('Chat on WhatsApp') }}
+</x-mail::button>
+
 ---
 Thanks,
 **{{ $companyName }}**

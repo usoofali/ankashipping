@@ -211,7 +211,7 @@ new #[Title('System settings')] class extends Component {
         }
 
         if (is_string($this->logo_path) && trim($this->logo_path) !== '') {
-            return Storage::url(trim($this->logo_path));
+            return asset('storage/' . trim($this->logo_path));
         }
 
         return null;

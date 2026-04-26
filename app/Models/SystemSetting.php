@@ -93,7 +93,7 @@ final class SystemSetting extends Model
     public function logoSrcForWeb(): ?string
     {
         if (is_string($this->logo_path) && trim($this->logo_path) !== '') {
-            return Storage::url(trim($this->logo_path));
+            return asset('storage/' . trim($this->logo_path));
         }
 
         if (! is_string($this->logo) || trim($this->logo) === '') {
@@ -114,13 +114,13 @@ final class SystemSetting extends Model
             return $logo;
         }
 
-        return Storage::url($logo);
+        return asset('storage/' . $logo);
     }
 
     public function logoSrcForEmail(): ?string
     {
         if (is_string($this->logo_path) && trim($this->logo_path) !== '') {
-            return url(Storage::url(trim($this->logo_path)));
+            return asset('storage/' . trim($this->logo_path));
         }
 
         if (! is_string($this->logo) || trim($this->logo) === '') {
@@ -197,8 +197,19 @@ final class SystemSetting extends Model
             return $pool[$index % count($pool)];
         }
 
-        // Hostinger stack (or default): use the purpose-specific mailer name directly.
-        // This resolves to one of: operations, booking, services, accounts, noreply
         return $purpose;
+    }
+
+    public function getWhatsAppUrl(?string $text = null): string
+    {
+        $phone = preg_replace('/[^0-9]/', '', $this->phone ?? '');
+
+        $url = "https://wa.me/{$phone}";
+
+        if ($text) {
+            $url .= "?text=" . urlencode($text);
+        }
+
+        return $url;
     }
 }

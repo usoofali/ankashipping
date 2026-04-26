@@ -9,6 +9,8 @@ use App\Enums\ShipmentDocumentType;
 use App\Models\Invoice;
 use App\Models\Shipment;
 use App\Models\SystemSetting;
+use App\Modules\WhatsApp\Services\WhatsAppDocumentService;
+use App\Notifications\Traits\HasWhatsAppNotification;
 use App\Support\ShipmentPdfSupport;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -18,7 +20,13 @@ use Illuminate\Support\Facades\Storage;
 
 final class InvoiceStatusChangedNotification extends Notification implements ShouldQueue
 {
-    use Queueable, ShipmentPdfSupport;
+    use Queueable, ShipmentPdfSupport, HasWhatsAppNotification;
+
+    /** @var int Maximum seconds this job may run before timing out. */
+    public int $timeout = 80;
+
+    /** @var int Number of times to attempt the job. */
+    public int $tries = 2;
 
     public function __construct(
         public readonly Shipment $shipment,
@@ -34,19 +42,48 @@ final class InvoiceStatusChangedNotification extends Notification implements Sho
     {
         $channels = ['database'];
 
-        // If the notifiable is the shipper of the shipment, we also send an email if status is Completed
-        $shipperUserId = $this->shipment->shipper?->user_id;
-        if ($shipperUserId !== null && (int) $notifiable->getKey() === (int) $shipperUserId) {
-            if ($this->toStatus === InvoiceStatus::Completed) {
-                $channels[] = 'mail';
-            }
+        if ($this->toStatus === InvoiceStatus::Completed) {
+            $channels[] = 'mail';
+            $channels = $this->viaWithWhatsApp($channels, $notifiable, (int) $this->shipment->shipper_id);
         }
 
         return $channels;
     }
 
+    public function toWhatsApp(object $notifiable): array
+    {
+        $docService = app(WhatsAppDocumentService::class);
+        $files = [];
+
+        // 1. Invoice PDF
+        $files[] = $docService->getInvoicePayload($this->shipment);
+
+        // 2. Bill of Lading
+        $blDocument = $this->shipment->documents()
+            ->where('document_type', ShipmentDocumentType::BillOfLading)
+            ->latest()
+            ->first();
+
+        if ($blDocument) {
+            foreach ($blDocument->files as $file) {
+                $files[] = [
+                    'url' => Storage::disk('public')->url($file->path),
+                    'name' => $file->original_name ?? 'BillOfLading.pdf',
+                ];
+            }
+        }
+
+        return [
+            'body' => "💰 *Invoice Completed:* Your shipment *{$this->shipment->reference_no}* is ready for release. Invoice and Bill of Lading attached.",
+            'files' => $files,
+            'related_entity' => $this->shipment,
+        ];
+    }
+
     public function toMail(object $notifiable): MailMessage
     {
+        ini_set('memory_limit', '512M');
+
         $setting = SystemSetting::current()->loadMissing(['city', 'state']);
         $companyName = $setting->company_name ?: config('app.name');
         $cityName = $setting->city?->name;

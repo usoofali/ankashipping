@@ -58,12 +58,12 @@ trait ShipmentPdfSupport
         $qrCodeBase64 = null;
 
         try {
-            $qrResponse = Http::get($qrUrl);
+            $qrResponse = Http::connectTimeout(5)->timeout(10)->get($qrUrl);
             if ($qrResponse->successful()) {
                 $qrCodeBase64 = 'data:image/png;base64,'.base64_encode($qrResponse->body());
             }
         } catch (\Exception $e) {
-            // Skip
+            // Skip — QR code is optional; PDF will render without it.
         }
 
         return $qrCodeBase64;

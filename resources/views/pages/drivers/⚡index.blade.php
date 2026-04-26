@@ -42,7 +42,7 @@ new #[Title('Drivers')] class extends Component {
     public function drivers()
     {
         return Driver::query()
-            ->withCount('shipments')
+            ->withCount('vehicles')
             ->when($this->search, fn($q) => $q->where('phone', 'like', "%{$this->search}%")
                 ->orWhere('company', 'like', "%{$this->search}%")
                 ->orWhere('email', 'like', "%{$this->search}%"))
@@ -63,7 +63,7 @@ new #[Title('Drivers')] class extends Component {
         $this->authorize('drivers.create');
 
         $validated = $this->validate([
-            'phone' => 'required|string|max:50',
+            'phone' => 'required|string|max:50|unique:drivers,phone',
             'email' => 'nullable|email|max:255',
             'company' => 'nullable|string|max:255',
         ]);
@@ -92,7 +92,7 @@ new #[Title('Drivers')] class extends Component {
         $this->authorize('drivers.update');
 
         $validated = $this->validate([
-            'phone' => 'required|string|max:50',
+            'phone' => 'required|string|max:50|unique:drivers,phone,' . $this->editingDriverId,
             'email' => 'nullable|email|max:255',
             'company' => 'nullable|string|max:255',
         ]);
@@ -120,9 +120,9 @@ new #[Title('Drivers')] class extends Component {
             $driver = Driver::findOrFail($this->driverPendingDeleteId);
             $driverLabel = $driver->company ?: ($driver->phone ?: ('Driver #' . $driver->id));
 
-            if ($driver->shipments()->exists()) {
+            if ($driver->vehicles()->exists()) {
                 $this->showDeleteModal = false;
-                $this->notification()->warning(__('Cannot delete ":name" because they have associated shipments.', ['name' => $driverLabel]));
+                $this->notification()->warning(__('Cannot delete ":name" because they have associated vehicles.', ['name' => $driverLabel]));
             } else {
                 $driver->delete();
                 $this->showDeleteModal = false;
@@ -157,7 +157,7 @@ new #[Title('Drivers')] class extends Component {
                     <flux:table.column icon="building-office">{{ __('Company') }}</flux:table.column>
                     <flux:table.column icon="phone">{{ __('Phone') }}</flux:table.column>
                     <flux:table.column icon="envelope">{{ __('Email') }}</flux:table.column>
-                    <flux:table.column icon="squares-2x2">{{ __('Shipments') }}</flux:table.column>
+                    <flux:table.column icon="truck">{{ __('Vehicles') }}</flux:table.column>
                     <flux:table.column align="right">{{ __('Actions') }}</flux:table.column>
                 </flux:table.columns>
 
@@ -168,7 +168,7 @@ new #[Title('Drivers')] class extends Component {
                             <flux:table.cell>{{ $driver->phone ?: '—' }}</flux:table.cell>
                             <flux:table.cell class="text-sm text-zinc-500">{{ $driver->email ?: '—' }}</flux:table.cell>
                             <flux:table.cell>
-                                <flux:badge color="zinc" size="sm">{{ $driver->shipments_count }}</flux:badge>
+                                <flux:badge color="zinc" size="sm">{{ $driver->vehicles_count }}</flux:badge>
                             </flux:table.cell>
                             <flux:table.cell align="right">
                                 <flux:dropdown align="end" variant="ghost">

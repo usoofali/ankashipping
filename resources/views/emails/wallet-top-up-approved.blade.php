@@ -21,6 +21,10 @@
 {{ __('View Wallet Balance') }}
 </x-mail::button>
 
+<x-mail::button :url="$setting->getWhatsAppUrl('Hi! I have a question about my wallet top-up.')" color="success">
+{{ __('Chat on WhatsApp') }}
+</x-mail::button>
+
 ---
 Thanks,
 **{{ $companyName }}**
