@@ -172,7 +172,7 @@ Thank you!";
 
         if ($conversation->contact_type === Driver::class) {
             $company = $conversation->contact->company ?? 'Driver';
-            $message = "🚚 *Welcome, {$company}*\n\nPlease choose an option:\n\n1️⃣ Get Assigned Dock Receipts\n2️⃣ Submit Stamped Receipt\n3️⃣ Speak to Agent";
+            $message = "🚚 *Welcome, {$company}*\n\nPlease choose an option:\n\n1️⃣ Get Dock Receipts\n2️⃣ Send Stamped Dock\n3️⃣ Speak to Agent";
             $this->waService->sendMessage($conversation->phone_number, $message);
 
             return;
