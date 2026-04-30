@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
     <head>
-        <wireui:scripts />
         @include('partials.head')
     </head>
     <body class="min-h-screen bg-sky-50/50 dark:bg-zinc-800">

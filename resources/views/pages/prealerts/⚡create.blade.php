@@ -32,6 +32,7 @@ new #[Title('Submit Prealert')] class extends Component {
     public string $vin = '';
     public ?int $carrier_id = null;
     public ?int $destination_port_id = null;
+    public bool $towing = false;
 
     // Logistics fields
     public string $shipping_mode = 'roro';
@@ -66,6 +67,7 @@ new #[Title('Submit Prealert')] class extends Component {
     {
         $this->consignee_id = null;
         $this->notify_party_id = null;
+        $this->towing = false;
         if ($this->shipper_id) {
             $this->assignDefaultConsignee();
         }
@@ -260,6 +262,7 @@ new #[Title('Submit Prealert')] class extends Component {
             'destination_port_id' => (int) $this->destination_port_id ?: null,
             'shipping_mode' => $this->shipping_mode,
             'shipment_id' => $this->shipment_id,
+            'towing' => $this->shipperTowing || $this->towing,
         ]);
 
         foreach ($this->vehicles as $vData) {
@@ -395,6 +398,16 @@ new #[Title('Submit Prealert')] class extends Component {
             ->get()
             ->filter(fn($s) => $s->vehicles_count < $s->capacity);
     }
+    #[Computed]
+    public function shipperTowing(): bool
+    {
+        if (!$this->shipper_id) {
+            return false;
+        }
+
+        return (bool) Shipper::find($this->shipper_id)?->towing;
+    }
+
 }; ?>
 
 <div>
@@ -682,6 +695,19 @@ new #[Title('Submit Prealert')] class extends Component {
                                                                 Auth::user()?->shipper?->company_name ?? '-'
                                                             )" disabled />
                                         <input type="hidden" wire:model="shipper_id">
+                                    @endif
+
+                                    @if($shipper_id)
+                                        <div class="mt-3">
+                                            @if($this->shipperTowing)
+                                                <flux:badge color="amber" variant="subtle" icon="truck" size="sm">
+                                                    {{ __('Towing required (set on shipper profile)') }}
+                                                </flux:badge>
+                                            @else
+                                                <flux:checkbox wire:model.live="towing" id="prealert-towing"
+                                                    :label="__('Towing Required for this Prealert?')" />
+                                            @endif
+                                        </div>
                                     @endif
                                 </div>
 

@@ -7,6 +7,7 @@ namespace App\Notifications;
 use App\Models\Invoice;
 use App\Models\Shipment;
 use App\Models\SystemSetting;
+use App\Modules\WhatsApp\Channels\WhatsAppChannel;
 use App\Support\ShipmentPdfSupport;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -37,7 +38,7 @@ final class PaymentReceivedNotification extends Notification implements ShouldQu
 
         if ($shipperUserId !== null && (int) $notifiable->getKey() === (int) $shipperUserId) {
             $channels[] = 'mail';
-            $channels[] = \App\Modules\WhatsApp\Channels\WhatsAppChannel::class;
+            $channels[] = WhatsAppChannel::class;
         }
 
         return $channels;

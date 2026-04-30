@@ -737,7 +737,7 @@ new #[Title('Shipment Details')] class extends Component {
 
         $validated = $this->validate([
             'new_driver_company' => ['nullable', 'string', 'max:255'],
-            'new_driver_phone' => ['required', 'string', 'max:50'],
+            'new_driver_phone' => ['required', 'string', 'regex:/^\+1 \(\d{3}\) \d{3}-\d{4}$/', 'unique:drivers,phone'],
             'new_driver_email' => ['nullable', 'email', 'max:255'],
         ]);
 
@@ -1200,7 +1200,7 @@ new #[Title('Shipment Details')] class extends Component {
             'logisticsForm.vehicles.*.measurement' => 'nullable|numeric|min:0',
             'logisticsForm.vehicles.*.measurement_unit' => 'required|string|in:CBM,CFT',
         ]);
-
+        $isTowing = $this->shipment?->towing ?? false;
         DB::transaction(function () use ($validated): void {
             $this->shipment->update($validated['logisticsForm']['shipment']);
 
@@ -1213,11 +1213,11 @@ new #[Title('Shipment Details')] class extends Component {
 
             // AUTO-TRANSITION: BOOKING -> INLAND
             if ($this->shipment->shipment_status === ShipmentStatus::Booking && $this->workflow()->canTransitionToInland($this->shipment)) {
-                $this->shipment->update(['shipment_status' => ShipmentStatus::Inland]);
+                $this->shipment->update(['shipment_status' => $isTowing ? ShipmentStatus::Inland : ShipmentStatus::Delivered]);
 
                 ShipmentTracking::query()->create([
                     'shipment_id' => $this->shipment->id,
-                    'status' => ShipmentStatus::Inland,
+                    'status' => $isTowing ? ShipmentStatus::Inland : ShipmentStatus::Delivered,
                     'note' => __('Shipment transitioned to INLAND after logistics & booking update.'),
                     'recorded_at' => now(),
                 ]);
@@ -1250,7 +1250,6 @@ new #[Title('Shipment Details')] class extends Component {
         }
 
         $shipper = $this->shipment->shipper;
-        $isTowing = $shipper?->towing ?? false;
 
         if ($this->shipment->isContainer()) {
             if (!$isTowing) {
@@ -2205,11 +2204,14 @@ new #[Title('Shipment Details')] class extends Component {
 
                 @can('shipments.delete')
                     <div class="mt-10 pt-8 border-t border-zinc-200 dark:border-zinc-800">
-                        <div class="rounded-xl border border-red-200 dark:border-red-900/40 bg-white dark:bg-zinc-900 overflow-hidden">
+                        <div
+                            class="rounded-xl border border-red-200 dark:border-red-900/40 bg-white dark:bg-zinc-900 overflow-hidden">
                             {{-- Header --}}
-                            <div class="px-6 py-4 border-b border-red-100 dark:border-red-900/30 bg-red-50/50 dark:bg-red-950/20 flex items-center gap-2">
+                            <div
+                                class="px-6 py-4 border-b border-red-100 dark:border-red-900/30 bg-red-50/50 dark:bg-red-950/20 flex items-center gap-2">
                                 <flux:icon.exclamation-triangle class="size-4 text-red-600 dark:text-red-400 shrink-0" />
-                                <flux:heading size="sm" class="text-red-700 dark:text-red-400 font-semibold uppercase tracking-wider">
+                                <flux:heading size="sm"
+                                    class="text-red-700 dark:text-red-400 font-semibold uppercase tracking-wider">
                                     {{ __('Danger Zone') }}
                                 </flux:heading>
                             </div>
@@ -2225,7 +2227,8 @@ new #[Title('Shipment Details')] class extends Component {
                                     </flux:text>
                                 </div>
 
-                                <flux:button variant="danger" icon="trash" class="shrink-0" wire:click="$set('showDeleteShipmentConfirmModal', true)">
+                                <flux:button variant="danger" icon="trash" class="shrink-0"
+                                    wire:click="$set('showDeleteShipmentConfirmModal', true)">
                                     {{ __('Delete Shipment') }}
                                 </flux:button>
                             </div>

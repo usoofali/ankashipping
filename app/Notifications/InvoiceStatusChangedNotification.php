@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Storage;
 
 final class InvoiceStatusChangedNotification extends Notification implements ShouldQueue
 {
-    use Queueable, ShipmentPdfSupport, HasWhatsAppNotification;
+    use HasWhatsAppNotification, Queueable, ShipmentPdfSupport;
 
     /** @var int Maximum seconds this job may run before timing out. */
     public int $timeout = 80;
@@ -138,7 +138,7 @@ final class InvoiceStatusChangedNotification extends Notification implements Sho
     public function toArray(object $notifiable): array
     {
         return [
-            'title' => __('Invoice Completed'),
+            'title' => __('Invoice :status', ['status' => $this->toStatus->name]),
             'body' => __('Invoice for shipment :ref changed from :from to :to.', [
                 'ref' => $this->shipment->reference_no,
                 'from' => $this->fromStatus->name,

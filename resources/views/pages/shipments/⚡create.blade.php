@@ -59,6 +59,7 @@ new #[Title('Create Shipment')] class extends Component {
     public ?string $notes = '';
     public int $capacity = 1;
     public ?string $sealed_at = null;
+    public bool $towing = false;
 
     public bool $showConsigneeModal = false;
     public string $newConsigneeName = '';
@@ -98,6 +99,7 @@ new #[Title('Create Shipment')] class extends Component {
             $this->destination_port_id = $pre->destination_port_id;
             $this->shipping_mode = $pre->shipping_mode?->value ?? $this->shipping_mode;
             $this->notes = $pre->notes;
+            $this->towing = $pre->towing;
 
             if ($this->shipping_mode === ShippingMode::Container->value) {
                 $this->capacity = 5;
@@ -200,7 +202,7 @@ new #[Title('Create Shipment')] class extends Component {
         try {
             DB::transaction(function () {
                 $shipper = Shipper::find($this->shipper_id);
-                $isDispatched = $shipper && !$shipper->towing;
+                $isDispatched = !$this->towing;
 
                 if ($this->targetShipment) {
                     $shipment = $this->targetShipment;
@@ -224,6 +226,7 @@ new #[Title('Create Shipment')] class extends Component {
                         'payment_method_id' => $this->payment_method_id,
                         'capacity' => $this->capacity,
                         'sealed_at' => $this->sealed_at,
+                        'towing' => $this->towing,
                     ]);
 
                     // 3. Create Invoice (Only for new shipments)
@@ -270,7 +273,7 @@ new #[Title('Create Shipment')] class extends Component {
                 }
 
                 // 3. Create Initial Tracking
-                $finalShipmentStatus = ($this->targetShipment) 
+                $finalShipmentStatus = ($this->targetShipment)
                     ? $shipment->shipment_status->value
                     : ($isDispatched && $this->shipping_mode === ShippingMode::Roro->value ? ShipmentStatus::Dispatched->value : $this->shipment_status);
 
@@ -561,6 +564,24 @@ new #[Title('Create Shipment')] class extends Component {
                     </x-crud.panel>
                 @endif
             </div>
+
+            {{-- Towing indicator --}}
+            <x-crud.panel class="p-4">
+                <div class="flex items-center gap-3">
+                    <flux:icon.truck class="size-5 text-amber-500 shrink-0" />
+                    <div class="flex-1">
+                        <flux:heading size="sm">{{ __('Towing') }}</flux:heading>
+                        <flux:text size="sm" class="text-zinc-500">{{ __('Is towing required for this shipment?') }}
+                        </flux:text>
+                    </div>
+                    <flux:checkbox wire:model.live="towing" id="shipment-towing" />
+                </div>
+                @if($towing)
+                    <flux:badge color="amber" variant="subtle" icon="truck" size="sm" class="mt-2">
+                        {{ __('Towing Required') }}
+                    </flux:badge>
+                @endif
+            </x-crud.panel>
 
             {{-- 2. Added Vehicles List --}}
             <div class="grid grid-cols-1 gap-6">

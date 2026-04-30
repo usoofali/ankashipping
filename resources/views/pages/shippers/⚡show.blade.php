@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Enums\InvoiceStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\ShipmentStatus;
+use App\Models\Driver;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Shipment;
@@ -106,11 +107,46 @@ new #[Title('Shipper')] class extends Component {
         $this->notification()->success(__('Shipper discount updated.'));
     }
 
+    public function toggleTowing(): void
+    {
+        $this->authorize('shippers.manage_towing');
+
+        $isTowing = !$this->shipper->towing;
+
+        $this->shipper->update([
+            'towing' => $isTowing,
+        ]);
+
+        if ($isTowing === false) {
+            $driver = Driver::where('company', $this->shipper->company_name)
+                ->where('email', $this->shipper->user->email)
+                ->first();
+
+            if (!$driver) {
+                $driver = Driver::create([
+                    'phone' => $this->shipper->phone . '01',
+                    'email' => $this->shipper->user->email,
+                    'company' => $this->shipper->company_name,
+                ]);
+            }
+
+            $this->shipper->update(['default_driver_id' => $driver->id]);
+        }
+
+        $this->shipper->refresh();
+
+        $this->notification()->success(
+            $this->shipper->towing
+            ? __('Towing requirement enabled for this shipper.')
+            : __('Towing requirement disabled for this shipper.')
+        );
+    }
+
     public function shipments(): LengthAwarePaginator
     {
         return Shipment::query()
             ->where('shipper_id', $this->shipper->id)
-            ->with(['vehicle', 'invoice.payment', 'originPort.state', 'originPort.country', 'driver', 'workshop'])
+            ->with(['vehicle.driver', 'invoice.payment', 'originPort.state', 'originPort.country', 'workshop'])
             ->when($this->search !== '', function ($query): void {
                 $query->where(function ($searchQuery): void {
                     $term = '%' . trim($this->search) . '%';
@@ -281,6 +317,11 @@ new #[Title('Shipper')] class extends Component {
     <x-crud.page-header :heading="$shipper->company_name" :subheading="__('Shipper overview and activity')">
         <x-slot name="actions">
             <div class="flex flex-wrap items-center gap-2">
+                @can('shippers.manage_towing')
+                    <flux:button variant="ghost" icon="arrows-right-left" wire:click="toggleTowing">
+                        {{ $shipper->towing ? __('Disable towing') : __('Enable towing') }}
+                    </flux:button>
+                @endcan
                 @can('update', $shipper)
                     <flux:button variant="ghost" icon="tag" wire:click="openDiscountModal">
                         {{ __('Edit discount') }}
@@ -465,6 +506,12 @@ new #[Title('Shipper')] class extends Component {
                 <flux:text class="text-xs font-medium uppercase text-zinc-500">{{ __('City') }}</flux:text>
                 <flux:text>{{ $shipper->city?->name ?? '—' }}</flux:text>
             </div>
+            <div class="flex flex-col items-start gap-1">
+                <flux:text class="text-xs font-medium uppercase text-zinc-500">{{ __('Towing required') }}</flux:text>
+                <flux:badge size="sm" color="{{ $shipper->towing ? 'amber' : 'zinc' }}" variant="subtle">
+                    {{ $shipper->towing ? __('Yes') : __('No') }}
+                </flux:badge>
+            </div>
         </div>
     </flux:card>
 
@@ -534,9 +581,6 @@ new #[Title('Shipper')] class extends Component {
                                     class="font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
                                     {{ $shipment->reference_no }}
                                 </a>
-                                <span class="font-mono text-xs text-zinc-500">
-                                    {{ $shipment->vin ? substr($shipment->vin, -6) : '—' }}
-                                </span>
                                 <span class="text-xs text-zinc-500">
                                     {{ $shipment->created_at?->format('d-m-y') ?? '—' }}
                                 </span>
@@ -561,10 +605,10 @@ new #[Title('Shipper')] class extends Component {
                             @endif
                         </flux:table.cell>
                         <flux:table.cell>
-                            @if ($shipment->driver_id && $shipment->driver)
+                            @if ($shipment->vehicle?->driver)
                                 <div class="flex flex-col">
-                                    <span class="font-semibold">{{ $shipment->driver->company ?: '—' }}</span>
-                                    <span class="text-xs text-zinc-500">{{ $shipment->driver->phone ?: '—' }}</span>
+                                    <span class="font-semibold">{{ $shipment->vehicle->driver->company ?: '—' }}</span>
+                                    <span class="text-xs text-zinc-500">{{ $shipment->vehicle->driver->phone ?: '—' }}</span>
                                 </div>
                             @else
                                 <span class="text-zinc-500">{{ __('Driver not assigned') }}</span>

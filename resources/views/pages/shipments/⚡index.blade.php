@@ -254,7 +254,12 @@ new #[Title('Shipments')] class extends Component {
                             @endif
                         </flux:table.cell>
                         <flux:table.cell class="font-mono">
-                            ${{ number_format((float) ($shipment->invoice?->total_amount ?? 0), 2) }}
+                            @if(auth()->user()->hasRole('shipper') && $shipment->invoice_status !== \App\Enums\InvoiceStatus::Completed)
+                                <span class="text-zinc-400"
+                                    title="{{ __('Invoice total available when completed') }}">$0.00</span>
+                            @else
+                                ${{ number_format((float) ($shipment->invoice?->total_amount ?? 0), 2) }}
+                            @endif
                         </flux:table.cell>
                         <flux:table.cell>
                             @if($shipment->payment_status === \App\Enums\PaymentStatus::AwaitingPayment && (auth()->user()->can('shipments.pay') || auth()->user()->hasRole('super_admin')))

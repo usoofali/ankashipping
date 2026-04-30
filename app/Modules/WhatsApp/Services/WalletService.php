@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\WhatsApp\Services;
 
+use App\Actions\Financial\ProcessWalletPaymentAction;
 use App\Actions\Financial\RequestWalletTopUpAction;
 use App\Enums\InvoiceStatus;
 use App\Enums\PaymentStatus;
+use App\Enums\ShipmentStatus;
 use App\Enums\TransactionType;
 use App\Enums\WalletTopUpStatus;
 use App\Models\Shipment;
@@ -24,7 +26,8 @@ class WalletService
 {
     public function __construct(
         protected WhatsAppService $waService,
-        protected RequestWalletTopUpAction $topUpAction
+        protected RequestWalletTopUpAction $topUpAction,
+        protected ProcessWalletPaymentAction $paymentAction
     ) {}
 
     public function startWalletFlow(WhatsAppConversation $conversation): void
@@ -38,7 +41,8 @@ class WalletService
         $menu = "💰 *Wallet Management*\n";
         $menu .= "━━━━━━━━━━━━━━━━━━━\n";
         $menu .= "1️⃣ *Balance & Transactions*\n";
-        $menu .= "2️⃣ *Fund / Top-up Wallet*\n\n";
+        $menu .= "2️⃣ *Fund / Top-up Wallet*\n";
+        $menu .= "3️⃣ *Pay for Shipment*\n\n";
         $menu .= "💡 _Type *'Menu'* to go back._";
 
         $this->waService->sendMessage($conversation->phone_number, $menu);
@@ -61,8 +65,11 @@ class WalletService
                 } elseif ($cleanText === '2') {
                     $state->update(['current_step' => 'wallet_fund_awaiting_amount']);
                     $this->waService->sendMessage($conversation->phone_number, "💵 *Fund Wallet*\n\nPlease enter the *Amount* you wish to top up (USD):");
+                } elseif ($cleanText === '3') {
+                    $state->update(['current_step' => 'wallet_pay_awaiting_vin']);
+                    $this->waService->sendMessage($conversation->phone_number, "💳 *Pay for Shipment*\n\nPlease enter the *Shipment Reference* or *Vehicle VIN*:");
                 } else {
-                    $this->waService->sendMessage($conversation->phone_number, "⚠️ Invalid selection. Please choose:\n\n1️⃣ Balance & Transactions\n2️⃣ Fund Wallet");
+                    $this->waService->sendMessage($conversation->phone_number, "⚠️ Invalid selection. Please choose:\n\n1️⃣ Balance & Transactions\n2️⃣ Fund Wallet\n3️⃣ Pay for Shipment");
                 }
                 break;
 
@@ -102,6 +109,14 @@ class WalletService
 
                 $this->finalizeTopUp($conversation, $state, $mediaId);
                 break;
+
+            case 'wallet_pay_awaiting_vin':
+                $this->validateAndPromptForPayment($conversation, $state, $cleanText);
+                break;
+
+            case 'wallet_pay_awaiting_confirmation':
+                $this->handlePaymentConfirmation($conversation, $state, $cleanText);
+                break;
         }
     }
 
@@ -114,10 +129,11 @@ class WalletService
         $localPath = $this->waService->downloadMedia($mediaId);
         if (! $localPath || ! Storage::disk('public')->exists($localPath)) {
             $this->waService->sendMessage($conversation->phone_number, '❌ Failed to download your receipt. Please try again.');
+
             return;
         }
 
-        $tmpFilename = 'receipts/tmp/' . basename($localPath);
+        $tmpFilename = 'receipts/tmp/'.basename($localPath);
         Storage::disk('public')->copy($localPath, $tmpFilename);
         Storage::disk('public')->delete($localPath);
 
@@ -233,5 +249,110 @@ class WalletService
 
         // Allow continuing in the flow if they want to fund
         $conversation->menuState()->update(['current_step' => 'wallet_menu_selection']);
+    }
+
+    protected function validateAndPromptForPayment(WhatsAppConversation $conversation, WhatsAppMenuState $state, string $input): void
+    {
+        /** @var Shipper $shipper */
+        $shipper = Shipper::with('wallet')->find($conversation->contact_id);
+
+        $shipment = Shipment::query()
+            ->where('shipper_id', $shipper->id)
+            ->where(function ($q) use ($input) {
+                $q->where('reference_no', $input)
+                    ->orWhereHas('vehicles', fn ($v) => $v->where('vin', 'like', "%{$input}%"));
+            })
+            ->first();
+
+        if (! $shipment) {
+            $this->waService->sendMessage($conversation->phone_number, "❌ *Shipment Not Found*\n\nWe couldn't find any shipment matching '{$input}' belonging to your account. Please check the reference or VIN and try again.");
+
+            return;
+        }
+
+        // 1. Check Shipment Status
+        if ($shipment->shipment_status !== ShipmentStatus::Loaded) {
+            $this->waService->sendMessage($conversation->phone_number, "⚠️ *Payment Blocked*\n\nThis shipment is currently *{$shipment->shipment_status->value}*. Payments can only be made when the shipment status is *LOADED*.");
+
+            return;
+        }
+
+        // 2. Check Invoice Status
+        $invoice = $shipment->invoice;
+        if (! $invoice || $invoice->status !== InvoiceStatus::Completed) {
+            $this->waService->sendMessage($conversation->phone_number, '⚠️ *Payment Blocked*\n\nThe invoice for this shipment is not yet completed or has not been generated.');
+
+            return;
+        }
+
+        // 3. Check Payment Status
+        if ($shipment->payment_status !== PaymentStatus::AwaitingPayment) {
+            $this->waService->sendMessage($conversation->phone_number, "⚠️ *Payment Blocked*\n\nThis shipment is already marked as *{$shipment->payment_status->value}*.");
+
+            return;
+        }
+
+        // 4. Check Wallet Balance
+        $balance = (float) ($shipper->wallet->balance ?? 0);
+        $amount = (float) $invoice->total_amount;
+
+        if ($balance < $amount) {
+            $shortfall = number_format($amount - $balance, 2);
+            $this->waService->sendMessage($conversation->phone_number, "❌ *Insufficient Balance*\n\n*Total Due:* \${$amount}\n*Your Balance:* \${$balance}\n\nYou need \${$shortfall} more in your wallet to complete this payment.");
+
+            return;
+        }
+
+        // All checks passed, ask for confirmation
+        $state->update([
+            'current_step' => 'wallet_pay_awaiting_confirmation',
+            'data_payload' => ['shipment_id' => $shipment->id, 'amount' => $amount],
+        ]);
+
+        $msg = "💳 *Confirm Payment*\n";
+        $msg .= "━━━━━━━━━━━━━━━━━━━\n";
+        $msg .= "*Shipment:* {$shipment->reference_no}\n";
+        $msg .= '*Amount:* $'.number_format($amount, 2)."\n\n";
+        $msg .= "Are you sure you want to pay for this shipment using your wallet balance?\n\n";
+        $msg .= "1️⃣ Confirm Payment\n";
+        $msg .= '2️⃣ Cancel';
+
+        $this->waService->sendMessage($conversation->phone_number, $msg);
+    }
+
+    protected function handlePaymentConfirmation(WhatsAppConversation $conversation, WhatsAppMenuState $state, string $choice): void
+    {
+        if ($choice === '2') {
+            $this->waService->sendMessage($conversation->phone_number, '❌ *Payment Cancelled.*');
+            $state->delete();
+
+            return;
+        }
+
+        if ($choice !== '1') {
+            $this->waService->sendMessage($conversation->phone_number, "⚠️ Invalid selection. Please choose:\n\n1️⃣ Confirm Payment\n2️⃣ Cancel");
+
+            return;
+        }
+
+        $payload = $state->data_payload;
+        $shipment = Shipment::find($payload['shipment_id']);
+        $shipper = Shipper::find($conversation->contact_id);
+
+        try {
+            $this->waService->sendMessage($conversation->phone_number, '⏳ *Processing payment...*');
+
+            // Pass the shipper's user as the actor
+            $this->paymentAction->execute($shipment, $shipper, $shipper->user);
+
+            $this->waService->sendMessage(
+                $conversation->phone_number,
+                "✅ *Payment Successful!*\n\nYour payment for shipment *{$shipment->reference_no}* has been processed. The shipment status has been updated to COMPLETED."
+            );
+
+            $state->delete();
+        } catch (\Exception $e) {
+            $this->waService->sendMessage($conversation->phone_number, '❌ *Payment Failed:* '.$e->getMessage());
+        }
     }
 }

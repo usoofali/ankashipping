@@ -12,6 +12,7 @@ use App\Models\Consignee;
 use App\Models\Port;
 use App\Models\Prealert;
 use App\Models\Shipment as ShipmentModel;
+use App\Models\Shipper;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Modules\WhatsApp\Models\WhatsAppConversation;
@@ -118,7 +119,7 @@ class PreAlertService
                 $localPath = $this->waService->downloadMedia($mediaId);
 
                 if ($localPath && Storage::disk('public')->exists($localPath)) {
-                    $tmpFilename = 'receipts/tmp/' . basename($localPath);
+                    $tmpFilename = 'receipts/tmp/'.basename($localPath);
                     Storage::disk('public')->copy($localPath, $tmpFilename);
                     Storage::disk('public')->delete($localPath);
                     $payload['vehicle_data'][$id]['auction_receipt_tmp'] = $tmpFilename;
@@ -230,12 +231,21 @@ class PreAlertService
                     return;
                 }
 
-                if (($payload['shipping_mode'] ?? '') === 'container') {
-                    $this->transitionToShipmentSelection($conversation, $state, $payload);
+                $this->transitionToTowingDecision($conversation, $state, $payload);
+                break;
+
+            case 'prealert_awaiting_towing':
+                if ($cleanText === '1') {
+                    $payload['towing'] = true;
+                } elseif ($cleanText === '2') {
+                    $payload['towing'] = false;
                 } else {
-                    $this->finalize($conversation, $payload);
-                    $state->delete();
+                    $this->waService->sendMessage($conversation->phone_number, "⚠️ Invalid selection.\n\n1. Yes, I need towing\n2. No, I will arrange delivery");
+
+                    return;
                 }
+
+                $this->proceedAfterTowingDecision($conversation, $state, $payload);
                 break;
 
             case 'prealert_awaiting_shipment_selection':
@@ -261,6 +271,34 @@ class PreAlertService
                 $this->finalize($conversation, $payload);
                 $state->delete();
                 break;
+        }
+    }
+
+    protected function proceedAfterTowingDecision(WhatsAppConversation $conversation, WhatsAppMenuState $state, array $payload): void
+    {
+        if (($payload['shipping_mode'] ?? '') === 'container') {
+            $this->transitionToShipmentSelection($conversation, $state, $payload);
+        } else {
+            $this->finalize($conversation, $payload);
+            $state->delete();
+        }
+    }
+
+    protected function transitionToTowingDecision(WhatsAppConversation $conversation, WhatsAppMenuState $state, array $payload): void
+    {
+        $shipper = Shipper::find($conversation->contact_id);
+
+        if ($shipper && $shipper->towing) {
+            $payload['towing'] = true;
+            $this->proceedAfterTowingDecision($conversation, $state, $payload);
+        } else {
+            $state->update([
+                'current_step' => 'prealert_awaiting_towing',
+                'data_payload' => $payload,
+            ]);
+
+            $msg = "🚛 *Towing Requirement*\n\nDo you need towing service for the vehicle(s) in this Pre-Alert?\n\n1. Yes, I need towing\n2. No, I will arrange delivery";
+            $this->waService->sendMessage($conversation->phone_number, $msg);
         }
     }
 
@@ -339,6 +377,7 @@ class PreAlertService
             'destination_port_id' => $data['destination_port_id'],
             'shipment_id' => $data['shipment_id'] ?? null,
             'shipping_mode' => $data['shipping_mode'],
+            'towing' => $data['towing'] ?? false,
             'status' => PrealertStatus::Pending,
         ]);
         Log::channel('whatsapp')->info('Pre-Alert record created: '.$prealert->id);

@@ -5398,6 +5398,7 @@ namespace App\Models {
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property \App\Enums\PrealertStatus $status
+     * @property boolean $towing
      * @property string|null $notes
      * @property mixed $destination_port_id
      * @property mixed $shipment_id
@@ -5423,6 +5424,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert whereShipmentId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert whereDestinationPortId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert whereNotes($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert whereTowing($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert whereStatus($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Prealert>|Prealert whereUpdatedAt($value)
@@ -5780,6 +5782,7 @@ namespace App\Models {
      * @property mixed $carrier_id
      * @property mixed $consignee_id
      * @property mixed $shipper_id
+     * @property boolean $towing
      * @property string|null $domestic_routing
      * @property string|null $loading_pier
      * @property string|null $export_references
@@ -5808,6 +5811,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereExportReferences($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereLoadingPier($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereDomesticRouting($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereTowing($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereShipperId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereConsigneeId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereCarrierId($value)
@@ -8917,6 +8921,7 @@ namespace App\Models {
      * @property string $email
      * @property string $name
      * @property int $id
+     * @property-read mixed $phone
      * @property-read \App\Models\Shipper $shipper
      * @property-read \App\Models\Staff $staff
      * @property-read \Illuminate\Database\Eloquent\Collection<int, \Spatie\Permission\Models\Role> $roles

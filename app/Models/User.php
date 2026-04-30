@@ -79,4 +79,12 @@ class User extends Authenticatable
             ->map(fn ($word) => Str::substr($word, 0, 1))
             ->implode('');
     }
+
+    /**
+     * Get the user's phone number from associated shipper or staff.
+     */
+    public function getPhoneAttribute(): ?string
+    {
+        return $this->shipper?->phone ?? $this->staff?->phone;
+    }
 }

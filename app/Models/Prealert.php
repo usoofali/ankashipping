@@ -25,6 +25,7 @@ final class Prealert extends Model
         'notes',
         'status',
         'notify_party_id',
+        'towing',
     ];
 
     protected function casts(): array
@@ -32,6 +33,7 @@ final class Prealert extends Model
         return [
             'status' => PrealertStatus::class,
             'shipping_mode' => ShippingMode::class,
+            'towing' => 'boolean',
         ];
     }
 

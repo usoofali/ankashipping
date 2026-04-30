@@ -32,13 +32,23 @@ class WhatsAppChannel
         // 1. Get Phone Number (normalized)
         $phone = $notifiable->phone ?? null;
         if (! $phone) {
+            Log::channel('whatsapp')->warning('WhatsApp notification skipped: Notifiable has no phone number.', [
+                'notifiable_id' => $notifiable->getKey(),
+                'notifiable_type' => get_class($notifiable),
+            ]);
             return;
         }
+
+        $phone = preg_replace('/[^\d]/', '', $phone);
 
         // 2. Find Conversation
         $conversation = WhatsAppConversation::where('phone_number', $phone)->first();
 
         if (! $conversation) {
+            Log::channel('whatsapp')->warning('WhatsApp notification skipped: No conversation found for phone number.', [
+                'phone' => $phone,
+                'notifiable_id' => $notifiable->getKey(),
+            ]);
             return;
         }
 

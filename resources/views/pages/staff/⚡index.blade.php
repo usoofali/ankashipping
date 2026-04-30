@@ -113,13 +113,17 @@ new #[Title('Staff')] class extends Component {
     {
         $this->authorize('staff.create');
 
+        if ($this->phone) {
+            $this->phone = preg_replace('/[^\+0-9]/', '', $this->phone);
+        }
+
         $this->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
             'password' => 'required|string|min:8',
             'role' => 'required|exists:roles,name',
             'job_title' => 'nullable|string|max:255',
-            'phone' => 'nullable|string|max:50|unique:staff,phone',
+            'phone' => ['nullable', 'string', 'max:50', 'regex:/^(\+1|\+234)\d{10}$/', 'unique:staff,phone'],
         ]);
 
         $user = User::create([
@@ -167,13 +171,17 @@ new #[Title('Staff')] class extends Component {
 
         $staff = Staff::with('user')->findOrFail($this->editingStaffId);
 
+        if ($this->phone) {
+            $this->phone = preg_replace('/[^\+0-9]/', '', $this->phone);
+        }
+
         $this->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email,' . $staff->user?->id,
             'password' => 'nullable|string|min:8',
             'role' => 'required|exists:roles,name',
             'job_title' => 'nullable|string|max:255',
-            'phone' => 'nullable|string|max:50|unique:staff,phone,' . $staff->id,
+            'phone' => ['nullable', 'string', 'max:50', 'regex:/^(\+1|\+234)\d{10}$/', 'unique:staff,phone,' . $staff->id],
         ]);
 
         $userData = [
@@ -333,7 +341,7 @@ new #[Title('Staff')] class extends Component {
                 </flux:select>
                 <flux:input wire:model="job_title" :label="__('Job Title')" icon="briefcase"
                     placeholder="e.g. Operations Manager" />
-                <x-phone-input wire:key="create-staff-phone" name="phone" x-on:input="$wire.phone = (() => { try { return window.intlTelInput.getInstance($el).getNumber(); } catch(e) { return $el.value; } })()" x-on:countrychange="$wire.phone = (() => { try { return window.intlTelInput.getInstance($el).getNumber(); } catch(e) { return $el.value; } })()" :label="__('Phone')" :value="$phone" />
+                <flux:input wire:model="phone" :label="__('Phone')" placeholder="+1 2345678900 or +234 8012345678" />
             </div>
 
             <div class="space-y-3">
@@ -378,7 +386,7 @@ new #[Title('Staff')] class extends Component {
                     @endforeach
                 </flux:select>
                 <flux:input wire:model="job_title" :label="__('Job Title')" icon="briefcase" />
-                <x-phone-input :wire:key="'edit-staff-phone-'.$editingStaffId" name="phone" x-on:input="$wire.phone = (() => { try { return window.intlTelInput.getInstance($el).getNumber(); } catch(e) { return $el.value; } })()" x-on:countrychange="$wire.phone = (() => { try { return window.intlTelInput.getInstance($el).getNumber(); } catch(e) { return $el.value; } })()" :label="__('Phone')" :value="$phone" />
+                <flux:input wire:model="phone" :label="__('Phone')" placeholder="+1 2345678900 or +234 8012345678" />
             </div>
 
             <div class="space-y-3">

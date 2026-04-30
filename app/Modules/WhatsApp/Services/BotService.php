@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Modules\WhatsApp\Services;
 
 use App\Models\Driver;
+use App\Models\Shipper;
 use App\Models\Staff;
 use App\Modules\WhatsApp\Models\WhatsAppCategory;
 use App\Modules\WhatsApp\Models\WhatsAppConversation;
 use App\Modules\WhatsApp\Models\WhatsAppMenuState;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -43,7 +45,7 @@ class BotService
                 'status' => 'bot',
                 'agent_id' => null,
             ]);
-            
+
             $conversation->menuState()->delete();
             $this->sendGreeting($conversation);
 
@@ -158,10 +160,10 @@ Thank you!";
 
     protected function sendGreeting(WhatsAppConversation $conversation): void
     {
-        $conversation->loadMissing(['contact' => function (\Illuminate\Database\Eloquent\Relations\MorphTo $morphTo) {
+        $conversation->loadMissing(['contact' => function (MorphTo $morphTo) {
             $morphTo->morphWith([
-                \App\Models\Staff::class => ['user'],
-                \App\Models\Shipper::class => ['user'],
+                Staff::class => ['user'],
+                Shipper::class => ['user'],
             ]);
         }]);
         if ($conversation->contact_type === Staff::class) {
@@ -259,6 +261,7 @@ Please choose an option:
             case 'prealert_awaiting_notify_party':
             case 'prealert_awaiting_carrier':
             case 'prealert_awaiting_destination_port':
+            case 'prealert_awaiting_towing':
             case 'prealert_awaiting_shipment_selection':
                 $this->preAlertService->handleStep($conversation, $state, $text, $mediaId);
                 break;
@@ -266,6 +269,8 @@ Please choose an option:
             case 'wallet_fund_awaiting_amount':
             case 'wallet_fund_awaiting_reference':
             case 'wallet_fund_awaiting_receipt':
+            case 'wallet_pay_awaiting_vin':
+            case 'wallet_pay_awaiting_confirmation':
                 $this->walletService->handleStep($conversation, $state, $text, $mediaId);
                 break;
             case 'driver_awaiting_vin':
@@ -296,14 +301,14 @@ Please choose an option:
             foreach ($deduplicated as $msg) {
                 if ($msg->media_url) {
                     $this->waService->sendDocument(
-                        $conversation->phone_number, 
-                        $msg->media_url, 
+                        $conversation->phone_number,
+                        $msg->media_url,
                         $msg->message_text ?: 'document.pdf'
                     );
                 } else {
                     $this->waService->sendMessage($conversation->phone_number, '📢 *Update:* '.$msg->message_text);
                 }
-                
+
                 $msg->update(['status' => 'sent']);
             }
         }

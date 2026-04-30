@@ -86,7 +86,7 @@ new #[Title('Drivers')] class extends Component {
         $this->authorize('drivers.create');
 
         $validated = $this->validate([
-            'phone' => 'required|string|max:50|unique:drivers,phone',
+            'phone' => ['required', 'string', 'regex:/^\+1 \(\d{3}\) \d{3}-\d{4}$/', 'unique:drivers,phone'],
             'email' => 'nullable|email|max:255',
             'company' => 'nullable|string|max:255',
         ]);
@@ -116,7 +116,7 @@ new #[Title('Drivers')] class extends Component {
         $this->authorize('drivers.update');
 
         $validated = $this->validate([
-            'phone' => 'required|string|max:50|unique:drivers,phone,' . $this->editingDriverId,
+            'phone' => ['required', 'string', 'regex:/^\+1 \(\d{3}\) \d{3}-\d{4}$/', 'unique:drivers,phone,' . $this->editingDriverId],
             'email' => 'nullable|email|max:255',
             'company' => 'nullable|string|max:255',
         ]);
@@ -237,10 +237,7 @@ new #[Title('Drivers')] class extends Component {
             </div>
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <x-phone-input wire:key="create-driver-phone" name="phone"
-                    x-on:input="$wire.phone = (() => { try { return window.intlTelInput.getInstance($el).getNumber(); } catch(e) { return $el.value; } })()"
-                    x-on:countrychange="$wire.phone = (() => { try { return window.intlTelInput.getInstance($el).getNumber(); } catch(e) { return $el.value; } })()"
-                    :label="__('Phone')" required :value="$phone" />
+                <flux:input wire:model="phone" :label="__('Phone')" required mask="+1 (999) 999-9999" placeholder="+1 (234) 567-8901" />
                 <flux:input wire:model="email" :label="__('Email')" icon="envelope" type="email"
                     placeholder="john@example.com" />
                 <flux:input wire:model="company" :label="__('Company')" icon="building-office"
@@ -268,10 +265,7 @@ new #[Title('Drivers')] class extends Component {
             </div>
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <x-phone-input :wire:key="'edit-driver-phone-'.$editingDriverId" name="phone"
-                    x-on:input="$wire.phone = (() => { try { return window.intlTelInput.getInstance($el).getNumber(); } catch(e) { return $el.value; } })()"
-                    x-on:countrychange="$wire.phone = (() => { try { return window.intlTelInput.getInstance($el).getNumber(); } catch(e) { return $el.value; } })()"
-                    :label="__('Phone')" required :value="$phone" />
+                <flux:input wire:model="phone" :label="__('Phone')" required mask="+1 (999) 999-9999" placeholder="+1 (234) 567-8901" />
                 <flux:input wire:model="email" :label="__('Email')" icon="envelope" type="email" />
                 <flux:input wire:model="company" :label="__('Company')" icon="building-office" />
             </div>

@@ -67,6 +67,7 @@ final class Shipment extends Model
         'exporter_state',
         'exporter_country',
         'exporter_zipcode',
+        'towing',
     ];
 
     protected function casts(): array
@@ -84,6 +85,7 @@ final class Shipment extends Model
             'cut_off_date' => 'date',
             'departure_date' => 'date',
             'arrival_date' => 'date',
+            'towing' => 'boolean',
         ];
     }
 

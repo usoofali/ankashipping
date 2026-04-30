@@ -6,6 +6,7 @@ namespace App\Notifications;
 
 use App\Models\SystemSetting;
 use App\Models\WalletTopUp;
+use App\Modules\WhatsApp\Channels\WhatsAppChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -33,7 +34,7 @@ final class WalletTopUpApprovedNotification extends Notification implements Shou
 
         if ($shipperUserId !== null && (int) $notifiable->getKey() === (int) $shipperUserId) {
             $channels[] = 'mail';
-            $channels[] = \App\Modules\WhatsApp\Channels\WhatsAppChannel::class;
+            $channels[] = WhatsAppChannel::class;
         }
 
         return $channels;
@@ -42,7 +43,7 @@ final class WalletTopUpApprovedNotification extends Notification implements Shou
     public function toWhatsApp(object $notifiable): array
     {
         $amount = number_format((float) $this->topUp->amount, 2);
-        $balance = number_format((float) ($this->topUp->shipper->wallet_balance ?? 0), 2);
+        $balance = number_format((float) ($this->topUp->shipper->wallet->balance ?? 0), 2);
 
         return [
             'body' => "✅ *Top-up Approved:* \${$amount} has been added to your wallet.\n\nNew Balance: *\${$balance}*",
