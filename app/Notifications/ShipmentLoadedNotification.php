@@ -75,10 +75,11 @@ final class ShipmentLoadedNotification extends Notification implements ShouldQue
 
         if ($blDocument) {
             foreach ($blDocument->files as $file) {
-                $mail->attach(Storage::disk('local')->path((string) $file->path), [
-                    'as' => (string) $file->original_name,
-                    'mime' => 'application/pdf',
-                ]);
+                if (Storage::disk('public')->exists((string) $file->path)) {
+                    $mail->attach(Storage::disk('public')->path((string) $file->path), [
+                        'as' => (string) $file->original_name,
+                    ]);
+                }
             }
         }
 

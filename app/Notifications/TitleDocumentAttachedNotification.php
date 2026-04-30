@@ -61,9 +61,11 @@ final class TitleDocumentAttachedNotification extends Notification implements Sh
 
         // Attach the files
         foreach ($this->vehicleDocument->files as $file) {
-            $mail->attach(Storage::disk('public')->path((string) $file->path), [
-                'as' => (string) $file->original_name,
-            ]);
+            if (Storage::disk('public')->exists((string) $file->path)) {
+                $mail->attach(Storage::disk('public')->path((string) $file->path), [
+                    'as' => (string) $file->original_name,
+                ]);
+            }
         }
 
         return $mail;

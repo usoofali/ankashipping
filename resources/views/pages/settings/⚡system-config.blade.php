@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Http;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use WireUi\Traits\WireUiActions;
@@ -29,6 +30,10 @@ new #[Title('System Configuration')] class extends Component {
     public array $backups = [];
 
     public string $last_output = '';
+
+    public string $whatsapp_health = 'unknown';
+
+    public array $storage_stats = [];
 
     public array $target_folders = [
         'storage',
@@ -190,11 +195,12 @@ new #[Title('System Configuration')] class extends Component {
             $rows = explode("\n", trim($output));
             // Filter rows that match "| No" indicating a pending migration
             $this->pending_migrations = count(array_filter($rows, fn($row) => str_contains($row, '| No')));
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $this->pending_migrations = 0;
         }
 
         $this->refreshPermissions();
+        $this->calculateStorageStats();
     }
 
     public function refreshPermissions(): void
@@ -231,9 +237,9 @@ new #[Title('System Configuration')] class extends Component {
                     description: __('Permissions for :folder set to 0775.', ['folder' => $folder]),
                 );
             } else {
-                throw new Exception(__('chmod failed.'));
+                throw new \Exception(__('chmod failed.'));
             }
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $this->dialog()->error(
                 title: __('Permission update failed'),
                 description: __('Failed to change permissions for :folder. This might be restricted by your host.', ['folder' => $folder]),
@@ -251,7 +257,7 @@ new #[Title('System Configuration')] class extends Component {
                 title: __('Storage link created'),
                 description: __('Storage link created successfully.'),
             );
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $this->last_output = $e->getMessage();
             $this->dialog()->error(
                 title: __('Storage link failed'),
@@ -270,7 +276,7 @@ new #[Title('System Configuration')] class extends Component {
                 title: __('Migrations completed'),
                 description: __('Database migrations executed successfully.'),
             );
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $this->last_output = $e->getMessage();
             $this->dialog()->error(
                 title: __('Migration failed'),
@@ -289,7 +295,7 @@ new #[Title('System Configuration')] class extends Component {
                 title: __('Forced migrations completed'),
                 description: __('Forced database migrations executed.'),
             );
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $this->last_output = $e->getMessage();
             $this->dialog()->error(
                 title: __('Forced migration failed'),
@@ -311,11 +317,29 @@ new #[Title('System Configuration')] class extends Component {
                 title: __('Seeding completed'),
                 description: $class ? __(':class seeder completed.', ['class' => $class]) : __('All database seeders completed.'),
             );
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $this->last_output = $e->getMessage();
             $this->dialog()->error(
                 title: __('Seeding failed'),
                 description: __('Seeding failed: ') . $e->getMessage(),
+            );
+        }
+    }
+
+    public function restartQueue(): void
+    {
+        try {
+            Artisan::call('queue:restart');
+            $this->last_output = Artisan::output();
+            $this->dialog()->success(
+                title: __('Queue restart signal sent'),
+                description: __('Queue workers will restart after completing their current job.'),
+            );
+        } catch (\Exception $e) {
+            $this->last_output = $e->getMessage();
+            $this->dialog()->error(
+                title: __('Queue restart failed'),
+                description: __('Failed to send restart signal.'),
             );
         }
     }
@@ -329,13 +353,100 @@ new #[Title('System Configuration')] class extends Component {
                 title: __('Optimization cleared'),
                 description: __('Optimization cache cleared.'),
             );
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $this->last_output = $e->getMessage();
             $this->dialog()->error(
                 title: __('Optimization clear failed'),
                 description: __('Failed to clear optimization cache.'),
             );
         }
+    }
+
+    public function checkWhatsAppHealth(): void
+    {
+        try {
+            $token = config('whatsapp.token');
+            $id = config('whatsapp.phone_number_id');
+
+            if (!$token || !$id) {
+                $this->whatsapp_health = 'error';
+                $this->dialog()->error(__('WhatsApp credentials missing in .env'));
+                return;
+            }
+
+            $response = Http::withToken($token)->get("https://graph.facebook.com/v19.0/{$id}");
+
+            if ($response->successful()) {
+                $this->whatsapp_health = 'healthy';
+                $this->dialog()->success(__('WhatsApp API connection is healthy'));
+            } else {
+                $this->whatsapp_health = 'error';
+                $this->dialog()->error(__('WhatsApp API error: ') . ($response->json('error.message') ?? 'Unknown error'));
+            }
+        } catch (\Exception $e) {
+            $this->whatsapp_health = 'error';
+            $this->dialog()->error(__('WhatsApp connection failed'));
+        }
+    }
+
+    public function clearLogs(bool $confirmed = false): void
+    {
+        if (! $confirmed) {
+            $this->dialog()->confirm([
+                'title' => __('Are you sure?'),
+                'description' => __('This will permanently truncate all system log files.'),
+                'icon' => 'warning',
+                'accept' => [
+                    'label' => __('Yes, clear them'),
+                    'method' => 'clearLogs',
+                    'params' => true,
+                ],
+                'reject' => [
+                    'label' => __('Cancel'),
+                ],
+            ]);
+
+            return;
+        }
+
+        try {
+            $logs = ['laravel.log', 'whatsapp.log', 'queue.log'];
+            foreach ($logs as $log) {
+                $path = storage_path("logs/{$log}");
+                if (File::exists($path)) {
+                    File::put($path, '');
+                }
+            }
+            $this->dialog()->success(__('All logs cleared successfully'));
+            $this->calculateStorageStats();
+        } catch (\Exception $e) {
+            $this->dialog()->error(__('Failed to clear logs'));
+        }
+    }
+
+    public function calculateStorageStats(): void
+    {
+        $this->storage_stats = [
+            'total' => $this->getDirSize(storage_path()),
+            'logs' => $this->getDirSize(storage_path('logs')),
+            'app' => $this->getDirSize(storage_path('app')),
+        ];
+    }
+
+    private function getDirSize(string $path): string
+    {
+        if (!File::exists($path)) {
+            return '0 B';
+        }
+        $size = 0;
+        foreach (File::allFiles($path) as $file) {
+            $size += $file->getSize();
+        }
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        for ($i = 0; $size > 1024; $i++) {
+            $size /= 1024;
+        }
+        return round($size, 2) . ' ' . $units[$i];
     }
 }; ?>
 
@@ -369,9 +480,30 @@ new #[Title('System Configuration')] class extends Component {
                 </flux:card>
             </div>
 
+            <!-- New Quick Stats -->
+            <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                <flux:card class="p-4 space-y-2 border-zinc-100 dark:border-zinc-800 col-span-1">
+                    <flux:text size="xs" class="uppercase tracking-widest text-zinc-400 font-bold">{{ __('Storage Total') }}</flux:text>
+                    <flux:heading size="lg">{{ $storage_stats['total'] ?? '---' }}</flux:heading>
+                </flux:card>
+                <flux:card class="p-4 space-y-2 border-zinc-100 dark:border-zinc-800 col-span-1">
+                    <flux:text size="xs" class="uppercase tracking-widest text-zinc-400 font-bold">{{ __('Log Files') }}</flux:text>
+                    <flux:heading size="lg">{{ $storage_stats['logs'] ?? '---' }}</flux:heading>
+                </flux:card>
+                <flux:card class="p-4 space-y-2 border-zinc-100 dark:border-zinc-800 col-span-2 lg:col-span-1">
+                    <flux:text size="xs" class="uppercase tracking-widest text-zinc-400 font-bold">{{ __('WhatsApp Bot') }}</flux:text>
+                    <div class="flex items-center justify-between gap-2">
+                        <flux:badge size="sm" :color="$whatsapp_health === 'healthy' ? 'green' : ($whatsapp_health === 'error' ? 'red' : 'zinc')">
+                            {{ ucfirst($whatsapp_health) }}
+                        </flux:badge>
+                        <flux:button wire:click="checkWhatsAppHealth" size="xs" icon="arrow-path" variant="ghost" />
+                    </div>
+                </flux:card>
+            </div>
+
             <!-- Detailed Status Indicators -->
             <flux:card class="space-y-4 border-zinc-100 dark:border-zinc-800">
-                <div class="flex items-center justify-between py-2 border-b border-zinc-50 dark:border-zinc-800/50">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-zinc-50 dark:border-zinc-800/50 gap-4">
                     <div class="flex items-center gap-3">
                         <div
                             class="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800">
@@ -382,7 +514,7 @@ new #[Title('System Configuration')] class extends Component {
                             <flux:text size="xs">{{ __('Requirement for public file accessibility.') }}</flux:text>
                         </div>
                     </div>
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center justify-between sm:justify-end gap-3">
                         <flux:badge size="sm" :color="$storage_link_exists ? 'green' : 'red'" inset="top bottom">
                             {{ $storage_link_exists ? __('Healthy') : __('Broken/Missing') }}
                         </flux:badge>
@@ -393,7 +525,7 @@ new #[Title('System Configuration')] class extends Component {
                     </div>
                 </div>
 
-                <div class="flex items-center justify-between py-2">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between py-2 gap-4">
                     <div class="flex items-center gap-3">
                         <div
                             class="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800">
@@ -405,7 +537,7 @@ new #[Title('System Configuration')] class extends Component {
                             </flux:text>
                         </div>
                     </div>
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center justify-between sm:justify-end gap-3">
                         @if($pending_migrations > 0)
                             <flux:badge size="sm" color="orange" class="font-bold">{{ $pending_migrations }}
                                 {{ __('Pending') }}</flux:badge>
@@ -425,20 +557,20 @@ new #[Title('System Configuration')] class extends Component {
                 <flux:card
                     class="divide-y divide-zinc-100 dark:divide-zinc-800 p-0 border-zinc-100 dark:border-zinc-800 overflow-hidden">
                     @foreach($target_folders as $folder)
-                        <div class="flex items-center justify-between p-4 bg-white dark:bg-zinc-900/50">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white dark:bg-zinc-900/50 gap-4">
                             <div class="flex items-center gap-3">
                                 <div
                                     class="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800">
                                     <flux:icon.folder class="size-4 text-zinc-400" />
                                 </div>
-                                <div>
-                                    <flux:heading size="sm" class="font-mono text-xs">{{ $folder }}</flux:heading>
+                                <div class="overflow-hidden">
+                                    <flux:heading size="sm" class="font-mono text-xs truncate">{{ $folder }}</flux:heading>
                                     <flux:text size="xs">{{ __('Current: ') }} <span
                                             class="font-mono font-bold @if($folder_perms[$folder] === '0775' || $folder_perms[$folder] === '0755') text-green-600 @else text-orange-600 @endif">{{ $folder_perms[$folder] ?? '---' }}</span>
                                     </flux:text>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center justify-end gap-2 shrink-0">
                                 @if($folder_perms[$folder] !== '0775' && $folder_perms[$folder] !== 'missing')
                                     <flux:button wire:click="fixPermission('{{ $folder }}')" size="xs" variant="subtle"
                                         icon="wrench-screwdriver" class="text-[10px]">{{ __('Fix (775)') }}</flux:button>
@@ -460,34 +592,70 @@ new #[Title('System Configuration')] class extends Component {
                     {{ __('Maintenance & Seeding') }}</flux:heading>
 
                 <div class="grid grid-cols-1 gap-4">
-                    <flux:card class="p-4 space-y-4 border-zinc-100 dark:border-zinc-800">
-                        <div class="flex items-start gap-3">
-                            <flux:icon.sparkles class="size-5 text-blue-500" />
-                            <div class="flex-1">
-                                <flux:heading size="sm">{{ __('Optimization') }}</flux:heading>
-                                <flux:text size="xs">
-                                    {{ __('Clear configuration, routing, and application caches to reflect recent changes.') }}
-                                </flux:text>
+                    <flux:card class="p-4 border-zinc-100 dark:border-zinc-800">
+                        <div class="flex flex-col lg:flex-row lg:items-start gap-4">
+                            <div class="flex items-start gap-3 flex-1">
+                                <flux:icon.document-text class="size-5 text-zinc-500 mt-1" />
+                                <div class="flex-1">
+                                    <flux:heading size="sm">{{ __('Log Management') }}</flux:heading>
+                                    <flux:text size="xs">
+                                        {{ __('Clear laravel.log, whatsapp.log, and queue.log to free up disk space.') }}
+                                    </flux:text>
+                                </div>
                             </div>
-                            <flux:button wire:click="clearOptimization" size="sm" variant="subtle">
+                            <flux:button wire:click="clearLogs" size="sm" variant="subtle" class="w-full lg:w-auto">
+                                {{ __('Truncate All Logs') }}</flux:button>
+                        </div>
+                    </flux:card>
+
+                    <flux:card class="p-4 border-zinc-100 dark:border-zinc-800">
+                        <div class="flex flex-col lg:flex-row lg:items-start gap-4">
+                            <div class="flex items-start gap-3 flex-1">
+                                <flux:icon.arrow-path class="size-5 text-orange-500 mt-1" />
+                                <div class="flex-1">
+                                    <flux:heading size="sm">{{ __('Queue Management') }}</flux:heading>
+                                    <flux:text size="xs">
+                                        {{ __('Send a restart signal to the background workers. Use this after code or permission updates.') }}
+                                    </flux:text>
+                                </div>
+                            </div>
+                            <flux:button wire:click="restartQueue" size="sm" variant="subtle" class="w-full lg:w-auto">
+                                {{ __('Restart Queue') }}</flux:button>
+                        </div>
+                    </flux:card>
+
+                    <flux:card class="p-4 border-zinc-100 dark:border-zinc-800">
+                        <div class="flex flex-col lg:flex-row lg:items-start gap-4">
+                            <div class="flex items-start gap-3 flex-1">
+                                <flux:icon.sparkles class="size-5 text-blue-500 mt-1" />
+                                <div class="flex-1">
+                                    <flux:heading size="sm">{{ __('Optimization') }}</flux:heading>
+                                    <flux:text size="xs">
+                                        {{ __('Clear configuration, routing, and application caches to reflect recent changes.') }}
+                                    </flux:text>
+                                </div>
+                            </div>
+                            <flux:button wire:click="clearOptimization" size="sm" variant="subtle" class="w-full lg:w-auto">
                                 {{ __('Clear All Caches') }}</flux:button>
                         </div>
                     </flux:card>
 
-                    <flux:card class="p-4 space-y-4 border-zinc-100 dark:border-zinc-800">
-                        <div class="flex items-start gap-3 border-b border-zinc-50 dark:border-zinc-800 pb-4">
-                            <flux:icon.beaker class="size-5 text-purple-500" />
-                            <div class="flex-1">
-                                <flux:heading size="sm">{{ __('Database Seeding') }}</flux:heading>
-                                <flux:text size="xs">{{ __('Populate the database with initial or dummy data.') }}
-                                </flux:text>
+                    <flux:card class="p-4 border-zinc-100 dark:border-zinc-800">
+                        <div class="flex flex-col lg:flex-row lg:items-start gap-4 border-b border-zinc-50 dark:border-zinc-800 pb-4">
+                            <div class="flex items-start gap-3 flex-1">
+                                <flux:icon.beaker class="size-5 text-purple-500 mt-1" />
+                                <div class="flex-1">
+                                    <flux:heading size="sm">{{ __('Database Seeding') }}</flux:heading>
+                                    <flux:text size="xs">{{ __('Populate the database with initial or dummy data.') }}
+                                    </flux:text>
+                                </div>
                             </div>
-                            <flux:button wire:click="runSeeder()" size="sm" variant="subtle" icon="play-circle">
+                            <flux:button wire:click="runSeeder()" size="sm" variant="subtle" icon="play-circle" class="w-full lg:w-auto">
                                 {{ __('Run Base Seeds') }}</flux:button>
                         </div>
 
                         <div class="space-y-3">
-                            <flux:text size="xs" weight="medium" class="text-zinc-500 uppercase tracking-wider">
+                            <flux:text size="xs" weight="medium" class="text-zinc-500 uppercase tracking-wider pt-4">
                                 {{ __('Selective Seeders') }}</flux:text>
                             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                                 @foreach($available_seeders as $seeder)

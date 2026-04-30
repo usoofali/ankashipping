@@ -88,9 +88,11 @@ final class StampedDockReceiptNotification extends Notification implements Shoul
 
         // Attach the files
         foreach ($this->shipmentDocument->files as $file) {
-            $mail->attach(Storage::disk('public')->path((string) $file->path), [
-                'as' => (string) $file->original_name,
-            ]);
+            if (Storage::disk('public')->exists((string) $file->path)) {
+                $mail->attach(Storage::disk('public')->path((string) $file->path), [
+                    'as' => (string) $file->original_name,
+                ]);
+            }
         }
 
         return $mail;
