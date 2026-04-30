@@ -52,63 +52,26 @@
                 </flux:sidebar.group>
             @endcanany
 
-            {{-- Logistics: Carriers, Ports, Drivers & Workshops --}}
-            @canany(['carriers.view', 'ports.view', 'drivers.view', 'workshops.view'])
-                <flux:sidebar.group :heading="__('Logistics')" class="grid" expandable expanded="false">
-                    @can('carriers.view')
-                        <flux:sidebar.item icon="truck" icon-class="text-emerald-500" :href="route('carriers.index')"
-                            :current="request()->routeIs('carriers.*')" wire:navigate>
-                            {{ __('Carriers') }}
+            {{-- Financials: Wallet & Transaction Management --}}
+            @canany(['financials.wallets.view', 'wallet_top_ups.view', 'wallets.view'])
+                <flux:sidebar.group :heading="__('Financials')" class="grid" expandable="true" expanded="false">
+                    @can('financials.wallets.view')
+                        <flux:sidebar.item icon="wallet" icon-class="text-blue-500" :href="route('financials.wallets.index')"
+                            :current="request()->routeIs('financials.wallets.*')" wire:navigate>
+                            {{ __('Master Wallets') }}
                         </flux:sidebar.item>
                     @endcan
-                    @can('ports.view')
-                        <flux:sidebar.item icon="map-pin" icon-class="text-cyan-500" :href="route('ports.index')"
-                            :current="request()->routeIs('ports.*')" wire:navigate>
-                            {{ __('Ports') }}
-                        </flux:sidebar.item>
-                    @endcan
-                    @can('drivers.view')
-                        <flux:sidebar.item icon="identification" icon-class="text-orange-500"
-                            :href="route('drivers.index')" :current="request()->routeIs('drivers.*')" wire:navigate>
-                            {{ __('Drivers') }}
-                        </flux:sidebar.item>
-                    @endcan
-                    @can('warehouses.view')
-                        <flux:sidebar.item icon="building-library" icon-class="text-amber-600"
-                            :href="route('warehouses.index')" :current="request()->routeIs('warehouses.*')"
+                    @can('wallet_top_ups.view')
+                        <flux:sidebar.item icon="banknotes" icon-class="text-emerald-500"
+                            :href="route('financials.top-ups.index')" :current="request()->routeIs('financials.top-ups.*')"
                             wire:navigate>
-                            {{ __('Warehouses') }}
+                            {{ __('Top-Ups Approvals') }}
                         </flux:sidebar.item>
                     @endcan
-                    @can('workshops.view')
-                        <flux:sidebar.item icon="wrench-screwdriver" icon-class="text-amber-500"
-                            :href="route('workshops.index')" :current="request()->routeIs('workshops.*')" wire:navigate>
-                            {{ __('Workshops') }}
-                        </flux:sidebar.item>
-                    @endcan
-                </flux:sidebar.group>
-            @endcanany
-
-            {{-- Relationships: Partners & Communications --}}
-            @canany(['shippers.view', 'staff.view', 'newsletters.view'])
-                <flux:sidebar.group :heading="__('Relationships')" class="grid" expandable expanded="false">
-                    @can('shippers.view')
-                        <flux:sidebar.item icon="building-office-2" icon-class="text-blue-500"
-                            :href="route('shippers.index')" :current="request()->routeIs('shippers.*')" wire:navigate>
-                            {{ __('Shippers') }}
-                        </flux:sidebar.item>
-                    @endcan
-                    @can('staff.view')
-                        <flux:sidebar.item icon="users" icon-class="text-teal-500" :href="route('staff.index')"
-                            :current="request()->routeIs('staff.*')" wire:navigate>
-                            {{ __('Staff') }}
-                        </flux:sidebar.item>
-                    @endcan
-                    @can('newsletters.view')
-                        <flux:sidebar.item icon="envelope" icon-class="text-violet-500"
-                            :href="route('newsletters.index')" :current="request()->routeIs('newsletters.*')"
-                            wire:navigate>
-                            {{ __('Newsletters') }}
+                    @can('wallets.view')
+                        <flux:sidebar.item icon="credit-card" icon-class="text-indigo-500" :href="route('shipper.wallet.index')"
+                            :current="request()->routeIs('shipper.wallet.*')" wire:navigate>
+                            {{ __('My Wallet') }}
                         </flux:sidebar.item>
                     @endcan
                 </flux:sidebar.group>
@@ -131,35 +94,70 @@
                     @endcan
                     @can('whatsapp.manage_conversations')
                         <flux:sidebar.item icon="hashtag" icon-class="text-indigo-500"
-                            :href="route('whatsapp.categories.index')" :current="request()->routeIs('whatsapp.categories.*')" wire:navigate>
+                            :href="route('whatsapp.categories.index')" :current="request()->routeIs('whatsapp.categories.*')"
+                            wire:navigate>
                             {{ __('Categories') }}
                         </flux:sidebar.item>
                     @endcan
                 </flux:sidebar.group>
             @endcanany
 
-            {{-- Financials: Wallet & Transaction Management --}}
-            @canany(['financials.wallets.view', 'wallet_top_ups.view', 'wallets.view'])
-                <flux:sidebar.group :heading="__('Financials')" class="grid" expandable="true" expanded="false">
-                    @can('financials.wallets.view')
-                        <flux:sidebar.item icon="wallet" icon-class="text-blue-500"
-                            :href="route('financials.wallets.index')"
-                            :current="request()->routeIs('financials.wallets.*')" wire:navigate>
-                            {{ __('Master Wallets') }}
+
+            {{-- Relationships: Partners & Communications --}}
+            @canany(['shippers.view', 'staff.view', 'newsletters.view'])
+                <flux:sidebar.group :heading="__('Relationships')" class="grid" expandable expanded="false">
+                    @can('shippers.view')
+                        <flux:sidebar.item icon="building-office-2" icon-class="text-blue-500" :href="route('shippers.index')"
+                            :current="request()->routeIs('shippers.*')" wire:navigate>
+                            {{ __('Shippers') }}
                         </flux:sidebar.item>
                     @endcan
-                    @can('wallet_top_ups.view')
-                        <flux:sidebar.item icon="banknotes" icon-class="text-emerald-500"
-                            :href="route('financials.top-ups.index')"
-                            :current="request()->routeIs('financials.top-ups.*')" wire:navigate>
-                            {{ __('Top-Ups Approvals') }}
+                    @can('staff.view')
+                        <flux:sidebar.item icon="users" icon-class="text-teal-500" :href="route('staff.index')"
+                            :current="request()->routeIs('staff.*')" wire:navigate>
+                            {{ __('Staff') }}
                         </flux:sidebar.item>
                     @endcan
-                    @can('wallets.view')
-                        <flux:sidebar.item icon="credit-card" icon-class="text-indigo-500"
-                            :href="route('shipper.wallet.index')" :current="request()->routeIs('shipper.wallet.*')"
-                            wire:navigate>
-                            {{ __('My Wallet') }}
+                    @can('newsletters.view')
+                        <flux:sidebar.item icon="envelope" icon-class="text-violet-500" :href="route('newsletters.index')"
+                            :current="request()->routeIs('newsletters.*')" wire:navigate>
+                            {{ __('Newsletters') }}
+                        </flux:sidebar.item>
+                    @endcan
+                </flux:sidebar.group>
+            @endcanany
+
+            {{-- Logistics: Carriers, Ports, Drivers & Workshops --}}
+            @canany(['carriers.view', 'ports.view', 'drivers.view', 'workshops.view'])
+                <flux:sidebar.group :heading="__('Logistics')" class="grid" expandable expanded="false">
+                    @can('carriers.view')
+                        <flux:sidebar.item icon="truck" icon-class="text-emerald-500" :href="route('carriers.index')"
+                            :current="request()->routeIs('carriers.*')" wire:navigate>
+                            {{ __('Carriers') }}
+                        </flux:sidebar.item>
+                    @endcan
+                    @can('ports.view')
+                        <flux:sidebar.item icon="map-pin" icon-class="text-cyan-500" :href="route('ports.index')"
+                            :current="request()->routeIs('ports.*')" wire:navigate>
+                            {{ __('Ports') }}
+                        </flux:sidebar.item>
+                    @endcan
+                    @can('drivers.view')
+                        <flux:sidebar.item icon="identification" icon-class="text-orange-500" :href="route('drivers.index')"
+                            :current="request()->routeIs('drivers.*')" wire:navigate>
+                            {{ __('Drivers') }}
+                        </flux:sidebar.item>
+                    @endcan
+                    @can('warehouses.view')
+                        <flux:sidebar.item icon="building-library" icon-class="text-amber-600" :href="route('warehouses.index')"
+                            :current="request()->routeIs('warehouses.*')" wire:navigate>
+                            {{ __('Warehouses') }}
+                        </flux:sidebar.item>
+                    @endcan
+                    @can('workshops.view')
+                        <flux:sidebar.item icon="wrench-screwdriver" icon-class="text-amber-500"
+                            :href="route('workshops.index')" :current="request()->routeIs('workshops.*')" wire:navigate>
+                            {{ __('Workshops') }}
                         </flux:sidebar.item>
                     @endcan
                 </flux:sidebar.group>
@@ -183,9 +181,8 @@
                         </flux:sidebar.item>
                     @endcan
                     @can('charge_items.view')
-                        <flux:sidebar.item icon="ticket" icon-class="text-amber-500"
-                            :href="route('charge-items.index')" :current="request()->routeIs('charge-items.*')"
-                            wire:navigate>
+                        <flux:sidebar.item icon="ticket" icon-class="text-amber-500" :href="route('charge-items.index')"
+                            :current="request()->routeIs('charge-items.*')" wire:navigate>
                             {{ __('Charge Items') }}
                         </flux:sidebar.item>
                     @endcan
@@ -220,16 +217,14 @@
             @canany(['email_logs.view', 'failed_jobs.view'])
                 <flux:sidebar.group :heading="__('System')" class="grid" expandable="true" expanded="false">
                     @can('email_logs.view')
-                        <flux:sidebar.item icon="envelope-open" icon-class="text-sky-500"
-                            :href="route('email-logs.index')" :current="request()->routeIs('email-logs.*')"
-                            wire:navigate>
+                        <flux:sidebar.item icon="envelope-open" icon-class="text-sky-500" :href="route('email-logs.index')"
+                            :current="request()->routeIs('email-logs.*')" wire:navigate>
                             {{ __('Email Logs') }}
                         </flux:sidebar.item>
                     @endcan
                     @can('failed_jobs.view')
                         <flux:sidebar.item icon="exclamation-triangle" icon-class="text-red-500"
-                            :href="route('failed-jobs.index')" :current="request()->routeIs('failed-jobs.*')"
-                            wire:navigate>
+                            :href="route('failed-jobs.index')" :current="request()->routeIs('failed-jobs.*')" wire:navigate>
                             {{ __('Failed Jobs') }}
                         </flux:sidebar.item>
                     @endcan
