@@ -1,7 +1,7 @@
 <x-layouts::auth.card :title="__('Terms of Service')">
     <div class="prose prose-sm prose-zinc max-w-none dark:prose-invert">
         <flux:text class="mb-4">
-            {{ __('Welcome to Anka Shipping and Logistics. These Terms of Service govern your use of our platform and services. By accessing our platform, you agree to be bound by these terms.') }}
+            {{ __('Welcome to Anka Shipping and Logistics(FMC # 034480N). These Terms of Service govern your use of our platform and services. By accessing our platform, you agree to be bound by these terms.') }}
         </flux:text>
 
         <flux:heading size="sm" level="3" class="mt-6">{{ __('1. Acceptance of Terms') }}</flux:heading>

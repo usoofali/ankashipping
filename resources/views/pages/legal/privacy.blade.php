@@ -1,7 +1,7 @@
 <x-layouts::auth.card :title="__('Privacy Policy')">
     <div class="prose prose-sm prose-zinc max-w-none dark:prose-invert">
         <flux:text class="mb-4">
-            {{ __('At Anka Shipping and Logistics, we are committed to protecting your privacy and ensuring the security of your personal and business data. This Privacy Policy explains how we collect, use, and safeguard your information when you use our logistics management platform.') }}
+            {{ __('At Anka Shipping and Logistics(FMC # 034480N), we are committed to protecting your privacy and ensuring the security of your personal and business data. This Privacy Policy explains how we collect, use, and safeguard your information when you use our logistics management platform.') }}
         </flux:text>
 
         <flux:heading size="sm" level="3" class="mt-6">{{ __('1. Information We Collect') }}</flux:heading>

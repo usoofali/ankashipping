@@ -8,6 +8,7 @@ use App\Models\Shipper;
 use App\Concerns\HandlesShipmentPayments;
 use WireUi\Traits\WireUiActions;
 use Livewire\Attributes\Title;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -20,9 +21,17 @@ new #[Title('Shipments')] class extends Component {
     public ?Shipment $selectedShipmentForPayment = null;
 
     public string $search = '';
+
+    #[Url]
     public string $filterMonth = '';
+
+    #[Url]
     public string $filterYear = '';
+
+    #[Url]
     public string $filterShipper = '';
+
+    #[Url]
     public string $filterShipmentStatus = '';
 
     public function updated(string $property): void
