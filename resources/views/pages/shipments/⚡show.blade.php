@@ -1201,7 +1201,7 @@ new #[Title('Shipment Details')] class extends Component {
             'logisticsForm.vehicles.*.measurement_unit' => 'required|string|in:CBM,CFT',
         ]);
         $isTowing = $this->shipment?->towing ?? false;
-        DB::transaction(function () use ($validated): void {
+        DB::transaction(function () use ($validated, $isTowing): void {
             $this->shipment->update($validated['logisticsForm']['shipment']);
 
             foreach ($validated['logisticsForm']['vehicles'] as $vehicleId => $data) {
