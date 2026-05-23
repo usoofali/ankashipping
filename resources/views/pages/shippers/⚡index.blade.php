@@ -221,7 +221,7 @@ new #[Title('Shippers')] class extends Component {
         $this->showImportModal = true;
     }
 
-    public function importCsv(): void
+    public function importCsv(): mixed
     {
         $this->authorizeShipperImport();
 
@@ -234,6 +234,7 @@ new #[Title('Shippers')] class extends Component {
         $created = 0;
         $updated = 0;
         $errors = 0;
+        $failedRows = [];
 
         foreach ($parsed['rows'] as $row) {
             $email = strtolower(trim((string) ($row['email'] ?? '')));
@@ -248,12 +249,14 @@ new #[Title('Shippers')] class extends Component {
             $discountAmountRaw = trim((string) ($row['discount_amount'] ?? ''));
 
             if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $failedRows[] = array_merge($row, ['_error_reason' => 'Missing or invalid email address']);
                 $errors++;
 
                 continue;
             }
 
             if ($companyName === '' || $phone === '' || $address === '' || $countryIso2 === '' || $stateCode === '' || $cityName === '') {
+                $failedRows[] = array_merge($row, ['_error_reason' => 'Missing required fields (company name, phone, address, country, state, city)']);
                 $errors++;
 
                 continue;
@@ -267,6 +270,7 @@ new #[Title('Shippers')] class extends Component {
                     ['discount_amount' => ['numeric', 'min:0', 'max:999999.99']]
                 );
                 if ($discountValidator->fails()) {
+                    $failedRows[] = array_merge($row, ['_error_reason' => 'Invalid discount amount']);
                     $errors++;
 
                     continue;
@@ -276,6 +280,7 @@ new #[Title('Shippers')] class extends Component {
 
             $country = Country::query()->where('iso2', $countryIso2)->first();
             if (!$country) {
+                $failedRows[] = array_merge($row, ['_error_reason' => "Country '{$countryIso2}' not found"]);
                 $errors++;
 
                 continue;
@@ -286,6 +291,7 @@ new #[Title('Shippers')] class extends Component {
                 ->where('code', $stateCode)
                 ->first();
             if (!$state) {
+                $failedRows[] = array_merge($row, ['_error_reason' => "State '{$stateCode}' not found in country '{$countryIso2}'"]);
                 $errors++;
 
                 continue;
@@ -296,6 +302,7 @@ new #[Title('Shippers')] class extends Component {
                 ->whereRaw('LOWER(name) = ?', [mb_strtolower($cityName)])
                 ->first();
             if (!$city) {
+                $failedRows[] = array_merge($row, ['_error_reason' => "City '{$cityName}' not found in state '{$stateCode}'"]);
                 $errors++;
 
                 continue;
@@ -307,6 +314,7 @@ new #[Title('Shippers')] class extends Component {
 
             // Staff protection check: do not assign shipper role or attach shipper profile to staff members
             if ($user !== null && $user->staff()->exists()) {
+                $failedRows[] = array_merge($row, ['_error_reason' => 'Email belongs to an internal staff member']);
                 $errors++;
 
                 continue;
@@ -314,6 +322,7 @@ new #[Title('Shippers')] class extends Component {
 
             if ($user === null) {
                 if ($name === '' || $password === '') {
+                    $failedRows[] = array_merge($row, ['_error_reason' => 'Missing name or password for new user']);
                     $errors++;
 
                     continue;
@@ -327,6 +336,7 @@ new #[Title('Shippers')] class extends Component {
                         ['password' => ['required', 'string', Password::default()]],
                     );
                     if ($passwordValidator->fails()) {
+                        $failedRows[] = array_merge($row, ['_error_reason' => 'Password does not meet complexity requirements']);
                         $errors++;
 
                         continue;
@@ -368,6 +378,7 @@ new #[Title('Shippers')] class extends Component {
                     if (app()->environment('testing')) {
                         throw $e;
                     }
+                    $failedRows[] = array_merge($row, ['_error_reason' => 'Database error (e.g. duplicate phone number)']);
                     $errors++;
                 }
 
@@ -443,6 +454,7 @@ new #[Title('Shippers')] class extends Component {
                 if (app()->environment('testing')) {
                     throw $e;
                 }
+                $failedRows[] = array_merge($row, ['_error_reason' => 'Database error: ' . $e->getMessage()]);
                 $errors++;
             }
         }
@@ -458,6 +470,19 @@ new #[Title('Shippers')] class extends Component {
                 'errors' => $errors,
             ])
         );
+
+        if (count($failedRows) > 0) {
+            return response()->streamDownload(function () use ($failedRows) {
+                $handle = fopen('php://output', 'w');
+                fputcsv($handle, array_keys($failedRows[0]));
+                foreach ($failedRows as $failedRow) {
+                    fputcsv($handle, $failedRow);
+                }
+                fclose($handle);
+            }, 'failed_shippers_import_' . now()->format('Ymd_His') . '.csv');
+        }
+
+        return null;
     }
 
     private function authorizeShipperImport(): void
