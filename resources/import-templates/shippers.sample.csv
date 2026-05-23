@@ -1,3 +1,2 @@
-owner_name,owner_email,owner_password,company_name,phone,address,country_iso2,state_code,city_name
-Jane Shipper,jane.shipper@example.com,Password1!,Acme Logistics Inc,+15551234567,123 Harbor Way,US,CA,Los Angeles
-John Carrier,john.carrier@example.com,Password1!,Coastal Freight LLC,+15559876543,456 Dock St,US,NY,New York
+name,email,password,company_name,phone,address,country_iso2,state_code,city_name,discount_amount
+Jane Shipper,jane.shipper@example.com,$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi,Acme Logistics Inc,+15551234567,123 Harbor Way,US,CA,Los Angeles,10.00

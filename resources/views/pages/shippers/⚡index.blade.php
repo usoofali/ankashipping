@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rules\Password;
 use Livewire\Attributes\Url;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -173,6 +174,16 @@ new #[Title('Shippers')] class extends Component {
         $shipper = Shipper::query()->with('user')->whereKey($this->shipperPendingDeleteId)->firstOrFail();
         $this->authorize('delete', $shipper);
 
+        if ($shipper->shipments()->exists() || ($shipper->wallet && $shipper->wallet->transactions()->exists())) {
+            $this->showDeleteModal = false;
+            $this->shipperPendingDeleteId = null;
+            $this->shipperPendingDeleteLabel = '';
+
+            $this->notification()->error(__('This shipper cannot be deleted because they have associated shipments or wallet transactions.'));
+
+            return;
+        }
+
         $owner = $shipper->user;
         if ($owner === null) {
             $shipper->delete();
@@ -225,17 +236,18 @@ new #[Title('Shippers')] class extends Component {
         $errors = 0;
 
         foreach ($parsed['rows'] as $row) {
-            $ownerEmail = strtolower(trim((string) ($row['owner_email'] ?? '')));
-            $ownerName = trim((string) ($row['owner_name'] ?? ''));
-            $ownerPassword = (string) ($row['owner_password'] ?? '');
+            $email = strtolower(trim((string) ($row['email'] ?? '')));
+            $name = trim((string) ($row['name'] ?? ''));
+            $password = (string) ($row['password'] ?? '');
             $companyName = trim((string) ($row['company_name'] ?? ''));
             $phone = trim((string) ($row['phone'] ?? ''));
             $address = trim((string) ($row['address'] ?? ''));
             $countryIso2 = strtoupper(trim((string) ($row['country_iso2'] ?? '')));
             $stateCode = strtoupper(trim((string) ($row['state_code'] ?? '')));
             $cityName = trim((string) ($row['city_name'] ?? ''));
+            $discountAmountRaw = trim((string) ($row['discount_amount'] ?? ''));
 
-            if ($ownerEmail === '' || !filter_var($ownerEmail, FILTER_VALIDATE_EMAIL)) {
+            if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $errors++;
 
                 continue;
@@ -245,6 +257,21 @@ new #[Title('Shippers')] class extends Component {
                 $errors++;
 
                 continue;
+            }
+
+            // Optional discount amount validation
+            $discountAmount = '0.00';
+            if ($discountAmountRaw !== '') {
+                $discountValidator = Validator::make(
+                    ['discount_amount' => $discountAmountRaw],
+                    ['discount_amount' => ['numeric', 'min:0', 'max:999999.99']]
+                );
+                if ($discountValidator->fails()) {
+                    $errors++;
+
+                    continue;
+                }
+                $discountAmount = number_format((float) $discountAmountRaw, 2, '.', '');
             }
 
             $country = Country::query()->where('iso2', $countryIso2)->first();
@@ -275,33 +302,51 @@ new #[Title('Shippers')] class extends Component {
             }
 
             $user = User::query()
-                ->whereRaw('LOWER(email) = ?', [mb_strtolower($ownerEmail)])
+                ->whereRaw('LOWER(email) = ?', [mb_strtolower($email)])
                 ->first();
 
+            // Staff protection check: do not assign shipper role or attach shipper profile to staff members
+            if ($user !== null && $user->staff()->exists()) {
+                $errors++;
+
+                continue;
+            }
+
             if ($user === null) {
-                if ($ownerName === '' || $ownerPassword === '') {
+                if ($name === '' || $password === '') {
                     $errors++;
 
                     continue;
                 }
 
-                $passwordValidator = Validator::make(
-                    ['owner_password' => $ownerPassword],
-                    ['owner_password' => ['required', 'string', 'min:8']],
-                );
-                if ($passwordValidator->fails()) {
-                    $errors++;
+                $isAlreadyHashed = password_get_info($password)['algo'] !== null && password_get_info($password)['algoName'] !== 'unknown';
 
-                    continue;
+                if (! $isAlreadyHashed) {
+                    $passwordValidator = Validator::make(
+                        ['password' => $password],
+                        ['password' => ['required', 'string', Password::default()]],
+                    );
+                    if ($passwordValidator->fails()) {
+                        $errors++;
+
+                        continue;
+                    }
                 }
 
                 try {
-                    DB::transaction(function () use ($ownerName, $ownerEmail, $ownerPassword, $companyName, $phone, $address, $country, $state, $city): void {
-                        $newUser = User::query()->create([
-                            'name' => $ownerName,
-                            'email' => $ownerEmail,
-                            'password' => Hash::make($ownerPassword),
+                    DB::transaction(function () use ($name, $email, $password, $isAlreadyHashed, $companyName, $phone, $address, $country, $state, $city, $discountAmount): void {
+                        $newUser = new User([
+                            'name' => $name,
+                            'email' => $email,
                         ]);
+
+                        if ($isAlreadyHashed) {
+                            $newUser->setRawAttributes(array_merge($newUser->getAttributes(), ['password' => $password]));
+                        } else {
+                            $newUser->password = Hash::make($password);
+                        }
+
+                        $newUser->save();
 
                         $newUser->assignRole('shipper');
 
@@ -313,42 +358,52 @@ new #[Title('Shippers')] class extends Component {
                             'country_id' => $country->id,
                             'state_id' => $state->id,
                             'city_id' => $city->id,
+                            'discount_amount' => $discountAmount,
                         ]);
 
                         $this->bootstrapNewShipperProfile($shipper, $newUser);
                     });
                     $created++;
-                } catch (\Throwable) {
+                } catch (\Throwable $e) {
+                    if (app()->environment('testing')) {
+                        throw $e;
+                    }
                     $errors++;
                 }
 
                 continue;
             }
 
-            if ($ownerName !== '') {
-                $user->update(['name' => $ownerName]);
-            }
-
-            if ($ownerPassword !== '') {
-                $passwordValidator = Validator::make(
-                    ['owner_password' => $ownerPassword],
-                    ['owner_password' => ['required', 'string', 'min:8']],
-                );
-                if ($passwordValidator->fails()) {
-                    $errors++;
-
-                    continue;
-                }
-
-                $user->update(['password' => Hash::make($ownerPassword)]);
-            }
-
-            $user->assignRole('shipper');
-
-            $existingShipper = Shipper::query()->where('user_id', $user->id)->first();
-
+            // Existing user handling: wrap ALL updates (User, roles, Shipper) inside a single transaction to guarantee atomicity
             try {
-                $outcome = DB::transaction(function () use ($user, $existingShipper, $companyName, $phone, $address, $country, $state, $city): string {
+                $outcome = DB::transaction(function () use ($user, $name, $password, $companyName, $phone, $address, $country, $state, $city, $discountAmount): string {
+                    if ($name !== '') {
+                        $user->update(['name' => $name]);
+                    }
+
+                    if ($password !== '') {
+                        $isAlreadyHashed = password_get_info($password)['algo'] !== null && password_get_info($password)['algoName'] !== 'unknown';
+
+                        if (! $isAlreadyHashed) {
+                            $passwordValidator = Validator::make(
+                                ['password' => $password],
+                                ['password' => ['required', 'string', Password::default()]],
+                            );
+                            if ($passwordValidator->fails()) {
+                                throw new \RuntimeException('Password validation failed.');
+                            }
+
+                            $user->update(['password' => Hash::make($password)]);
+                        } else {
+                            $user->setRawAttributes(array_merge($user->getAttributes(), ['password' => $password]));
+                            $user->save();
+                        }
+                    }
+
+                    $user->assignRole('shipper');
+
+                    $existingShipper = Shipper::query()->where('user_id', $user->id)->first();
+
                     if ($existingShipper === null) {
                         $shipper = Shipper::query()->create([
                             'user_id' => $user->id,
@@ -358,6 +413,7 @@ new #[Title('Shippers')] class extends Component {
                             'country_id' => $country->id,
                             'state_id' => $state->id,
                             'city_id' => $city->id,
+                            'discount_amount' => $discountAmount,
                         ]);
 
                         $this->bootstrapNewShipperProfile($shipper, $user);
@@ -372,6 +428,7 @@ new #[Title('Shippers')] class extends Component {
                         'country_id' => $country->id,
                         'state_id' => $state->id,
                         'city_id' => $city->id,
+                        'discount_amount' => $discountAmount,
                     ]);
 
                     return 'updated';
@@ -382,7 +439,10 @@ new #[Title('Shippers')] class extends Component {
                 } else {
                     $updated++;
                 }
-            } catch (\Throwable) {
+            } catch (\Throwable $e) {
+                if (app()->environment('testing')) {
+                    throw $e;
+                }
                 $errors++;
             }
         }
@@ -432,6 +492,8 @@ new #[Title('Shippers')] class extends Component {
             'name' => $user->name ?? $shipper->company_name ?? '',
             'address' => $shipper->address ?? '',
             'is_default' => true,
+            'country_id' => $shipper->country_id,
+            'state_id' => $shipper->state_id,
         ]);
     }
 
@@ -779,15 +841,15 @@ new #[Title('Shippers')] class extends Component {
             <div>
                 <flux:heading size="lg">{{ __('Import Shippers CSV') }}</flux:heading>
                 <flux:subheading>
-                    {{ __('Expected headers: owner_name, owner_email, owner_password, company_name, phone, address, country_iso2, state_code, city_name') }}
+                    {{ __('Expected headers: name, email, password, company_name, phone, address, country_iso2, state_code, city_name, discount_amount') }}
                 </flux:subheading>
             </div>
             <div class="space-y-3">
                 <input type="file" wire:model="importFile" accept=".csv,text/csv" class="block w-full text-sm" />
                 <flux:error name="importFile" />
-                <flux:link :href="route('import-templates.geo', 'shippers')" wire:navigate="false">
+                <a href="{{ route('import-templates.geo', 'shippers') }}" download class="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
                     {{ __('Download Sample CSV') }}
-                </flux:link>
+                </a>
             </div>
             <div class="flex justify-end gap-2">
                 <flux:modal.close>
@@ -798,7 +860,7 @@ new #[Title('Shippers')] class extends Component {
         </form>
     </flux:modal>
 
-    <flux:modal wire:model.self="showDeleteModal" class="max-w-md">
+    <flux:modal wire:model="showDeleteModal" class="max-w-md">
         <div class="space-y-4">
             <flux:heading size="lg">{{ __('Delete shipper?') }}</flux:heading>
             <flux:subheading>
