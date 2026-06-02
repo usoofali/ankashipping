@@ -312,7 +312,7 @@
                         <tr>
                             <td style="vertical-align:middle;text-align:right;">
                                 <span
-                                    style="font-size:8pt;text-transform:uppercase;color:#001f3f;display:block;letter-spacing:.5px;">FMC
+                                    style="font-size:12pt;text-transform:uppercase;color:#000000;display:block;letter-spacing:.5px;">FMC
                                     #</span>
                                 <span
                                     style="font-family:'Helvetica-Bold',sans-serif;font-size:24pt;color:#001f3f;display:block;letter-spacing:1px;">{{ $settings->fmc_number ?: 'N/A' }}</span>
@@ -366,7 +366,7 @@
                                 <div class="val">{{ $shipment->booking_number ?: 'N/A' }}</div>
                             </td>
                             <td style="border:none;padding:5px 6px;width:34%;">
-                                <span class="lbl">4. Ref #</span>
+                                <span class="lbl">4. Reference #</span>
                                 <div class="val">{{ $shipment->reference_no ?: 'PENDING' }}</div>
                             </td>
                         </tr>
