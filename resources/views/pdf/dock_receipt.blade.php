@@ -456,8 +456,13 @@
                 <td colspan="3">
                     <span class="lbl"> 12. Domestic Routing / Export Instructions</span>
                     <div style="font-size:7.5pt;color:#333;min-height:14px;">
-                        Tartan Terminals, Inc. 2025 East McComas Street Baltimore, MD 21230 Phone: 443 510-4646
-                        info@tartanterminals.com
+                        @if($shipment->originPort && $shipment->originPort->terminal_name)
+                            {{ $shipment->originPort->terminal_name }}<br>
+                            {{ $shipment->originPort->terminal_address }}<br>
+                            {{ $shipment->originPort->terminal_state }} {{ $shipment->originPort->terminal_zipcode }}<br>
+                            @if($shipment->originPort->terminal_phone) Phone: {{ $shipment->originPort->terminal_phone }}<br> @endif
+                            {{ $shipment->originPort->terminal_email }}
+                        @endif
                         {{-- {{ $shipment->domestic_routing }} --}}
                     </div>
                 </td>

@@ -440,7 +440,7 @@ new #[Title('Ports')] class extends Component {
                     <flux:input wire:model="terminal_name" :label="__('Terminal Name')" icon="building-office" />
                 </div>
                 <div class="sm:col-span-1">
-                    <flux:input wire:model="terminal_state" :label="__('Terminal State')" icon="map" />
+                    <flux:input wire:model="terminal_state" :label="__('Terminal City / State')" icon="map" />
                 </div>
                 
                 <div class="sm:col-span-1">
