@@ -455,7 +455,11 @@
             <tr>
                 <td colspan="3">
                     <span class="lbl"> 12. Domestic Routing / Export Instructions</span>
-                    <div style="font-size:7.5pt;color:#333;min-height:14px;">{{ $shipment->domestic_routing }}</div>
+                    <div style="font-size:7.5pt;color:#333;min-height:14px;">
+                        Tartan Terminals, Inc. 2025 East McComas Street Baltimore, MD 21230 Phone: 443 510-4646
+                        info@tartanterminals.com
+                        {{-- {{ $shipment->domestic_routing }} --}}
+                    </div>
                 </td>
                 <td style="text-align:center; vertical-align:middle;">
                     <span class="lbl" style="text-align:left;">13. CONTAINERIZED (Vessel only)</span>
