@@ -311,11 +311,10 @@
                     <table style="border-collapse:collapse;float:right;">
                         <tr>
                             <td style="vertical-align:middle;text-align:right;">
+
                                 <span
-                                    style="font-size:12pt;text-transform:uppercase;color:#000000;display:block;letter-spacing:.5px;">FMC
-                                    #</span>
-                                <span
-                                    style="font-family:'Helvetica-Bold',sans-serif;font-size:24pt;color:#001f3f;display:block;letter-spacing:1px;">{{ $settings->fmc_number ?: 'N/A' }}</span>
+                                    style="font-family:'Helvetica-Bold',sans-serif;font-size:24pt;color:#001f3f;display:block;letter-spacing:1px;">FCM
+                                    # {{ $settings->fmc_number ?: 'N/A' }}</span>
                             </td>
                         </tr>
                     </table>
