@@ -364,7 +364,7 @@
                         <tr>
                             <td style="border:none;border-right:1px solid #000;padding:5px 6px;width:33%;">
                                 <span class="lbl">2. B/L Number</span>
-                                <div class="val">{{ $shipment->bill_of_lading_number ?: 'TBD' }}</div>
+                                <div class="val">AES-{{ $shipment->bill_of_lading_number ?: 'TBD' }}</div>
                             </td>
                             <td style="border:none;border-right:1px solid #000;padding:5px 6px;width:33%;">
                                 <span class="lbl">3. Booking #</span>
@@ -372,7 +372,7 @@
                             </td>
                             <td style="border:none;padding:5px 6px;width:34%;">
                                 <span class="lbl">4. AES ITN #</span>
-                                <div class="val">{{ $shipment->itn_number ?: 'PENDING' }}</div>
+                                <div class="val">AES-{{ $shipment->itn_number ?: 'PENDING' }}</div>
                             </td>
                         </tr>
                     </table>
