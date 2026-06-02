@@ -93,7 +93,7 @@ final class SystemSetting extends Model
     public function logoSrcForWeb(): ?string
     {
         if (is_string($this->logo_path) && trim($this->logo_path) !== '') {
-            return asset('storage/' . trim($this->logo_path));
+            return asset('storage/'.trim($this->logo_path));
         }
 
         if (! is_string($this->logo) || trim($this->logo) === '') {
@@ -114,13 +114,13 @@ final class SystemSetting extends Model
             return $logo;
         }
 
-        return asset('storage/' . $logo);
+        return asset('storage/'.$logo);
     }
 
     public function logoSrcForEmail(): ?string
     {
         if (is_string($this->logo_path) && trim($this->logo_path) !== '') {
-            return asset('storage/' . trim($this->logo_path));
+            return asset('storage/'.trim($this->logo_path));
         }
 
         if (! is_string($this->logo) || trim($this->logo) === '') {
@@ -190,6 +190,17 @@ final class SystemSetting extends Model
             return 'google_operations';
         }
 
+        if ($this->preferred_mailer === 'zoho') {
+            if ($purpose === 'newsletter') {
+                $pool = ['zoho_news1', 'zoho_news2', 'zoho_news3'];
+                $index = Cache::increment('newsletter_mailer_index') - 1;
+
+                return $pool[$index % count($pool)];
+            }
+
+            return 'zoho_'.$purpose;
+        }
+
         if ($purpose === 'newsletter') {
             $pool = ['news1', 'news2', 'news3'];
             $index = Cache::increment('newsletter_mailer_index') - 1;
@@ -207,7 +218,7 @@ final class SystemSetting extends Model
         $url = "https://wa.me/{$phone}";
 
         if ($text) {
-            $url .= "?text=" . urlencode($text);
+            $url .= '?text='.urlencode($text);
         }
 
         return $url;

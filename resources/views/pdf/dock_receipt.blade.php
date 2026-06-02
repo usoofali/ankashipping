@@ -371,7 +371,7 @@
                                 <div class="val">{{ $shipment->booking_number ?: 'N/A' }}</div>
                             </td>
                             <td style="border:none;padding:5px 6px;width:34%;">
-                                <span class="lbl">4. ASL ITN #</span>
+                                <span class="lbl">4. AES ITN #</span>
                                 <div class="val">{{ $shipment->itn_number ?: 'PENDING' }}</div>
                             </td>
                         </tr>

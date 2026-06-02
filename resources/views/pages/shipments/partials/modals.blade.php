@@ -588,7 +588,7 @@
             <flux:input wire:model="logisticsForm.shipment.vessel_name" label="{{ __('Vessel Name') }}"
                 icon="ship" />
             <flux:input wire:model="logisticsForm.shipment.voyage_no" label="{{ __('Voyage #') }}" icon="hashtag" />
-            <flux:input wire:model="logisticsForm.shipment.itn_number" label="{{ __('ASL ITN #') }}"
+            <flux:input wire:model="logisticsForm.shipment.itn_number" label="{{ __('AES ITN #') }}"
                 icon="finger-print" />
 
             <flux:input wire:model="logisticsForm.shipment.booking_number" label="{{ __('Booking #') }}"

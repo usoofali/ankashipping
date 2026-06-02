@@ -165,6 +165,118 @@ return [
             ],
         ],
 
+        'zoho_operations' => [
+            'transport' => 'smtp',
+            'scheme' => env('MAIL_ZOHO_SCHEME', 'smtps'),
+            'host' => env('MAIL_ZOHO_HOST', 'smtp.zoho.com'),
+            'port' => env('MAIL_ZOHO_PORT', 465),
+            'username' => env('MAIL_OPERATIONS_USERNAME'),
+            'password' => env('MAIL_OPERATIONS_PASSWORD'),
+            'timeout' => null,
+            'from' => [
+                'address' => env('MAIL_OPERATIONS_FROM_ADDRESS', env('MAIL_OPERATIONS_USERNAME')),
+                'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
+            ],
+        ],
+
+        'zoho_booking' => [
+            'transport' => 'smtp',
+            'scheme' => env('MAIL_ZOHO_SCHEME', 'smtps'),
+            'host' => env('MAIL_ZOHO_HOST', 'smtp.zoho.com'),
+            'port' => env('MAIL_ZOHO_PORT', 465),
+            'username' => env('MAIL_BOOKING_USERNAME'),
+            'password' => env('MAIL_BOOKING_PASSWORD'),
+            'timeout' => null,
+            'from' => [
+                'address' => env('MAIL_BOOKING_FROM_ADDRESS', env('MAIL_BOOKING_USERNAME')),
+                'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
+            ],
+        ],
+
+        'zoho_noreply' => [
+            'transport' => 'smtp',
+            'scheme' => env('MAIL_ZOHO_SCHEME', 'smtps'),
+            'host' => env('MAIL_ZOHO_HOST', 'smtp.zoho.com'),
+            'port' => env('MAIL_ZOHO_PORT', 465),
+            'username' => env('MAIL_NOREPLY_USERNAME'),
+            'password' => env('MAIL_NOREPLY_PASSWORD'),
+            'timeout' => null,
+            'from' => [
+                'address' => env('MAIL_NOREPLY_FROM_ADDRESS', env('MAIL_NOREPLY_USERNAME')),
+                'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
+            ],
+        ],
+
+        'zoho_services' => [
+            'transport' => 'smtp',
+            'scheme' => env('MAIL_ZOHO_SCHEME', 'smtps'),
+            'host' => env('MAIL_ZOHO_HOST', 'smtp.zoho.com'),
+            'port' => env('MAIL_ZOHO_PORT', 465),
+            'username' => env('MAIL_SERVICES_USERNAME'),
+            'password' => env('MAIL_SERVICES_PASSWORD'),
+            'timeout' => null,
+            'from' => [
+                'address' => env('MAIL_SERVICES_FROM_ADDRESS', env('MAIL_SERVICES_USERNAME')),
+                'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
+            ],
+        ],
+
+        'zoho_accounts' => [
+            'transport' => 'smtp',
+            'scheme' => env('MAIL_ZOHO_SCHEME', 'smtps'),
+            'host' => env('MAIL_ZOHO_HOST', 'smtp.zoho.com'),
+            'port' => env('MAIL_ZOHO_PORT', 465),
+            'username' => env('MAIL_ACCOUNTS_USERNAME'),
+            'password' => env('MAIL_ACCOUNTS_PASSWORD'),
+            'timeout' => null,
+            'from' => [
+                'address' => env('MAIL_ACCOUNTS_FROM_ADDRESS', env('MAIL_ACCOUNTS_USERNAME')),
+                'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
+            ],
+        ],
+
+        'zoho_news1' => [
+            'transport' => 'smtp',
+            'scheme' => env('MAIL_ZOHO_SCHEME', 'smtps'),
+            'host' => env('MAIL_ZOHO_HOST', 'smtp.zoho.com'),
+            'port' => env('MAIL_ZOHO_PORT', 465),
+            'username' => env('MAIL_NEWS1_USERNAME'),
+            'password' => env('MAIL_NEWS1_PASSWORD'),
+            'timeout' => null,
+            'from' => [
+                'address' => env('MAIL_NEWS1_FROM_ADDRESS', env('MAIL_NEWS1_USERNAME')),
+                'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
+            ],
+        ],
+
+        'zoho_news2' => [
+            'transport' => 'smtp',
+            'scheme' => env('MAIL_ZOHO_SCHEME', 'smtps'),
+            'host' => env('MAIL_ZOHO_HOST', 'smtp.zoho.com'),
+            'port' => env('MAIL_ZOHO_PORT', 465),
+            'username' => env('MAIL_NEWS2_USERNAME'),
+            'password' => env('MAIL_NEWS2_PASSWORD'),
+            'timeout' => null,
+            'from' => [
+                'address' => env('MAIL_NEWS2_FROM_ADDRESS', env('MAIL_NEWS2_USERNAME')),
+                'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
+            ],
+        ],
+
+        'zoho_news3' => [
+            'transport' => 'smtp',
+            'scheme' => env('MAIL_ZOHO_SCHEME', 'smtps'),
+            'host' => env('MAIL_ZOHO_HOST', 'smtp.zoho.com'),
+            'port' => env('MAIL_ZOHO_PORT', 465),
+            'username' => env('MAIL_NEWS3_USERNAME'),
+            'password' => env('MAIL_NEWS3_PASSWORD'),
+            'timeout' => null,
+            'from' => [
+                'address' => env('MAIL_NEWS3_FROM_ADDRESS', env('MAIL_NEWS3_USERNAME')),
+                'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
+            ],
+        ],
+
         // Newsletter-specific roundrobin accounts
         'news1' => [
             'transport' => 'smtp',

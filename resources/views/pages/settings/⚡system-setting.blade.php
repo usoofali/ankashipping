@@ -117,7 +117,7 @@ new #[Title('System settings')] class extends Component {
             'tracking_digits' => ['required', 'integer', 'min:1', 'max:12'],
             'tracking_number_type' => ['required', 'in:auto_increment,random'],
             'tracking_random_digits' => ['required', 'integer', 'min:1', 'max:20'],
-            'preferred_mailer' => ['required', 'string', 'in:hostinger,google'],
+            'preferred_mailer' => ['required', 'string', 'in:hostinger,google,zoho'],
             'fmc_number' => ['nullable', 'string', 'max:255'],
             'forwarding_agent_name' => ['nullable', 'string', 'max:255'],
             'forwarding_agent_address' => ['nullable', 'string'],
@@ -313,11 +313,11 @@ new #[Title('System settings')] class extends Component {
 
             <div class="rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
                 <flux:heading size="sm">{{ __('Mail Provider') }}</flux:heading>
-                <flux:subheading class="mt-1 text-sm text-zinc-500">{{ __('Choose which provider delivers all system emails. Hostinger uses dedicated purpose-specific accounts (operations@, services@, etc.). Google routes everything through your Google Workspace account.') }}</flux:subheading>
+                <flux:subheading class="mt-1 text-sm text-zinc-500">{{ __('Choose which provider delivers all system emails. Hostinger and Zoho use dedicated purpose-specific accounts (operations@, services@, etc.). Google routes everything through your Google Workspace account.') }}</flux:subheading>
                 <div class="mt-4">
                     <flux:radio.group
                         wire:model="preferred_mailer"
-                        class="grid grid-cols-1 gap-4 sm:grid-cols-2"
+                        class="grid grid-cols-1 gap-4 sm:grid-cols-3"
                     >
                         <flux:radio
                             value="hostinger"
@@ -328,6 +328,11 @@ new #[Title('System settings')] class extends Component {
                             value="google"
                             :label="__('Google Workspace')"
                             :description="__('All emails use your Google Workspace account via smtp.gmail.com.')"
+                        />
+                        <flux:radio
+                            value="zoho"
+                            :label="__('Zoho Mail')"
+                            :description="__('Uses dedicated purpose-specific accounts: operations@, services@, news1/2/3@ etc. via Zoho SMTP.')"
                         />
                     </flux:radio.group>
                 </div>
