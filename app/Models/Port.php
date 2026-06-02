@@ -21,6 +21,12 @@ final class Port extends Model
         'warehouse_id',
         'name',
         'type',
+        'terminal_name',
+        'terminal_state',
+        'terminal_zipcode',
+        'terminal_address',
+        'terminal_phone',
+        'terminal_email',
     ];
 
     public function warehouse(): BelongsTo

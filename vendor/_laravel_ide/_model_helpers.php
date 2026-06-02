@@ -5053,6 +5053,12 @@ namespace App\Models {
     /**
      * App\Models\Port
      *
+     * @property string|null $terminal_email
+     * @property string|null $terminal_phone
+     * @property string|null $terminal_address
+     * @property string|null $terminal_zipcode
+     * @property string|null $terminal_state
+     * @property string|null $terminal_name
      * @property mixed $warehouse_id
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
@@ -5076,6 +5082,12 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<Port>|Port whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Port>|Port whereUpdatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Port>|Port whereWarehouseId($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Port>|Port whereTerminalName($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Port>|Port whereTerminalState($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Port>|Port whereTerminalZipcode($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Port>|Port whereTerminalAddress($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Port>|Port whereTerminalPhone($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Port>|Port whereTerminalEmail($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Port>|Port newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Port>|Port newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Port>|Port query()

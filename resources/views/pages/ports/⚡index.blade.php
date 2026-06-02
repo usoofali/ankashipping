@@ -41,6 +41,12 @@ new #[Title('Ports')] class extends Component {
     public string $name = '';
     public string $type = 'origin';
     public ?int $warehouse_id = null;
+    public string $terminal_name = '';
+    public string $terminal_state = '';
+    public string $terminal_zipcode = '';
+    public string $terminal_address = '';
+    public string $terminal_phone = '';
+    public string $terminal_email = '';
     public mixed $importFile = null;
 
     public function updatedSearch(): void
@@ -56,7 +62,7 @@ new #[Title('Ports')] class extends Component {
     public function openCreateModal(): void
     {
         $this->authorize('ports.create');
-        $this->reset(['name', 'type', 'warehouse_id', 'country_id', 'state_id', 'editingPortId']);
+        $this->reset(['name', 'type', 'warehouse_id', 'country_id', 'state_id', 'terminal_name', 'terminal_state', 'terminal_zipcode', 'terminal_address', 'terminal_phone', 'terminal_email', 'editingPortId']);
         $this->showCreateModal = true;
     }
 
@@ -155,6 +161,12 @@ new #[Title('Ports')] class extends Component {
                 'warehouse_id' => $this->warehouse_id,
                 'country_id' => $this->country_id,
                 'state_id' => $this->state_id,
+                'terminal_name' => $this->terminal_name,
+                'terminal_state' => $this->terminal_state,
+                'terminal_zipcode' => $this->terminal_zipcode,
+                'terminal_address' => $this->terminal_address,
+                'terminal_phone' => $this->terminal_phone,
+                'terminal_email' => $this->terminal_email,
             ],
             [
                 'name' => ['required', 'string', 'max:255', 'unique:ports,name'],
@@ -162,6 +174,12 @@ new #[Title('Ports')] class extends Component {
                 'warehouse_id' => ['nullable', 'integer', 'exists:warehouses,id'],
                 'country_id' => ['required', 'integer', 'exists:countries,id'],
                 'state_id' => ['required', 'integer', 'exists:states,id'],
+                'terminal_name' => ['nullable', 'string', 'max:255'],
+                'terminal_state' => ['nullable', 'string', 'max:255'],
+                'terminal_zipcode' => ['nullable', 'string', 'max:255'],
+                'terminal_address' => ['nullable', 'string'],
+                'terminal_phone' => ['nullable', 'string', 'max:255'],
+                'terminal_email' => ['nullable', 'email', 'max:255'],
             ]
         );
         $validator->after(function (\Illuminate\Validation\Validator $v): void {
@@ -185,6 +203,12 @@ new #[Title('Ports')] class extends Component {
         $this->warehouse_id = $port->warehouse_id;
         $this->country_id = $port->country_id;
         $this->state_id = $port->state_id;
+        $this->terminal_name = (string) $port->terminal_name;
+        $this->terminal_state = (string) $port->terminal_state;
+        $this->terminal_zipcode = (string) $port->terminal_zipcode;
+        $this->terminal_address = (string) $port->terminal_address;
+        $this->terminal_phone = (string) $port->terminal_phone;
+        $this->terminal_email = (string) $port->terminal_email;
 
         $this->showEditModal = true;
     }
@@ -205,6 +229,12 @@ new #[Title('Ports')] class extends Component {
                 'warehouse_id' => $this->warehouse_id,
                 'country_id' => $this->country_id,
                 'state_id' => $this->state_id,
+                'terminal_name' => $this->terminal_name,
+                'terminal_state' => $this->terminal_state,
+                'terminal_zipcode' => $this->terminal_zipcode,
+                'terminal_address' => $this->terminal_address,
+                'terminal_phone' => $this->terminal_phone,
+                'terminal_email' => $this->terminal_email,
             ],
             [
                 'name' => ['required', 'string', 'max:255', 'unique:ports,name,' . $port->id],
@@ -212,6 +242,12 @@ new #[Title('Ports')] class extends Component {
                 'warehouse_id' => ['nullable', 'integer', 'exists:warehouses,id'],
                 'country_id' => ['required', 'integer', 'exists:countries,id'],
                 'state_id' => ['required', 'integer', 'exists:states,id'],
+                'terminal_name' => ['nullable', 'string', 'max:255'],
+                'terminal_state' => ['nullable', 'string', 'max:255'],
+                'terminal_zipcode' => ['nullable', 'string', 'max:255'],
+                'terminal_address' => ['nullable', 'string'],
+                'terminal_phone' => ['nullable', 'string', 'max:255'],
+                'terminal_email' => ['nullable', 'email', 'max:255'],
             ]
         );
         $validator->after(function (\Illuminate\Validation\Validator $v): void {
@@ -394,6 +430,35 @@ new #[Title('Ports')] class extends Component {
                             'params' => ['country_id' => $this->country_id],
                         ]" searchable :disabled="!$this->country_id" />
                 </div>
+
+                <div class="sm:col-span-2">
+                    <flux:separator variant="subtle" class="my-4" />
+                    <flux:heading size="md" class="mb-2">{{ __('Terminal Information') }}</flux:heading>
+                </div>
+                
+                <div class="sm:col-span-1">
+                    <flux:input wire:model="terminal_name" :label="__('Terminal Name')" icon="building-office" />
+                </div>
+                <div class="sm:col-span-1">
+                    <flux:input wire:model="terminal_state" :label="__('Terminal State')" icon="map" />
+                </div>
+                
+                <div class="sm:col-span-1">
+                    <flux:input wire:model="terminal_zipcode" :label="__('Terminal Zip Code')" icon="hashtag" />
+                </div>
+                <div class="sm:col-span-1">
+                    <flux:input wire:model="terminal_phone" :label="__('Terminal Phone')" icon="phone" />
+                </div>
+                
+                <div class="sm:col-span-1">
+                    <flux:input wire:model="terminal_email" type="email" :label="__('Terminal Email')" icon="envelope" />
+                </div>
+                <div class="sm:col-span-1">
+                </div>
+
+                <div class="sm:col-span-2">
+                    <flux:textarea wire:model="terminal_address" :label="__('Terminal Address')" />
+                </div>
             </div>
 
             <div class="flex justify-end gap-2 mt-4">
@@ -444,6 +509,35 @@ new #[Title('Ports')] class extends Component {
                             'api' => route('register.geo.states'),
                             'params' => ['country_id' => $this->country_id],
                         ]" searchable :disabled="!$this->country_id" />
+                </div>
+
+                <div class="sm:col-span-2">
+                    <flux:separator variant="subtle" class="my-4" />
+                    <flux:heading size="md" class="mb-2">{{ __('Terminal Information') }}</flux:heading>
+                </div>
+                
+                <div class="sm:col-span-1">
+                    <flux:input wire:model="terminal_name" :label="__('Terminal Name')" icon="building-office" />
+                </div>
+                <div class="sm:col-span-1">
+                    <flux:input wire:model="terminal_state" :label="__('Terminal State')" icon="map" />
+                </div>
+                
+                <div class="sm:col-span-1">
+                    <flux:input wire:model="terminal_zipcode" :label="__('Terminal Zip Code')" icon="hashtag" />
+                </div>
+                <div class="sm:col-span-1">
+                    <flux:input wire:model="terminal_phone" :label="__('Terminal Phone')" icon="phone" />
+                </div>
+                
+                <div class="sm:col-span-1">
+                    <flux:input wire:model="terminal_email" type="email" :label="__('Terminal Email')" icon="envelope" />
+                </div>
+                <div class="sm:col-span-1">
+                </div>
+
+                <div class="sm:col-span-2">
+                    <flux:textarea wire:model="terminal_address" :label="__('Terminal Address')" />
                 </div>
             </div>
 
