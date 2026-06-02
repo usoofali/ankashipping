@@ -312,7 +312,7 @@
                         <tr>
                             <td style="vertical-align:middle;text-align:right;">
                                 <span
-                                    style="font-size:10pt;text-transform:uppercase;color:#000000;display:block;letter-spacing:.5px;">FMC
+                                    style="font-size:10pt;font-weight:bold;text-transform:uppercase;color:#000000;display:block;letter-spacing:.5px;">FMC
                                     #</span>
                                 <span
                                     style="font-family:'Helvetica-Bold',sans-serif;font-size:24pt;color:#001f3f;display:block;letter-spacing:1px;">{{ $settings->fmc_number ?: 'N/A' }}</span>
