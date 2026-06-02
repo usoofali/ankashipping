@@ -310,17 +310,12 @@
                 <td class="hdr-right">
                     <table style="border-collapse:collapse;float:right;">
                         <tr>
-                            <td style="vertical-align:middle;padding-right:8px;text-align:right;">
+                            <td style="vertical-align:middle;text-align:right;">
                                 <span
                                     style="font-size:8pt;text-transform:uppercase;color:#001f3f;display:block;letter-spacing:.5px;">FMC
-                                    Number</span>
+                                    #</span>
                                 <span
                                     style="font-family:'Helvetica-Bold',sans-serif;font-size:24pt;color:#001f3f;display:block;letter-spacing:1px;">{{ $settings->fmc_number ?: 'N/A' }}</span>
-                            </td>
-                            <td style="vertical-align:middle;">
-                                @if($qrCode)
-                                    <img src="{{ $qrCode }}" class="qr-code" alt="QR">
-                                @endif
                             </td>
                         </tr>
                     </table>
@@ -371,8 +366,8 @@
                                 <div class="val">{{ $shipment->booking_number ?: 'N/A' }}</div>
                             </td>
                             <td style="border:none;padding:5px 6px;width:34%;">
-                                <span class="lbl">4. AES ITN #</span>
-                                <div class="val">{{ $shipment->itn_number ?: 'PENDING' }}</div>
+                                <span class="lbl">4. Ref #</span>
+                                <div class="val">{{ $shipment->reference_no ?: 'PENDING' }}</div>
                             </td>
                         </tr>
                     </table>
@@ -460,7 +455,8 @@
                             {{ $shipment->originPort->terminal_name }}<br>
                             {{ $shipment->originPort->terminal_address }}<br>
                             {{ $shipment->originPort->terminal_state }} {{ $shipment->originPort->terminal_zipcode }}<br>
-                            @if($shipment->originPort->terminal_phone) Phone: {{ $shipment->originPort->terminal_phone }}<br> @endif
+                            @if($shipment->originPort->terminal_phone) Phone:
+                            {{ $shipment->originPort->terminal_phone }}<br> @endif
                             {{ $shipment->originPort->terminal_email }}
                         @endif
                         {{-- {{ $shipment->domestic_routing }} --}}
@@ -510,6 +506,7 @@
                         <td>
                             <span class="v-title">{{ $vehicle->year }} {{ $vehicle->make }} {{ $vehicle->model }}</span>
                             <span class="vin">VIN: {{ $vehicle->vin }}</span>
+                            <span class="sub">AES ITN: {{ $shipment->itn_number }}</span>
                             <span class="sub">Declared Value: ${{ number_format((float) $vehicle->value, 2) }}</span>
                         </td>
                         @php
@@ -581,7 +578,7 @@
         <div class="sig-area">
             <table style="width:100%;border-collapse:collapse;margin-top:8px;">
                 <tr>
-                    <td style="width:40%;vertical-align:bottom;">
+                    <td style="width:30%;vertical-align:bottom;">
                         <div class="sig-line">Authorized Warehouse Representative</div>
                     </td>
                     <td style="width:20%;text-align:center;vertical-align:bottom;">
@@ -589,7 +586,12 @@
                             style="font-size:7pt;color:#aaa;border:1.5px dashed #ccc;padding:4px;border-radius:50%;width:55px;height:55px;line-height:55px;margin:0 auto;text-align:center;">
                             Stamp</div>
                     </td>
-                    <td style="width:40%;text-align:right;vertical-align:bottom;">
+                    <td style="width:20%;text-align:center;vertical-align:bottom;">
+                        @if($qrCode)
+                            <img src="{{ $qrCode }}" class="qr-code" alt="QR" style="margin:0 auto;">
+                        @endif
+                    </td>
+                    <td style="width:30%;text-align:right;vertical-align:bottom;">
                         <div class="sig-line" style="margin-left:auto;">Customer / Driver Initials</div>
                         <div style="font-size:7pt;color:#666;margin-top:3px;">Date: {{ now()->format('d M Y') }}</div>
                     </td>
