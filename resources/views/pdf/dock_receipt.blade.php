@@ -378,7 +378,7 @@
         {{-- ── ROW 2: Shipper | Consignee ── --}}
         <table class="grid">
             <tr>
-                <td style="width:50%;" rowspan="2">
+                <td style="width:50%;">
                     <span class="lbl">5. Consignee</span>
                     @if($shipment->consignee)
                         <div class="val">{{ $shipment->consignee->name }}</div>
@@ -393,7 +393,7 @@
                         <div class="val">N/A</div>
                     @endif
                 </td>
-                <td style="width:50%;">
+                <td style="width:50%;" rowspan="2">
                     <span class="lbl">6. Forwarding Agent / Identity</span>
                     <div class="val">{{ $settings->forwarding_agent_name ?: $settings->company_name }}
                         FMC# {{$settings->fmc_number }}</div>
