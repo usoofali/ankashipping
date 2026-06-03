@@ -154,6 +154,14 @@
             line-height: 1.15;
         }
 
+        .sub1 {
+            font-size: 10.5pt;
+            color: #333;
+            display: block;
+            margin-top: 1px;
+            line-height: 1.15;
+        }
+
         /* ── Logistics row (4-column) ── */
         table.lg4 {
             width: 100%;
@@ -211,13 +219,13 @@
 
         .v-title {
             font-family: 'Helvetica-Bold', sans-serif;
-            font-size: 8.5pt;
+            font-size: 10.5pt;
             display: block;
         }
 
         .vin {
             font-family: 'Courier', monospace;
-            font-size: 7.5pt;
+            font-size: 10.5pt;
             color: #333;
         }
 
@@ -507,7 +515,7 @@
                         <td>
                             <span class="v-title">{{ $vehicle->year }} {{ $vehicle->make }} {{ $vehicle->model }}</span>
                             <span class="vin">VIN: {{ $vehicle->vin }}</span>
-                            <span class="sub">AES ITN: {{ $shipment->itn_number }}</span>
+                            <span class="sub1">AES ITN: {{ $shipment->itn_number }}</span>
                             <span class="sub">Declared Value: ${{ number_format((float) $vehicle->value, 2) }}</span>
                         </td>
                         @php
