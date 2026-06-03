@@ -379,16 +379,7 @@
         <table class="grid">
             <tr>
                 <td style="width:50%;" rowspan="2">
-                    <span class="lbl">5. Forwarding Agent / Identity</span>
-                    <div class="val">{{ $settings->forwarding_agent_name ?: $settings->company_name }}
-                        FMC# {{$settings->fmc_number }}</div>
-                    <span class="sub">
-                        {{ $settings->forwarding_agent_address ?: $settings->address }}<br>
-                        Tel: {{ $settings->forwarding_agent_phone ?: $settings->phone }}
-                    </span>
-                </td>
-                <td style="width:50%;">
-                    <span class="lbl">6. Consignee</span>
+                    <span class="lbl">5. Consignee</span>
                     @if($shipment->consignee)
                         <div class="val">{{ $shipment->consignee->name }}</div>
                         <span class="sub">
@@ -401,6 +392,16 @@
                     @else
                         <div class="val">N/A</div>
                     @endif
+                </td>
+                <td style="width:50%;">
+                    <span class="lbl">6. Forwarding Agent / Identity</span>
+                    <div class="val">{{ $settings->forwarding_agent_name ?: $settings->company_name }}
+                        FMC# {{$settings->fmc_number }}</div>
+                    <span class="sub">
+                        {{ $settings->forwarding_agent_address ?: $settings->address }}<br>
+                        Tel: {{ $settings->forwarding_agent_phone ?: $settings->phone }}
+                    </span>
+
                 </td>
             </tr>
             <tr>

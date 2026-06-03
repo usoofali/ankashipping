@@ -610,11 +610,6 @@
                 label="{{ __('ETA (Arrival)') }}" />
             <flux:input wire:model="logisticsForm.shipment.loading_pier"
                 label="{{ __('Loading Pier(Terminal)') }}" />
-
-            <div class="md:col-span-3">
-                <flux:textarea wire:model="logisticsForm.shipment.domestic_routing"
-                    label="{{ __('Domestic Routing') }}" rows="2" />
-            </div>
         </div>
 
         <div class="border-t border-zinc-100 dark:border-zinc-800 pt-6">
