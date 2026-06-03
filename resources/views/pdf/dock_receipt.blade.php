@@ -516,7 +516,10 @@
                             <span class="v-title">{{ $vehicle->year }} {{ $vehicle->make }} {{ $vehicle->model }}</span>
                             <span class="vin">VIN: {{ $vehicle->vin }}</span>
                             <span class="sub1">AES ITN: {{ $shipment->itn_number }}</span>
-                            <span class="sub">Declared Value: ${{ number_format((float) $vehicle->value, 2) }}</span>
+                            <span class="sub">Value: ${{ number_format((float) $vehicle->value, 2) }}</span>
+                            @if(!$shipment->isContainer())
+                                <br /><span class="sub1"> {{ $vehicle->vehicle_is->label() }}</span>
+                            @endif
                         </td>
                         @php
                             $w = (float) $vehicle->weight;
@@ -525,19 +528,15 @@
                             $wKg = in_array($wu, ['LB', 'LBS']) ? $w / 2.20462262 : $w;
 
                             $m = (float) $vehicle->measurement;
-                            // Given 457.97 is already in CFT, we treat it as such without multiplying
-                            // (or auto-convert if it's genuinely a CBM value < 100)
-                            $mFt3 = ($m < 100 && strtoupper($vehicle->measurement_unit ?? '') === 'CBM')
-                                ? $m * 35.3146667
-                                : $m;
-                            $mVlb = $mFt3 * (1728 / 166);
+                            $mCbm = $m;
+                            $mVlb = $m * 367.662897;
                         @endphp
                         <td style="text-align:center;">
                             <span class="val">{{ number_format($wKg, 2) }} Kg</span><br>
                             <span style="font-size:7.5pt;color:#333;">"{{ number_format($wLb, 2) }} Lb"</span>
                         </td>
                         <td style="text-align:center;">
-                            <span class="val">{{ number_format($mFt3, 2) }} ft&sup3;</span><br>
+                            <span class="val">{{ number_format($mCbm, 2) }} m&sup3;</span><br>
                             <span style="font-size:7.5pt;color:#333;">"{{ number_format($mVlb, 2) }} Vlb"</span>
                         </td>
                     </tr>
@@ -588,7 +587,7 @@
             <table style="width:100%;border-collapse:collapse;margin-top:8px;">
                 <tr>
                     <td style="width:30%;vertical-align:bottom;">
-                        <div class="sig-line">Authorized Warehouse Representative</div>
+                        <div class="sig-line">Authorized Representative</div>
                     </td>
                     <td style="width:20%;text-align:center;vertical-align:bottom;">
                         <div

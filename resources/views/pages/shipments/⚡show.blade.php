@@ -1160,13 +1160,14 @@ new #[Title('Shipment Details')] class extends Component {
                 'weight_unit' => $vehicle->weight_unit ?? 'KG',
                 'measurement' => $vehicle->measurement,
                 'measurement_unit' => $vehicle->measurement_unit ?? 'CBM',
+                'vehicle_is' => $vehicle->vehicle_is?->value,
             ];
         }
 
         $this->showLogisticsModal = true;
     }
 
-    public function saveLogistics(): void
+    public function saveLogistics(bool $isDraft = false): void
     {
         if (!auth()->user()->can('workflow.manage_logistics')) {
             $this->notification()->error(__('Access Denied'), __('You do not have permission to manage logistics.'));
@@ -1199,9 +1200,10 @@ new #[Title('Shipment Details')] class extends Component {
             'logisticsForm.vehicles.*.weight_unit' => 'required|string|in:KG,LBS',
             'logisticsForm.vehicles.*.measurement' => 'nullable|numeric|min:0',
             'logisticsForm.vehicles.*.measurement_unit' => 'required|string|in:CBM,CFT',
+            'logisticsForm.vehicles.*.vehicle_is' => ['nullable', 'string', Rule::enum(\App\Enums\VehicleIs::class)],
         ]);
         $isTowing = $this->shipment?->towing ?? false;
-        DB::transaction(function () use ($validated, $isTowing): void {
+        DB::transaction(function () use ($validated, $isTowing, $isDraft): void {
             $this->shipment->update($validated['logisticsForm']['shipment']);
 
             foreach ($validated['logisticsForm']['vehicles'] as $vehicleId => $data) {
@@ -1212,7 +1214,7 @@ new #[Title('Shipment Details')] class extends Component {
             }
 
             // AUTO-TRANSITION: BOOKING -> INLAND
-            if ($this->shipment->shipment_status === ShipmentStatus::Booking && $this->workflow()->canTransitionToInland($this->shipment)) {
+            if (!$isDraft && $this->shipment->shipment_status === ShipmentStatus::Booking && $this->workflow()->canTransitionToInland($this->shipment)) {
                 $this->shipment->update(['shipment_status' => $isTowing ? ShipmentStatus::Inland : ShipmentStatus::Delivered]);
 
                 ShipmentTracking::query()->create([
@@ -1226,18 +1228,23 @@ new #[Title('Shipment Details')] class extends Component {
             ActivityLog::query()->create([
                 'shipment_id' => $this->shipment->id,
                 'user_id' => Auth::id(),
-                'action' => 'logistics_updated',
+                'action' => $isDraft ? 'logistics_draft_saved' : 'logistics_updated',
                 'properties' => [
                     'reference_no' => $this->shipment->reference_no,
                     'source' => 'shipment_show_logistics_modal',
                     'transitioned_to_inland' => $this->shipment->shipment_status === ShipmentStatus::Inland,
+                    'is_draft' => $isDraft,
                 ],
             ]);
         });
 
         $this->showLogisticsModal = false;
-        $this->notification()->success(__('Shipment booked successfully.'));
+        $this->notification()->success($isDraft ? __('Draft saved successfully.') : __('Shipment booked successfully.'));
         $this->reloadShipmentPageData();
+
+        if ($isDraft) {
+            return;
+        }
 
         $recipientIds = $this->staffAndAdminNotificationRecipientIds();
         if ($this->shipment->shipper?->user_id !== null) {

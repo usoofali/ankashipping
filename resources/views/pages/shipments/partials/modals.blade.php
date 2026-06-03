@@ -613,6 +613,23 @@
         </div>
 
         <div class="border-t border-zinc-100 dark:border-zinc-800 pt-6">
+            <flux:heading size="md" class="mb-4">{{ __('Vehicle Condition') }}</flux:heading>
+            <div class="space-y-4">
+                @foreach($shipment->vehicles as $v)
+                    <div wire:key="cond-v-{{ $v->id }}">
+                        <flux:radio.group wire:model="logisticsForm.vehicles.{{ $v->id }}.vehicle_is" :label="$shipment->vehicles->count() > 1 ? __('Condition for :make :model (:vin)', ['make' => $v->make, 'model' => $v->model, 'vin' => substr($v->vin ?? '—', -6)]) : __('Vehicle condition')"
+                            variant="segmented">
+                            @foreach(\App\Enums\VehicleIs::cases() as $vIs)
+                                <flux:radio :value="$vIs->value" :label="$vIs->label()" />
+                            @endforeach
+                        </flux:radio.group>
+                        <flux:error name="logisticsForm.vehicles.{{ $v->id }}.vehicle_is" />
+                    </div>
+                @endforeach
+            </div>
+        </div>
+
+        <div class="border-t border-zinc-100 dark:border-zinc-800 pt-6 mt-6">
             <flux:heading size="md" class="mb-4">{{ __('Vehicle Measurements (Schedule B)') }}</flux:heading>
             <div class="space-y-4">
                 @foreach($shipment->vehicles as $v)
@@ -656,6 +673,7 @@
             <flux:modal.close>
                 <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
             </flux:modal.close>
+            <flux:button type="button" wire:click="saveLogistics(true)" variant="outline" wire:loading.attr="disabled">{{ __('Save as Draft') }}</flux:button>
             <flux:button type="submit" variant="primary" wire:loading.attr="disabled">{{ __('Save Logistics') }}
             </flux:button>
         </div>

@@ -5,6 +5,12 @@
         <!-- Session Status -->
         <x-auth-session-status class="text-center" :status="session('status')" />
 
+        @if (session('error'))
+            <div class="font-medium text-sm text-red-600 dark:text-red-400 text-center">
+                {{ session('error') }}
+            </div>
+        @endif
+
         <form method="POST" action="{{ route('login.store') }}" class="flex flex-col gap-6">
             @csrf
 
