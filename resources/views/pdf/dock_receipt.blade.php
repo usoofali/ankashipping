@@ -528,8 +528,13 @@
                             $wKg = in_array($wu, ['LB', 'LBS']) ? $w / 2.20462262 : $w;
 
                             $m = (float) $vehicle->measurement;
-                            $mCbm = $m;
-                            $mVlb = $m * 367.662897;
+                            // Given 457.97 is already in CFT, we treat it as such without multiplying
+                            // (or auto-convert if it's genuinely a CBM value < 100)
+                            $mFt3 = ($m < 100 && strtoupper($vehicle->measurement_unit ?? '') === 'CBM')
+                                ? $m
+                                : $m;
+                            $mCbm = $mFt3;
+                            $mVlb = $mFt3 * 367.662897;
                         @endphp
                         <td style="text-align:center;">
                             <span class="val">{{ number_format($wKg, 2) }} Kg</span><br>
