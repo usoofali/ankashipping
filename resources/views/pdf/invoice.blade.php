@@ -483,12 +483,6 @@
                     <tr>
                         <td>
                             <span class="item-category">{{ $item->description }}</span>
-                            @if((float) $item->discount_amount > 0)
-                                <div class="item-subtext" style="color:#15803d;">
-                                    {{ __('List') }}: ${{ number_format((float) $item->gross_amount, 2) }}
-                                    &mdash; {{ __('Discount') }}: ${{ number_format((float) $item->discount_amount, 2) }}
-                                </div>
-                            @endif
                             @php
                                 $isVehicleSpecific = str_contains($item->description, '(') && str_contains($item->description, ')');
                             @endphp
