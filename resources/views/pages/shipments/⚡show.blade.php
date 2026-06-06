@@ -1869,7 +1869,7 @@ new #[Title('Shipment Details')] class extends Component {
                             @endcan
                         @endif
 
-                        @can('documents.manage')
+                        @can('workflow.upload_photos')
                             <flux:menu.item icon="paper-clip" wire:click="openAttachDocumentModal">
                                 {{ $this->dueShipmentDocumentType ? __('Attach :type', ['type' => $this->dueShipmentDocumentType->label()]) : __('Attach documents') }}
                             </flux:menu.item>

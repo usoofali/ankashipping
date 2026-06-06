@@ -77,47 +77,58 @@
                             </flux:button>
                             <flux:menu>
                                 @if($this->workflow()->canAssignDriver($shipment, $vehicle))
-                                    <flux:menu.item icon="user-plus" wire:click="openAssignDriverModal({{ $vehicle->id }})">
-                                        {{ __('Assign Driver') }}
-                                    </flux:menu.item>
+                                    @can('workflow.assign_driver')
+                                        <flux:menu.item icon="user-plus" wire:click="openAssignDriverModal({{ $vehicle->id }})">
+                                            {{ __('Assign Driver') }}
+                                        </flux:menu.item>
+                                    @endcan
                                 @endif
 
                                 @if($this->workflow()->canAttachTitle($shipment, $vehicle))
-                                    <flux:menu.item icon="document-text"
-                                        wire:click="openAttachVehicleDocumentModal({{ $vehicle->id }}, '{{ \App\Enums\VehicleDocumentType::TitleDocument->value }}')">
-                                        {{ __('Attach Title') }}
-                                    </flux:menu.item>
+                                    @can('workflow.attach_title')
+                                        <flux:menu.item icon="document-text"
+                                            wire:click="openAttachVehicleDocumentModal({{ $vehicle->id }}, '{{ \App\Enums\VehicleDocumentType::TitleDocument->value }}')">
+                                            {{ __('Attach Title') }}
+                                        </flux:menu.item>
+                                    @endcan
                                 @endif
 
                                 @if($this->workflow()->canAttachPhotos($shipment, $vehicle))
-                                    <flux:menu.item icon="photo"
-                                        wire:click="openAttachVehicleDocumentModal({{ $vehicle->id }}, '{{ \App\Enums\VehicleDocumentType::PhotosAndVideos->value }}')">
-                                        {{ __('Upload Photos') }}
-                                    </flux:menu.item>
+                                    @can('workflow.upload_photos')
+                                        <flux:menu.item icon="photo"
+                                            wire:click="openAttachVehicleDocumentModal({{ $vehicle->id }}, '{{ \App\Enums\VehicleDocumentType::PhotosAndVideos->value }}')">
+                                            {{ __('Upload Photos') }}
+                                        </flux:menu.item>
+                                    @endcan
                                 @endif
 
-                                <flux:menu.item icon="paper-clip"
-                                    wire:click="openAttachVehicleDocumentModal({{ $vehicle->id }}, '{{ \App\Enums\VehicleDocumentType::Other->value }}')">
-                                    {{ __('Other Document') }}
-                                </flux:menu.item>
+                                @can('workflow.upload_photos')
+                                    <flux:menu.item icon="paper-clip"
+                                        wire:click="openAttachVehicleDocumentModal({{ $vehicle->id }}, '{{ \App\Enums\VehicleDocumentType::Other->value }}')">
+                                        {{ __('Other Document') }}
+                                    </flux:menu.item>
+                                @endcan
 
-                                <flux:menu.separator />
-                                @if($vehicle->workshop_id)
-                                    <flux:menu.item icon="arrow-uturn-left"
-                                        wire:click="openFromWorkshopConfirmModal({{ $vehicle->id }})">
-                                        {{ __('From Workshop') }}
-                                    </flux:menu.item>
-                                @else
-                                    <flux:menu.item icon="wrench" wire:click="openToWorkshopModal({{ $vehicle->id }})">
-                                        {{ __('Send to Workshop') }}
-                                    </flux:menu.item>
+                                @if(($vehicle->workshop_id && auth()->user()->can('workflow.from_workshop')) || (!$vehicle->workshop_id && auth()->user()->can('workflow.to_workshop')))
+                                    <flux:menu.separator />
+                                    @if($vehicle->workshop_id)
+                                        <flux:menu.item icon="arrow-uturn-left"
+                                            wire:click="openFromWorkshopConfirmModal({{ $vehicle->id }})">
+                                            {{ __('From Workshop') }}
+                                        </flux:menu.item>
+                                    @else
+                                        <flux:menu.item icon="wrench" wire:click="openToWorkshopModal({{ $vehicle->id }})">
+                                            {{ __('Send to Workshop') }}
+                                        </flux:menu.item>
+                                    @endif
                                 @endif
 
-                                <flux:menu.separator />
-
-                                <flux:menu.item icon="eye" wire:click="openVehicleDocumentsModal({{ $vehicle->id }})">
-                                    {{ __('View Documents') }}
-                                </flux:menu.item>
+                                @can('documents.view')
+                                    <flux:menu.separator />
+                                    <flux:menu.item icon="eye" wire:click="openVehicleDocumentsModal({{ $vehicle->id }})">
+                                        {{ __('View Documents') }}
+                                    </flux:menu.item>
+                                @endcan
                             </flux:menu>
                         </flux:dropdown>
                     @endif

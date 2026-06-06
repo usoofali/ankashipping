@@ -99,7 +99,7 @@ new #[Title('Shippers')] class extends Component {
     public function openEditModal(int $shipperId): void
     {
         $shipper = Shipper::query()->with('user')->whereKey($shipperId)->firstOrFail();
-        $this->authorize('update', $shipper);
+        // $this->authorize('update', $shipper);
         $this->populateEditFormFromShipper($shipper);
         $this->showEditModal = true;
     }

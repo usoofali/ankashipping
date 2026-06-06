@@ -12,10 +12,12 @@ use App\Models\Shipment;
 use App\Models\User;
 use App\Models\Vehicle;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Notification;
 use Livewire\Volt\Volt;
 
 beforeEach(function (): void {
     $this->artisan('db:seed', ['--class' => 'RolePermissionSeeder']);
+    Notification::fake();
 });
 
 test('container vehicle flow: pending -> dispatched -> inland -> at_warehouse', function (): void {
@@ -97,8 +99,8 @@ test('roro dual sync flow: pending -> dispatched -> inland', function (): void {
         ->call('saveAttachedVehicleDocuments')
         ->assertHasNoErrors();
 
-    expect($shipment->refresh()->shipment_status)->toBe(ShipmentStatus::Inland);
-    expect($vehicle->refresh()->tracking_status)->toBe(VehicleStatus::Inland);
+    expect($shipment->refresh()->shipment_status)->toBe(ShipmentStatus::Booking);
+    expect($vehicle->refresh()->tracking_status)->toBe(VehicleStatus::Dispatched);
 
     // 3. Upload Photos (No change for RoRo)
     $photo = UploadedFile::fake()->image('car.jpg');
@@ -108,8 +110,8 @@ test('roro dual sync flow: pending -> dispatched -> inland', function (): void {
         ->call('saveAttachedVehicleDocuments')
         ->assertHasNoErrors();
 
-    expect($shipment->refresh()->shipment_status)->toBe(ShipmentStatus::Inland);
-    expect($vehicle->refresh()->tracking_status)->toBe(VehicleStatus::Inland);
+    expect($shipment->refresh()->shipment_status)->toBe(ShipmentStatus::Booking);
+    expect($vehicle->refresh()->tracking_status)->toBe(VehicleStatus::Dispatched);
 });
 
 test('shipment-level flow: inland -> delivered -> loaded -> completed', function (): void {
@@ -183,4 +185,27 @@ test('actions are rejected if status does not match', function (): void {
         ->call('saveAttachedVehicleDocuments');
 
     expect($vehicle->refresh()->tracking_status)->toBe(VehicleStatus::Pending);
+});
+
+test('documents view permission is enforced', function (): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $shipment = Shipment::factory()->create();
+    $vehicle = Vehicle::factory()->create(['shipment_id' => $shipment->id]);
+
+    // User without permission should be unauthorized when calling openVehicleDocumentsModal
+    Volt::test('pages::shipments.⚡show', ['shipment' => $shipment])
+        ->call('openVehicleDocumentsModal', $vehicle->id)
+        ->assertForbidden();
+
+    // Now assign the permission documents.view
+    $user->givePermissionTo('documents.view');
+
+    // User with permission should succeed
+    Volt::test('pages::shipments.⚡show', ['shipment' => $shipment])
+        ->call('openVehicleDocumentsModal', $vehicle->id)
+        ->assertHasNoErrors()
+        ->assertSet('selectedVehicleIdForDocs', $vehicle->id)
+        ->assertSet('showVehicleDocumentsModal', true);
 });

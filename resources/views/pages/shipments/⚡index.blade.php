@@ -43,8 +43,13 @@ new #[Title('Shipments')] class extends Component {
 
     public function shipments(): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
+        $user = auth()->user();
+
         return Shipment::query()
             ->with(['shipper.user', 'vehicles.driver', 'invoice', 'originPort.state', 'originPort.country', 'workshop'])
+            ->when(! ($user?->hasRole('super_admin') || $user?->staff()->exists()), function ($query) use ($user): void {
+                $query->where('shipper_id', $user?->shipper?->id);
+            })
             ->when($this->search !== '', function ($query): void {
                 $query->where(function ($searchQuery): void {
                     $term = '%' . trim($this->search) . '%';
@@ -79,8 +84,13 @@ new #[Title('Shipments')] class extends Component {
             ->paginate(15);
     }
 
-    public function shippers(): \Illuminate\Database\Eloquent\Collection
+    public function shippers(): \Illuminate\Support\Collection|\Illuminate\Database\Eloquent\Collection
     {
+        $user = auth()->user();
+        if (! ($user?->hasRole('super_admin') || $user?->staff()->exists())) {
+            return collect();
+        }
+
         return Shipper::query()
             ->with('user')
             ->orderBy('company_name')
@@ -89,7 +99,12 @@ new #[Title('Shipments')] class extends Component {
 
     public function years(): \Illuminate\Support\Collection
     {
+        $user = auth()->user();
+
         return Shipment::query()
+            ->when(! ($user?->hasRole('super_admin') || $user?->staff()->exists()), function ($query) use ($user): void {
+                $query->where('shipper_id', $user?->shipper?->id);
+            })
             ->whereNotNull('created_at')
             ->latest('created_at')
             ->get(['created_at'])
@@ -144,14 +159,16 @@ new #[Title('Shipments')] class extends Component {
             @endforeach
         </flux:select>
 
-        <flux:select wire:model.live="filterShipper" label="{{ __('Shipper') }}" icon="user-group">
-            <flux:select.option value="">{{ __('All Shippers') }}</flux:select.option>
-            @foreach($this->shippers() as $shipper)
-                <flux:select.option value="{{ $shipper->id }}">
-                    {{ $shipper->user?->name ?: $shipper->company_name }}
-                </flux:select.option>
-            @endforeach
-        </flux:select>
+        @if (auth()->user()?->hasRole('super_admin') || auth()->user()?->staff()->exists())
+            <flux:select wire:model.live="filterShipper" label="{{ __('Shipper') }}" icon="user-group">
+                <flux:select.option value="">{{ __('All Shippers') }}</flux:select.option>
+                @foreach($this->shippers() as $shipper)
+                    <flux:select.option value="{{ $shipper->id }}">
+                        {{ $shipper->user?->name ?: $shipper->company_name }}
+                    </flux:select.option>
+                @endforeach
+            </flux:select>
+        @endif
 
         <flux:select wire:model.live="filterShipmentStatus" label="{{ __('Shipment Status') }}" icon="car-front">
             <flux:select.option value="">{{ __('All Statuses') }}</flux:select.option>
