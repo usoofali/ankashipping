@@ -146,6 +146,12 @@ final class RolePermissionSeeder extends Seeder
             );
         }
 
+        // On production, only sync new permissions — do not overwrite role assignments
+        // that may have been customised via the admin UI.
+        if (app()->isProduction()) {
+            return;
+        }
+
         $superAdmin = Role::query()->firstOrCreate(
             ['name' => 'super_admin', 'guard_name' => 'web'],
         );
