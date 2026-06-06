@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Livewire\Newsletters;
 
-use App\Jobs\SendIndividualNewsletterJob;
 use App\Models\Newsletter;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -48,7 +47,11 @@ new #[Title('Newsletters')] class extends Component {
     #[Computed]
     public function shippers(): Collection
     {
-        return User::role('shipper')->get();
+        return User::role('shipper')
+            ->whereHas('shipper')
+            ->whereNotNull('email')
+            ->where('email', '!=', '')
+            ->get();
     }
 
     public function openCreateModal(): void
@@ -122,18 +125,20 @@ new #[Title('Newsletters')] class extends Component {
             return;
         }
 
-        $jobs = $shippers->map(fn($user) => new SendIndividualNewsletterJob($user, $newsletter));
-
-        Bus::batch($jobs)
-            ->name("Newsletter: {$newsletter->subject}")
-            ->dispatch();
+        $queuedCount = app(\App\Services\NewsletterService::class)->sendBulk(
+            recipients: $shippers,
+            title: $newsletter->subject,
+            body: $newsletter->body,
+            url: $newsletter->url,
+            mailer: $newsletter->mailer
+        );
 
         $newsletter->update([
             'sent_at' => now(),
-            'recipients_count' => $shippers->count(),
+            'recipients_count' => $queuedCount,
         ]);
 
-        $this->notification()->success(__('Newsletter batch dispatched successfully.'));
+        $this->notification()->success(__('Newsletter queued successfully.'));
     }
 }; ?>
 

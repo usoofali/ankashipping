@@ -6,6 +6,7 @@ namespace App\Modules\WhatsApp\Jobs;
 
 use App\Modules\WhatsApp\Models\WhatsAppConversation;
 use App\Modules\WhatsApp\Models\WhatsAppMessage;
+use App\Modules\WhatsApp\Models\WhatsAppUserStat;
 use App\Modules\WhatsApp\Services\BotService;
 use App\Modules\WhatsApp\Services\MessageRouter;
 use App\Modules\WhatsApp\Services\PhoneNumberMatcher;
@@ -62,12 +63,15 @@ class ProcessIncomingMessage implements ShouldQueue
             ?? null;
 
         // 1. Find or Create Conversation
+        $wasRecentlyCreated = false;
         $conversation = WhatsAppConversation::firstOrCreate(
             ['phone_number' => $phoneNumber],
             ['status' => 'bot']
         );
+        $wasRecentlyCreated = $conversation->wasRecentlyCreated;
 
         // 2. Match Contact if not already linked
+        $contact = null;
         if (! $conversation->contact_id) {
             $contact = $matcher->match($phoneNumber);
             if ($contact) {
@@ -78,7 +82,45 @@ class ProcessIncomingMessage implements ShouldQueue
             }
         }
 
-        // 3. Log the Message
+        // 3. Upsert WhatsApp usage stat (one row per phone number)
+        $resolvedContact = $contact ?? $conversation->contact;
+        $morphClass = $resolvedContact ? $resolvedContact->getMorphClass() : null;
+        $normalizedPhone = $matcher->normalize($phoneNumber);
+
+        $stat = WhatsAppUserStat::firstOrCreate(
+            ['phone_number' => $normalizedPhone],
+            [
+                'contact_role' => 'unknown',
+                'first_contact_at' => now(),
+                'conversation_count' => 1,
+            ]
+        );
+
+        // Increment counters via the query builder to avoid cast conflicts
+        WhatsAppUserStat::where('phone_number', $normalizedPhone)
+            ->increment('total_messages', 1, ['last_contact_at' => now()]);
+
+        if ($wasRecentlyCreated && ! $stat->wasRecentlyCreated) {
+            WhatsAppUserStat::where('phone_number', $normalizedPhone)
+                ->increment('conversation_count');
+        }
+
+        // Fill first_contact_at only when it was never set
+        if ($stat->first_contact_at === null) {
+            $stat->update(['first_contact_at' => now()]);
+        }
+
+        // Update contact info whenever we have a resolved contact
+        if ($resolvedContact) {
+            $stat->update([
+                'contact_id' => $resolvedContact->id,
+                'contact_type' => $morphClass,
+                'contact_name' => WhatsAppUserStat::resolveContactName($resolvedContact),
+                'contact_role' => WhatsAppUserStat::resolveRole($morphClass),
+            ]);
+        }
+
+        // 4. Log the Message
         $message = WhatsAppMessage::updateOrCreate(
             ['whatsapp_message_id' => $messageId],
             [
@@ -91,15 +133,15 @@ class ProcessIncomingMessage implements ShouldQueue
             ]
         );
 
-        // 4. Route Message (Dynamic Categories & Reassignment)
+        // 5. Route Message (Dynamic Categories & Reassignment)
         $router->route($conversation, $message);
 
-        // 5. Update Window and Flush Pending Notifications
+        // 6. Update Window and Flush Pending Notifications
         $this->flushPendingMessages($conversation, $waService);
 
         $conversation->update(['last_message_at' => now()]);
 
-        // 6. Trigger Bot Logic (Phase 3)
+        // 7. Trigger Bot Logic (Phase 3)
         app(BotService::class)->handle($conversation, $messageData);
     }
 

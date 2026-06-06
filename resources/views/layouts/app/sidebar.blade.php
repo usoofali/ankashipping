@@ -214,7 +214,7 @@
             @endcanany
 
             {{-- System: Logs & Maintenance --}}
-            @canany(['email_logs.view', 'failed_jobs.view'])
+            @canany(['email_logs.view', 'failed_jobs.view', 'whatsapp.view_user_stats'])
                 <flux:sidebar.group :heading="__('System')" class="grid" expandable="true" expanded="false">
                     @can('email_logs.view')
                         <flux:sidebar.item icon="envelope-open" icon-class="text-sky-500" :href="route('email-logs.index')"
@@ -226,6 +226,12 @@
                         <flux:sidebar.item icon="exclamation-triangle" icon-class="text-red-500"
                             :href="route('failed-jobs.index')" :current="request()->routeIs('failed-jobs.*')" wire:navigate>
                             {{ __('Failed Jobs') }}
+                        </flux:sidebar.item>
+                    @endcan
+                    @can('whatsapp.view_user_stats')
+                        <flux:sidebar.item icon="chat-bubble-left-right" icon-class="text-green-500"
+                            :href="route('whatsapp.user-stats.index')" :current="request()->routeIs('whatsapp.user-stats.*')" wire:navigate>
+                            {{ __('WhatsApp Usage') }}
                         </flux:sidebar.item>
                     @endcan
                 </flux:sidebar.group>

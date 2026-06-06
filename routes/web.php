@@ -135,6 +135,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::livewire('/whatsapp/categories', 'pages::whatsapp.categories.index')
         ->middleware('permission:whatsapp.manage_conversations')
         ->name('whatsapp.categories.index');
+    Route::livewire('/whatsapp/user-stats', 'pages::whatsapp.user-stats.index')
+        ->middleware('permission:whatsapp.view_user_stats')
+        ->name('whatsapp.user-stats.index');
 
     // Shipper Wallet
     Route::livewire('/shipper/wallet', 'pages::shipper.wallet.index')

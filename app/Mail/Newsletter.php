@@ -4,13 +4,14 @@ namespace App\Mail;
 
 use App\Models\SystemSetting;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class Newsletter extends Mailable
+class Newsletter extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
@@ -43,6 +44,9 @@ class Newsletter extends Mailable
         $setting = SystemSetting::current()->loadMissing(['city', 'state']);
         $emailLogo = $setting->logoSrcForEmail();
         $companyName = $setting->company_name ?: config('app.name');
+        $cityName = $setting->city?->name;
+        $stateName = $setting->state?->name;
+        $location = collect([$cityName, $stateName])->filter()->implode(', ');
 
         return new Content(
             markdown: 'emails.newsletter',
@@ -51,6 +55,8 @@ class Newsletter extends Mailable
                 'body' => $this->body,
                 'companyName' => $companyName,
                 'emailLogo' => $emailLogo,
+                'setting' => $setting,
+                'location' => $location,
                 'url' => $this->url,
             ],
         );
