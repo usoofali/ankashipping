@@ -122,11 +122,13 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function openShipmentDocumentsModal(): void
     {
+        $this->authorize('documents.view');
         $this->showShipmentDocumentsModal = true;
     }
 
     public function openVehicleDocumentsModal(int $vehicleId): void
     {
+        $this->authorize('documents.view');
         $this->selectedVehicleIdForDocs = $vehicleId;
         $this->showVehicleDocumentsModal = true;
     }

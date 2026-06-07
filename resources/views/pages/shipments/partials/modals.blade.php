@@ -272,6 +272,7 @@
             </div>
         </div>
     </flux:modal>
+@endif
 
     <flux:modal wire:model="showShipmentDocumentsModal" class="max-w-3xl">
         <div class="space-y-6">
@@ -538,7 +539,6 @@
             </div>
         @endif
     </flux:modal>
-@endif
 
 <flux:modal wire:model.self="showForceFillConfirmModal" class="max-w-md">
     <div class="space-y-4">
