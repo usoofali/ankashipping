@@ -86,6 +86,14 @@ class User extends Authenticatable
      */
     public function getPhoneAttribute(): ?string
     {
+        if ($this->hasRole('shipper')) {
+            return $this->shipper?->phone;
+        }
+
+        if ($this->hasAnyRole(['staff_admin', 'staff_operator', 'whatsapp_agent'])) {
+            return $this->staff?->phone;
+        }
+
         return $this->shipper?->phone ?? $this->staff?->phone;
     }
 

@@ -282,10 +282,10 @@ new #[Title('My Dashboard')] class extends Component {
             {{-- Custom Segmented Tabs --}}
             <div class="flex p-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg w-full sm:w-max overflow-x-auto no-scrollbar">
                 <button type="button" wire:click="$set('activeTab', 'shipments')" @class([
-                    'flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md transition-all whitespace-nowrap',
-                    'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white' => $activeTab === 'shipments',
-                    'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300' => $activeTab !== 'shipments',
-                ])>
+    'flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md transition-all whitespace-nowrap',
+    'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white' => $activeTab === 'shipments',
+    'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300' => $activeTab !== 'shipments',
+])>
                     <flux:icon.car-front class="size-4" />
                     <span>{{ __('Shipments') }}</span>
                     <flux:badge color="zinc" size="sm" inset="top bottom" class="ml-1">
@@ -294,10 +294,10 @@ new #[Title('My Dashboard')] class extends Component {
                 </button>
 
                 <button type="button" wire:click="$set('activeTab', 'prealerts')" @class([
-                    'flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md transition-all whitespace-nowrap',
-                    'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white' => $activeTab === 'prealerts',
-                    'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300' => $activeTab !== 'prealerts',
-                ])>
+    'flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md transition-all whitespace-nowrap',
+    'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white' => $activeTab === 'prealerts',
+    'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300' => $activeTab !== 'prealerts',
+])>
                     <flux:icon.bell class="size-4" />
                     <span>{{ __('Prealerts') }}</span>
                     <flux:badge color="zinc" size="sm" inset="top bottom" class="ml-1">
@@ -306,10 +306,10 @@ new #[Title('My Dashboard')] class extends Component {
                 </button>
 
                 <button type="button" wire:click="$set('activeTab', 'wallet')" @class([
-                    'flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md transition-all whitespace-nowrap',
-                    'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white' => $activeTab === 'wallet',
-                    'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300' => $activeTab !== 'wallet',
-                ])>
+    'flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md transition-all whitespace-nowrap',
+    'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white' => $activeTab === 'wallet',
+    'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300' => $activeTab !== 'wallet',
+])>
                     <flux:icon.wallet class="size-4" />
                     <span>{{ __('Wallet') }}</span>
                     <flux:badge color="zinc" size="sm" inset="top bottom" class="ml-1">
@@ -379,7 +379,11 @@ new #[Title('My Dashboard')] class extends Component {
                                             <span class="text-sm">{{ $shipment->originPort->name ?? '—' }}</span>
                                         </flux:table.cell>
                                         <flux:table.cell class="font-mono text-sm">
-                                            ${{ number_format((float) ($shipment->invoice?->total_amount ?? 0), 2) }}
+                                            @if(auth()->user()->hasRole('shipper') && $shipment->invoice_status !== \App\Enums\InvoiceStatus::Completed)
+                                                <span class="text-zinc-400" title="{{ __('Invoice total available when completed') }}">$0.00</span>
+                                            @else
+                                                ${{ number_format((float) ($shipment->invoice?->total_amount ?? 0), 2) }}
+                                            @endif
                                         </flux:table.cell>
                                         <flux:table.cell>
                                             <flux:badge size="sm"

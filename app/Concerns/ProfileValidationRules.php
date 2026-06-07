@@ -14,9 +14,12 @@ trait ProfileValidationRules
      */
     protected function profileRules(?int $userId = null): array
     {
+        $user = $userId ? User::find($userId) : auth()->user();
+
         return [
             'name' => $this->nameRules(),
             'email' => $this->emailRules($userId),
+            'phone' => $this->phoneRules($user),
         ];
     }
 
@@ -28,6 +31,26 @@ trait ProfileValidationRules
     protected function nameRules(): array
     {
         return ['required', 'string', 'max:255'];
+    }
+
+    /**
+     * Get the validation rules used to validate phone numbers.
+     *
+     * @return array<int, \Illuminate\Contracts\Validation\Rule|array<mixed>|string>
+     */
+    protected function phoneRules(?User $user = null): array
+    {
+        $rules = ['nullable', 'string', 'starts_with:+', 'max:20'];
+
+        if ($user) {
+            if ($user->hasRole('shipper')) {
+                $rules[] = Rule::unique('shippers', 'phone')->ignore($user->shipper?->id);
+            } elseif ($user->hasAnyRole(['staff_admin', 'staff_operator', 'whatsapp_agent'])) {
+                $rules[] = Rule::unique('staff', 'phone')->ignore($user->staff?->id);
+            }
+        }
+
+        return $rules;
     }
 
     /**
