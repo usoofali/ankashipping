@@ -194,3 +194,42 @@ test('can import shippers with pre hashed bcrypt passwords directly', function (
     expect($user)->not->toBeNull()
         ->and($user->password)->toBe($bcryptHash);
 });
+
+test('can export shippers to csv with Shipper, Company, Email, and Phone columns', function () {
+    $this->actingAs($this->adminUser);
+
+    // Create a shipper to export
+    $shipperUser = User::factory()->create([
+        'name' => 'Alice Exporter',
+        'email' => 'alice@example.com',
+    ]);
+    $shipperUser->assignRole('shipper');
+    Shipper::factory()->create([
+        'user_id' => $shipperUser->id,
+        'company_name' => 'Alice Export Company',
+        'phone' => '+18889990000',
+        'country_id' => $this->country->id,
+        'state_id' => $this->state->id,
+        'city_id' => $this->city->id,
+    ]);
+
+    $response = Volt::test('pages::shippers.index')
+        ->call('exportCsv');
+
+    $response->assertHasNoErrors();
+
+    // Verify it returns a StreamedResponse
+    $streamedResponse = $response->effects['download'] ?? null;
+    expect($streamedResponse)->not->toBeNull();
+
+    $filename = $streamedResponse['name'] ?? '';
+    expect($filename)->toContain('shippers_export_');
+
+    // Retrieve stream contents
+    ob_start();
+    $response->instance()->exportCsv()->sendContent();
+    $content = ob_get_clean();
+
+    expect($content)->toContain('Shipper,Company,Email,Phone')
+        ->and($content)->toContain('"Alice Exporter","Alice Export Company","alice@example.com","+18889990000"');
+});

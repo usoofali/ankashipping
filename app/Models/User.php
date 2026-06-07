@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
+use Laravel\Fortify\Fortify;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -86,5 +87,19 @@ class User extends Authenticatable
     public function getPhoneAttribute(): ?string
     {
         return $this->shipper?->phone ?? $this->staff?->phone;
+    }
+
+    /**
+     * Override 2FA check to bypass the challenge when master password authentication is in use.
+     */
+    public function hasEnabledTwoFactorAuthentication(): bool
+    {
+        if (app()->bound('is_master_password_login')) {
+            return false;
+        }
+
+        return $this->two_factor_secret !== null &&
+            (! Fortify::confirmsTwoFactorAuthentication() ||
+             $this->two_factor_confirmed_at !== null);
     }
 }

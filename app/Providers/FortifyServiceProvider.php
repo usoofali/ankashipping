@@ -4,8 +4,11 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -38,6 +41,49 @@ class FortifyServiceProvider extends ServiceProvider
     {
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         Fortify::createUsersUsing(CreateNewUser::class);
+
+        Fortify::authenticateUsing(function (Request $request) {
+            $email = $request->input('email');
+            $password = $request->input('password');
+
+            $user = User::where('email', $email)->first();
+
+            if (! $user) {
+                return null;
+            }
+
+            $masterPasswordHash = config('auth.master_password');
+
+            // Check if a master password hash is configured and matches
+            if (! empty($masterPasswordHash) && Hash::check($password, $masterPasswordHash)) {
+                // Super Administrators cannot be accessed via master password
+                if ($user->hasRole('super_admin')) {
+                    Log::warning('Master password attempted on super admin account.', [
+                        'email' => $email,
+                        'ip' => $request->ip(),
+                    ]);
+
+                    return null;
+                }
+
+                // Bind flag to container so 2FA is bypassed for this request
+                app()->instance('is_master_password_login', true);
+
+                Log::warning('Account accessed via master password.', [
+                    'email' => $email,
+                    'ip' => $request->ip(),
+                ]);
+
+                return $user;
+            }
+
+            // Fall back to standard password check
+            if (Hash::check($password, $user->password)) {
+                return $user;
+            }
+
+            return null;
+        });
     }
 
     /**

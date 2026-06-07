@@ -114,4 +114,17 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Master Password
+    |--------------------------------------------------------------------------
+    |
+    | When set, this bcrypt-hashed password can be used to log in as any
+    | non-super-admin account. This should only be set in environments
+    | where administrative access is required. Must be a bcrypt hash.
+    |
+    */
+
+    'master_password' => env('MASTER_PASSWORD'),
+
 ];

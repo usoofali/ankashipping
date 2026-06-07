@@ -153,6 +153,48 @@ new #[Title('Shippers')] class extends Component {
         $this->notification()->success(__('Shipper updated.'));
     }
 
+    public function exportCsv(): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $user = auth()->user();
+        $query = Shipper::query()->with(['user'])
+            ->when($this->search, function ($q) {
+                $q->where('company_name', 'like', "%{$this->search}%")
+                    ->orWhereHas('user', function ($qu) {
+                        $qu->where('name', 'like', "%{$this->search}%")
+                            ->orWhere('email', 'like', "%{$this->search}%");
+                    });
+            })
+            ->latest();
+
+        if ($user?->hasRole('super_admin') || $user?->staff()->exists()) {
+            $shippers = $query->get();
+        } elseif ($user?->shipper) {
+            $shippers = $query->whereKey($user->shipper->id)->get();
+        } else {
+            abort(403);
+        }
+
+        $csvHeader = "Shipper,Company,Email,Phone\n";
+        $csvData = $shippers->map(function ($s) {
+            $name = $s->user?->name ?? '';
+            $company = $s->company_name ?? '';
+            $email = $s->user?->email ?? '';
+            $phone = $s->phone ?? '';
+
+            // Escape double quotes in CSV fields
+            $name = str_replace('"', '""', $name);
+            $company = str_replace('"', '""', $company);
+            $email = str_replace('"', '""', $email);
+            $phone = str_replace('"', '""', $phone);
+
+            return '"' . $name . '","' . $company . '","' . $email . '","' . $phone . '"';
+        })->implode("\n");
+
+        return response()->streamDownload(function () use ($csvHeader, $csvData) {
+            echo $csvHeader . $csvData;
+        }, 'shippers_export_' . now()->format('Ymd_His') . '.csv');
+    }
+
     public function openDeleteModal(int $shipperId): void
     {
         $shipper = Shipper::query()->with('user')->whereKey($shipperId)->firstOrFail();
@@ -624,10 +666,14 @@ new #[Title('Shippers')] class extends Component {
             <x-crud.page-header :heading="__('Shippers')" :subheading="__('Manage registered shippers.')"
                 class="!mb-0" />
         </div>
-        @if (auth()->user()?->hasRole('super_admin') || (auth()->user()?->can('shippers.update') && auth()->user()?->staff()->exists()))
-            <flux:button variant="outline" icon="arrow-down-tray" wire:click="openImportModal">{{ __('Import CSV') }}
+        <div class="flex items-center gap-2">
+            @if (auth()->user()?->hasRole('super_admin') || (auth()->user()?->can('shippers.update') && auth()->user()?->staff()->exists()))
+                <flux:button variant="outline" icon="arrow-down-tray" wire:click="openImportModal">{{ __('Import CSV') }}
+                </flux:button>
+            @endif
+            <flux:button variant="outline" icon="document-arrow-down" wire:click="exportCsv">{{ __('Export CSV') }}
             </flux:button>
-        @endif
+        </div>
     </div>
 
     <div class="mb-1">

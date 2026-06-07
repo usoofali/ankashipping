@@ -123,12 +123,9 @@
                                     @endif
                                 @endif
 
-                                @can('documents.view')
-                                    <flux:menu.separator />
-                                    <flux:menu.item icon="eye" wire:click="openVehicleDocumentsModal({{ $vehicle->id }})">
-                                        {{ __('View Documents') }}
-                                    </flux:menu.item>
-                                @endcan
+                                <flux:menu.item icon="eye" wire:click="openVehicleDocumentsModal({{ $vehicle->id }})">
+                                    {{ __('View Documents') }}
+                                </flux:menu.item>
                             </flux:menu>
                         </flux:dropdown>
                     @endif
@@ -164,20 +161,23 @@
                 @endif
 
                 @if($vehicle->driver)
-                    <div>
-                        <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">{{ __('Driver') }}</p>
-                        <div class="flex flex-col">
-                            <span class="font-bold text-zinc-900 dark:text-zinc-100 whitespace-normal break-words">
-                                {{ $vehicle->driver->company ?: __('Partner Driver') }}
-                            </span>
-                            <flux:button variant="ghost" size="sm" x-data
-                                class="!p-0 !h-auto !min-h-0 text-indigo-600 dark:text-indigo-400 mt-0.5 justify-start"
-                                x-on:click.stop="window.navigator.clipboard.writeText('{{ $vehicle->driver->phone }}'); $dispatch('ui-toast', { type: 'success', message: '{{ __('Copied') }}' })">
-                                <flux:text color="indigo">{{ $vehicle->driver->phone }}</flux:text>
-                                <flux:icon.clipboard-document class="size-3.5 ml-1" />
-                            </flux:button>
+                    @can('workflow.assign_driver')
+                        <div>
+                            <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">{{ __('Driver') }}</p>
+                            <div class="flex flex-col">
+                                <span class="font-bold text-zinc-900 dark:text-zinc-100 whitespace-normal break-words">
+                                    {{ $vehicle->driver->company ?: __('Partner Driver') }}
+                                </span>
+                                <flux:button variant="ghost" size="sm" x-data
+                                    class="!p-0 !h-auto !min-h-0 text-indigo-600 dark:text-indigo-400 mt-0.5 justify-start"
+                                    x-on:click.stop="window.navigator.clipboard.writeText('{{ $vehicle->driver->phone }}'); $dispatch('ui-toast', { type: 'success', message: '{{ __('Copied') }}' })">
+                                    <flux:text color="indigo">{{ $vehicle->driver->phone }}</flux:text>
+                                    <flux:icon.clipboard-document class="size-3.5 ml-1" />
+                                </flux:button>
+
+                            </div>
                         </div>
-                    </div>
+                    @endcan
                 @endif
 
                 @if($vehicle->gatepass_pin)
