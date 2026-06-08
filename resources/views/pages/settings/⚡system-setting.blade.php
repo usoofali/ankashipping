@@ -6,7 +6,6 @@ use App\Models\City;
 use App\Models\Country;
 use App\Models\State;
 use App\Models\SystemSetting;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -47,7 +46,7 @@ new #[Title('System settings')] class extends Component {
 
     public function mount(): void
     {
-        abort_unless(Auth::user()?->hasRole('super_admin') === true, 403);
+        $this->authorize('system-setting.edit');
 
         $setting = SystemSetting::current();
         $this->company_name = $setting->company_name ?? '';
@@ -99,7 +98,7 @@ new #[Title('System settings')] class extends Component {
 
     public function save(): void
     {
-        abort_unless(Auth::user()?->hasRole('super_admin') === true, 403);
+        $this->authorize('system-setting.edit');
 
         $validated = $this->validate([
             'company_name' => ['nullable', 'string', 'max:255'],

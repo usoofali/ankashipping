@@ -4,11 +4,15 @@
             <flux:navlist.item :href="route('profile.edit')" wire:navigate>{{ __('Profile') }}</flux:navlist.item>
             <flux:navlist.item :href="route('security.edit')" wire:navigate>{{ __('Security') }}</flux:navlist.item>
             <flux:navlist.item :href="route('appearance.edit')" wire:navigate>{{ __('Appearance') }}</flux:navlist.item>
-            @if (auth()->user()?->hasRole('super_admin'))
+            @can('system-setting.edit')
                 <flux:navlist.item :href="route('system-setting.edit')" wire:navigate>{{ __('System') }}</flux:navlist.item>
+            @endcan
+            @if (auth()->user()?->hasRole('super_admin'))
                 <flux:navlist.item :href="route('system-config.edit')" wire:navigate>{{ __('System Config') }}</flux:navlist.item>
-                <flux:navlist.item :href="route('roles.edit')" wire:navigate>{{ __('Roles') }}</flux:navlist.item>
             @endif
+            @can('roles.edit')
+                <flux:navlist.item :href="route('roles.edit')" wire:navigate>{{ __('Roles') }}</flux:navlist.item>
+            @endcan
         </flux:navlist>
     </div>
 

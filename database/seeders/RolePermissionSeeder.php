@@ -19,6 +19,8 @@ final class RolePermissionSeeder extends Seeder
             'admin.access',
             'users.manage',
             'roles.manage',
+            'roles.edit',
+            'system-setting.edit',
             'shipments.create',
             'shipments.view',
             'shipments.update',

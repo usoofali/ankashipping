@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -28,7 +27,7 @@ new #[Title('Role Management')] class extends Component {
 
     public function mount(): void
     {
-        abort_unless(Auth::user()?->hasRole('super_admin'), 403);
+        $this->authorize('roles.edit');
     }
 
     #[Computed]
