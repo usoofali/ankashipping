@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Concerns\HandlesShipperGeoSelects;
-use App\Http\Requests\UpdateShipperRequest;
 use App\Models\City;
 use App\Models\Consignee;
 use App\Models\Country;
@@ -114,7 +113,7 @@ new #[Title('Shippers')] class extends Component {
         }
 
         $shipper = Shipper::query()->whereKey($this->shipperEditingId)->firstOrFail();
-        // $this->authorize('update', $shipper);
+        $this->authorize('update', $shipper);
 
         $validator = Validator::make(
             [
@@ -127,8 +126,12 @@ new #[Title('Shippers')] class extends Component {
                 'discount_amount' => $this->discount_amount,
             ],
             [
-                ...app(UpdateShipperRequest::class)->rules(),
+                'company_name' => ['required', 'string', 'max:255'],
                 'phone' => ['required', 'string', 'max:50', 'unique:shippers,phone,' . $this->shipperEditingId],
+                'address' => ['required', 'string', 'max:500'],
+                'country_id' => ['required', 'integer', 'exists:countries,id'],
+                'state_id' => ['required', 'integer', 'exists:states,id'],
+                'city_id' => ['required', 'integer', 'exists:cities,id'],
                 'discount_amount' => ['required', 'numeric', 'min:0', 'max:999999.99'],
             ],
         );
@@ -579,8 +582,12 @@ new #[Title('Shippers')] class extends Component {
     #[Computed]
     public function states()
     {
+        if ($this->country_id === null) {
+            return State::query()->whereRaw('0 = 1')->get();
+        }
+
         return State::query()
-            ->when($this->country_id, fn($query) => $query->where('country_id', $this->country_id))
+            ->where('country_id', $this->country_id)
             ->orderBy('name')
             ->get();
     }
@@ -591,8 +598,12 @@ new #[Title('Shippers')] class extends Component {
     #[Computed]
     public function cities()
     {
+        if ($this->state_id === null) {
+            return City::query()->whereRaw('0 = 1')->get();
+        }
+
         return City::query()
-            ->when($this->state_id, fn($query) => $query->where('state_id', $this->state_id))
+            ->where('state_id', $this->state_id)
             ->orderBy('name')
             ->get();
     }
@@ -773,6 +784,7 @@ new #[Title('Shippers')] class extends Component {
         </flux:table>
     </x-crud.panel>
 
+    @if ($showEditModal)
     <flux:modal wire:model.self="showEditModal" class="max-w-4xl">
         <div class="max-h-[85vh] space-y-8 overflow-y-auto px-1 pb-4">
             <div class="flex items-start gap-4 border-b border-zinc-100 pb-6 dark:border-zinc-800">
@@ -906,6 +918,7 @@ new #[Title('Shippers')] class extends Component {
             </form>
         </div>
     </flux:modal>
+    @endif
 
     <flux:modal wire:model="showImportModal" class="max-w-lg">
         <form wire:submit="importCsv" class="space-y-6">
