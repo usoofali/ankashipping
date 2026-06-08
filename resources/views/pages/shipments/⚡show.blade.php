@@ -627,7 +627,7 @@ new #[Title('Shipment Details')] class extends Component {
             $vehicle = \App\Models\Vehicle::query()->findOrFail($vehicleId);
             $this->driver_id = $vehicle->driver_id;
         } else {
-            $this->driver_id = $this->shipment->driver_id;
+            $this->driver_id = $this->shipment->vehicles()->value('driver_id');
         }
 
         $this->showAssignDriverModal = true;
@@ -675,23 +675,25 @@ new #[Title('Shipment Details')] class extends Component {
 
                 $vehicle = \App\Models\Vehicle::query()->findOrFail($vehicleId);
                 $vehicle->update(['driver_id' => $driverId]);
-                $vehicle->updateStatus(\App\Enums\VehicleStatus::Dispatched, __('Driver assigned to vehicle: :d', ['d' => $driverLabel]));
+
+                if ($vehicle->tracking_status === \App\Enums\VehicleStatus::Pending) {
+                    $vehicle->updateStatus(\App\Enums\VehicleStatus::Dispatched, __('Driver assigned to vehicle: :d', ['d' => $driverLabel]));
+                }
             } else {
-                // RoRo: shipment-level assignment
-                $this->shipment->update([
-                    'driver_id' => $driverId,
-                    'shipment_status' => \App\Enums\ShipmentStatus::Dispatched,
-                ]);
+                // RoRo: vehicle-level driver assignment across the shipment
+                $this->shipment->vehicles()->update(['driver_id' => $driverId]);
 
-                // Also update the single vehicle status for RoRo
-                $this->shipment->vehicles()->update(['driver_id' => $driverId, 'tracking_status' => \App\Enums\VehicleStatus::Dispatched]);
+                if ($this->shipment->shipment_status === \App\Enums\ShipmentStatus::Pending) {
+                    $this->shipment->update(['shipment_status' => \App\Enums\ShipmentStatus::Dispatched]);
+                    $this->shipment->vehicles()->update(['tracking_status' => \App\Enums\VehicleStatus::Dispatched]);
 
-                \App\Models\ShipmentTracking::query()->create([
-                    'shipment_id' => $this->shipment->id,
-                    'status' => \App\Enums\ShipmentStatus::Dispatched,
-                    'note' => __('Driver assigned to RoRo shipment; status moved to DISPATCHED.'),
-                    'recorded_at' => now(),
-                ]);
+                    \App\Models\ShipmentTracking::query()->create([
+                        'shipment_id' => $this->shipment->id,
+                        'status' => \App\Enums\ShipmentStatus::Dispatched,
+                        'note' => __('Driver assigned to RoRo shipment; status moved to DISPATCHED.'),
+                        'recorded_at' => now(),
+                    ]);
+                }
             }
 
             ActivityLog::query()->create([

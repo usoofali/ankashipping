@@ -11,6 +11,7 @@ use App\Models\Driver;
 use App\Models\Shipment;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\ShippingWorkflow\ShippingWorkflow;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Volt\Volt;
@@ -185,6 +186,115 @@ test('actions are rejected if status does not match', function (): void {
         ->call('saveAttachedVehicleDocuments');
 
     expect($vehicle->refresh()->tracking_status)->toBe(VehicleStatus::Pending);
+});
+
+test('can assign driver for container vehicles in pending dispatched and inland statuses', function (): void {
+    $workflow = new ShippingWorkflow;
+
+    $shipment = Shipment::factory()->create([
+        'shipping_mode' => ShippingMode::Container,
+        'shipment_status' => ShipmentStatus::Open,
+    ]);
+
+    foreach ([VehicleStatus::Pending, VehicleStatus::Dispatched, VehicleStatus::Inland] as $status) {
+        $vehicle = Vehicle::factory()->create([
+            'shipment_id' => $shipment->id,
+            'tracking_status' => $status,
+        ]);
+
+        expect($workflow->canAssignDriver($shipment, $vehicle))->toBeTrue();
+    }
+
+    $blockedVehicle = Vehicle::factory()->create([
+        'shipment_id' => $shipment->id,
+        'tracking_status' => VehicleStatus::AtWarehouse,
+    ]);
+
+    expect($workflow->canAssignDriver($shipment, $blockedVehicle))->toBeFalse();
+});
+
+test('can assign driver for roro shipments in pending dispatched booking and inland statuses', function (): void {
+    $workflow = new ShippingWorkflow;
+
+    foreach ([ShipmentStatus::Pending, ShipmentStatus::Dispatched, ShipmentStatus::Booking, ShipmentStatus::Inland] as $status) {
+        $shipment = Shipment::factory()->create([
+            'shipping_mode' => ShippingMode::Roro,
+            'shipment_status' => $status,
+        ]);
+        Vehicle::factory()->create([
+            'shipment_id' => $shipment->id,
+            'tracking_status' => VehicleStatus::Dispatched,
+        ]);
+
+        expect($workflow->canAssignDriver($shipment))->toBeTrue();
+    }
+
+    $deliveredShipment = Shipment::factory()->create([
+        'shipping_mode' => ShippingMode::Roro,
+        'shipment_status' => ShipmentStatus::Delivered,
+    ]);
+    Vehicle::factory()->create(['shipment_id' => $deliveredShipment->id]);
+
+    expect($workflow->canAssignDriver($deliveredShipment))->toBeFalse();
+});
+
+test('reassigning driver does not regress container vehicle status', function (): void {
+    $user = User::factory()->create();
+    $user->assignRole('super_admin');
+    $this->actingAs($user);
+
+    $shipment = Shipment::factory()->create([
+        'shipping_mode' => ShippingMode::Container,
+        'shipment_status' => ShipmentStatus::Open,
+    ]);
+    $vehicle = Vehicle::factory()->create([
+        'shipment_id' => $shipment->id,
+        'tracking_status' => VehicleStatus::Inland,
+    ]);
+    $originalDriver = Driver::factory()->create();
+    $replacementDriver = Driver::factory()->create();
+    $vehicle->update(['driver_id' => $originalDriver->id]);
+
+    Volt::test('pages::shipments.⚡show', ['shipment' => $shipment])
+        ->set('driver_id', $replacementDriver->id)
+        ->set('selectedVehicleId', $vehicle->id)
+        ->call('assignDriver')
+        ->assertHasNoErrors();
+
+    $vehicle->refresh();
+
+    expect($vehicle->driver_id)->toBe($replacementDriver->id);
+    expect($vehicle->tracking_status)->toBe(VehicleStatus::Inland);
+});
+
+test('reassigning driver does not regress roro shipment status', function (): void {
+    $user = User::factory()->create();
+    $user->assignRole('super_admin');
+    $this->actingAs($user);
+
+    $shipment = Shipment::factory()->create([
+        'shipping_mode' => ShippingMode::Roro,
+        'shipment_status' => ShipmentStatus::Booking,
+    ]);
+    $vehicle = Vehicle::factory()->create([
+        'shipment_id' => $shipment->id,
+        'tracking_status' => VehicleStatus::Dispatched,
+    ]);
+    $originalDriver = Driver::factory()->create();
+    $replacementDriver = Driver::factory()->create();
+    $vehicle->update(['driver_id' => $originalDriver->id]);
+
+    Volt::test('pages::shipments.⚡show', ['shipment' => $shipment])
+        ->set('driver_id', $replacementDriver->id)
+        ->call('assignDriver')
+        ->assertHasNoErrors();
+
+    $shipment->refresh();
+    $vehicle->refresh();
+
+    expect($shipment->shipment_status)->toBe(ShipmentStatus::Booking);
+    expect($vehicle->driver_id)->toBe($replacementDriver->id);
+    expect($vehicle->tracking_status)->toBe(VehicleStatus::Dispatched);
 });
 
 test('documents view permission is enforced', function (): void {

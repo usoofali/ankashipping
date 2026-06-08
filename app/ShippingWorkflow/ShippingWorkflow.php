@@ -23,14 +23,21 @@ class ShippingWorkflow
         }
 
         if ($shipment->shipping_mode === ShippingMode::Roro) {
-            $v = $shipment->vehicles()->first();
-
-            return $v !== null
-                && $shipment->shipment_status === ShipmentStatus::Pending
-                && $v->tracking_status === VehicleStatus::Pending;
+            return $shipment->vehicles()->exists()
+                && in_array($shipment->shipment_status, [
+                    ShipmentStatus::Pending,
+                    ShipmentStatus::Dispatched,
+                    ShipmentStatus::Booking,
+                    ShipmentStatus::Inland,
+                ], true);
         }
 
-        return $vehicle !== null && $vehicle->tracking_status === VehicleStatus::Pending;
+        return $vehicle !== null
+            && in_array($vehicle->tracking_status, [
+                VehicleStatus::Pending,
+                VehicleStatus::Dispatched,
+                VehicleStatus::Inland,
+            ], true);
     }
 
     public function canAttachTitle(Shipment $shipment, Vehicle $vehicle): bool
