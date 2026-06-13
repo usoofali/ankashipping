@@ -47,7 +47,7 @@ new #[Title('Shipments')] class extends Component {
 
         return Shipment::query()
             ->with(['shipper.user', 'vehicles.driver', 'invoice', 'originPort.state', 'originPort.country', 'workshop'])
-            ->when(! ($user?->hasRole('super_admin') || $user?->staff()->exists()), function ($query) use ($user): void {
+            ->when(!($user?->hasRole('super_admin') || $user?->staff()->exists()), function ($query) use ($user): void {
                 $query->where('shipper_id', $user?->shipper?->id);
             })
             ->when($this->search !== '', function ($query): void {
@@ -87,7 +87,7 @@ new #[Title('Shipments')] class extends Component {
     public function shippers(): \Illuminate\Support\Collection|\Illuminate\Database\Eloquent\Collection
     {
         $user = auth()->user();
-        if (! ($user?->hasRole('super_admin') || $user?->staff()->exists())) {
+        if (!($user?->hasRole('super_admin') || $user?->staff()->exists())) {
             return collect();
         }
 
@@ -102,7 +102,7 @@ new #[Title('Shipments')] class extends Component {
         $user = auth()->user();
 
         return Shipment::query()
-            ->when(! ($user?->hasRole('super_admin') || $user?->staff()->exists()), function ($query) use ($user): void {
+            ->when(!($user?->hasRole('super_admin') || $user?->staff()->exists()), function ($query) use ($user): void {
                 $query->where('shipper_id', $user?->shipper?->id);
             })
             ->whereNotNull('created_at')
@@ -230,39 +230,6 @@ new #[Title('Shipments')] class extends Component {
                                     </span>
                                     <span class="font-semibold">
                                         {{ trim($v?->model ?? '') ?: '—' }}
-                                    </span>
-                                    @php
-                                        $vehicleColor = strtolower(trim((string) ($v?->color ?? '')));
-                                        $vehicleColorClass = match ($vehicleColor) {
-                                            'red' => 'text-red-600 dark:text-red-400',
-                                            'blue' => 'text-blue-600 dark:text-blue-400',
-                                            'green' => 'text-emerald-600 dark:text-emerald-400',
-                                            'yellow' => 'text-amber-600 dark:text-amber-400',
-                                            'orange' => 'text-orange-600 dark:text-orange-400',
-                                            'purple' => 'text-violet-600 dark:text-violet-400',
-                                            'silver', 'gray', 'grey' => 'text-slate-500 dark:text-slate-300',
-                                            'charcoal' => 'text-zinc-700 dark:text-zinc-300',
-                                            'black' => 'text-zinc-950 dark:text-zinc-100',
-                                            'white' => 'text-zinc-500 dark:text-zinc-200',
-                                            'brown' => 'text-orange-600 dark:text-orange-400',
-                                            'beige' => 'text-stone-600 dark:text-stone-400',
-                                            'gold' => 'text-yellow-600 dark:text-yellow-400',
-                                            'bronze' => 'text-amber-600 dark:text-amber-400',
-                                            'chrome' => 'text-zinc-600 dark:text-zinc-400',
-                                            'matte' => 'text-zinc-600 dark:text-zinc-400',
-                                            'metallic' => 'text-zinc-600 dark:text-zinc-400',
-                                            'pearl' => 'text-zinc-600 dark:text-zinc-400',
-                                            'platinum' => 'text-zinc-600 dark:text-zinc-400',
-                                            'polished' => 'text-zinc-600 dark:text-zinc-400',
-                                            'rubber' => 'text-zinc-600 dark:text-zinc-400',
-                                            'steel' => 'text-zinc-600 dark:text-zinc-400',
-                                            'titanium' => 'text-zinc-600 dark:text-zinc-400',
-                                            'nickel' => 'text-zinc-600 dark:text-zinc-400',
-                                            default => 'text-zinc-500',
-                                        };
-                                    @endphp
-                                    <span class="text-xs {{ $vehicleColorClass }}">
-                                        {{ $v?->color ?? '—' }}
                                     </span>
                                 @endif
                             </div>
