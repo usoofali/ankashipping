@@ -62,6 +62,8 @@ new #[Title('Dashboard')] class extends Component {
             'topup_requests' => WalletTopUp::count(),
             'total_roro' => Shipment::where('shipping_mode', ShippingMode::Roro)->count(),
             'total_container' => Shipment::where('shipping_mode', ShippingMode::Container)->count(),
+            'booking' => Shipment::where('shipment_status', ShipmentStatus::Booking)->count(),
+            'booking_unclaimed' => Shipment::where('shipment_status', ShipmentStatus::Booking)->whereNull('booking_agent_id')->count(),
         ];
     }
 
@@ -218,6 +220,24 @@ new #[Title('Dashboard')] class extends Component {
                         {{ number_format($this->stats['undelivered']) }}
                     </flux:heading>
                     <flux:subheading>{{ __('Undelivered Shipments') }}</flux:subheading>
+                </div>
+            </flux:card>
+        @endcan
+
+        @can('dashboard.view.stats.booking')
+            <flux:card as="a" href="{{ route('shipments.index', ['filterShipmentStatus' => 'BOOKING']) }}" wire:navigate class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between">
+                    <flux:icon.calendar-days class="size-8 text-amber-500" />
+                    <flux:badge color="amber" size="sm" variant="subtle">{{ __('Booking') }}</flux:badge>
+                </div>
+                <div>
+                    <flux:heading level="3" size="xl" class="font-bold">
+                        {{ number_format($this->stats['booking'] ?? 0) }}
+                    </flux:heading>
+                    <flux:subheading>
+                        {{ __('Booking Shipments') }}
+                        <span class="text-xs text-zinc-500 block">({{ __(':count unclaimed', ['count' => $this->stats['booking_unclaimed'] ?? 0]) }})</span>
+                    </flux:subheading>
                 </div>
             </flux:card>
         @endcan

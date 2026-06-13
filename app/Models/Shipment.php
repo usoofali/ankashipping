@@ -68,6 +68,7 @@ final class Shipment extends Model
         'exporter_country',
         'exporter_zipcode',
         'towing',
+        'booking_agent_id',
     ];
 
     protected function casts(): array
@@ -87,6 +88,11 @@ final class Shipment extends Model
             'arrival_date' => 'date',
             'towing' => 'boolean',
         ];
+    }
+
+    public function bookingAgent(): BelongsTo
+    {
+        return $this->belongsTo(Staff::class, 'booking_agent_id');
     }
 
     public function shipper(): BelongsTo

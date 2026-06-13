@@ -330,10 +330,13 @@ new #[Title('System Configuration')] class extends Component {
         try {
             Artisan::call('optimize:clear');
             $this->last_output = Artisan::output();
-            $this->dialog()->success(
-                title: __('Optimization cleared'),
-                description: __('Optimization cache cleared.'),
-            );
+
+            session()->flash('toast', [
+                'type' => 'success',
+                'message' => __('Optimization cache cleared.'),
+            ]);
+
+            $this->redirect(route('system-config.edit'));
         } catch (\Exception $e) {
             $this->last_output = $e->getMessage();
             $this->dialog()->error(

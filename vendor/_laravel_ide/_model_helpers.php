@@ -5759,6 +5759,7 @@ namespace App\Models {
     /**
      * App\Models\Shipment
      *
+     * @property mixed $booking_agent_id
      * @property string|null $exporter_zipcode
      * @property string|null $exporter_country
      * @property string|null $exporter_state
@@ -5800,6 +5801,7 @@ namespace App\Models {
      * @property string|null $export_references
      * @property string $reference_no
      * @property int $id
+     * @property-read \App\Models\Staff $bookingAgent
      * @property-read \App\Models\Shipper $shipper
      * @property-read \App\Models\Consignee $consignee
      * @property-read \App\Models\Consignee $notifyParty
@@ -5859,6 +5861,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereExporterState($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereExporterCountry($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereExporterZipcode($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereBookingAgentId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment query()

@@ -557,7 +557,7 @@ new #[Title('Shipment Details')] class extends Component {
             ]);
         });
 
-        $recipientIds = $this->staffAndAdminNotificationRecipientIds();
+        $recipientIds = collect();
         if ($this->shipment->shipper?->user_id !== null) {
             $recipientIds->push($this->shipment->shipper->user_id);
         }

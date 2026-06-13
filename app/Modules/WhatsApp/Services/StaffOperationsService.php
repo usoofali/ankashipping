@@ -421,6 +421,7 @@ class StaffOperationsService
         if ($shipment->shipper?->user_id) {
             $recipientIds->push($shipment->shipper->user_id);
         }
+
         $recipients = User::whereIn('id', $recipientIds->unique())->get();
         if ($recipients->isNotEmpty()) {
             Notification::send($recipients, new InvoiceStatusChangedNotification($shipment, $invoice, $fromStatus, $newStatus));

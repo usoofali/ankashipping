@@ -140,6 +140,7 @@ final class RolePermissionSeeder extends Seeder
             'dashboard.view.stats.user_summary',
             'dashboard.view.stats.roro',
             'dashboard.view.stats.container',
+            'dashboard.view.stats.booking',
             'dashboard.view.shipment_table',
         ];
 
@@ -280,6 +281,7 @@ final class RolePermissionSeeder extends Seeder
             'dashboard.view.stats.user_summary',
             'dashboard.view.stats.roro',
             'dashboard.view.stats.container',
+            'dashboard.view.stats.booking',
             'dashboard.view.shipment_table',
         ]);
 
@@ -355,6 +357,7 @@ final class RolePermissionSeeder extends Seeder
             'dashboard.view.stats.wallet_balance',
             'dashboard.view.stats.topup_requests',
             'dashboard.view.stats.user_summary',
+            'dashboard.view.stats.booking',
             'dashboard.view.shipment_table',
         ]);
 
