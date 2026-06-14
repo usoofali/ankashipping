@@ -2,31 +2,40 @@
 
 declare(strict_types=1);
 
-use App\Enums\ShipmentStatus;
-use App\Enums\PaymentStatus;
 use App\Enums\InvoiceStatus;
+use App\Enums\PaymentStatus;
+use App\Enums\ShipmentStatus;
 use App\Enums\ShippingMode;
-use App\Models\Shipment;
-use App\Models\Prealert;
 use App\Models\Invoice;
+use App\Models\Prealert;
+use App\Models\Shipment;
+use App\Models\Shipper;
 use App\Models\Wallet;
 use App\Models\WalletTopUp;
-use App\Models\User;
-use App\Models\Shipper;
-use Spatie\Permission\Models\Role;
-use Livewire\Attributes\Title;
+use App\Modules\WhatsApp\Models\WhatsAppMessage;
+use Carbon\Carbon;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Spatie\Permission\Models\Role;
 
-new #[Title('Dashboard')] class extends Component {
+new #[Title('Dashboard')] class extends Component
+{
     use WithPagination;
 
     public string $search = '';
+
     public string $filterMonth = '';
+
     public string $filterYear = '';
+
     public string $filterShipper = '';
+
     public string $filterShipmentStatus = '';
+
     public string $activeTab = 'shipments';
 
     public function mount(): void
@@ -54,9 +63,9 @@ new #[Title('Dashboard')] class extends Component {
             'delivered' => Shipment::whereIn('shipment_status', $deliveredStatuses)->count(),
             'undelivered' => Shipment::whereIn('shipment_status', $undeliveredStatuses)->count(),
             'loaded' => Shipment::where('shipment_status', ShipmentStatus::Loaded)->count(),
-            'paid_invoices' => Invoice::whereHas('shipment', fn($q) => $q->where('payment_status', PaymentStatus::Paid))->count(),
+            'paid_invoices' => Invoice::whereHas('shipment', fn ($q) => $q->where('payment_status', PaymentStatus::Paid))->count(),
             'due_invoices' => Invoice::where('status', InvoiceStatus::Completed)
-                ->whereHas('shipment', fn($q) => $q->where('payment_status', '!=', PaymentStatus::Paid))
+                ->whereHas('shipment', fn ($q) => $q->where('payment_status', '!=', PaymentStatus::Paid))
                 ->count(),
             'total_wallet_balance' => Wallet::sum('balance'),
             'topup_requests' => WalletTopUp::count(),
@@ -64,29 +73,29 @@ new #[Title('Dashboard')] class extends Component {
             'total_container' => Shipment::where('shipping_mode', ShippingMode::Container)->count(),
             'booking' => Shipment::where('shipment_status', ShipmentStatus::Booking)->count(),
             'booking_unclaimed' => Shipment::where('shipment_status', ShipmentStatus::Booking)->whereNull('booking_agent_id')->count(),
-            'unread_whatsapp' => \App\Modules\WhatsApp\Models\WhatsAppMessage::where('sender_type', 'customer')
+            'unread_whatsapp' => WhatsAppMessage::where('sender_type', 'customer')
                 ->where('status', '!=', 'read')
                 ->count(),
         ];
     }
 
     #[Computed]
-    public function userSummary(): \Illuminate\Support\Collection
+    public function userSummary(): Collection
     {
-        return Role::withCount('users')->get()->map(fn($role) => [
+        return Role::withCount('users')->get()->map(fn ($role) => [
             'name' => str($role->name)->replace('_', ' ')->title(),
             'count' => $role->users_count,
         ]);
     }
 
     #[Computed]
-    public function shipments(): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    public function shipments(): LengthAwarePaginator
     {
         return Shipment::query()
             ->with(['shipper.user', 'vehicles.driver', 'invoice', 'originPort.state', 'originPort.country'])
             ->when($this->search !== '', function ($query): void {
                 $query->where(function ($searchQuery): void {
-                    $term = '%' . trim($this->search) . '%';
+                    $term = '%'.trim($this->search).'%';
                     $searchQuery->where('reference_no', 'like', $term)
                         ->orWhereHas('vehicles', function ($vehicleQuery) use ($term): void {
                             $vehicleQuery->where('make', 'like', $term)
@@ -118,7 +127,7 @@ new #[Title('Dashboard')] class extends Component {
             ->paginate(25);
     }
 
-    public function shippers(): \Illuminate\Database\Eloquent\Collection
+    public function shippers(): Illuminate\Database\Eloquent\Collection
     {
         return Shipper::query()
             ->with('user')
@@ -126,13 +135,13 @@ new #[Title('Dashboard')] class extends Component {
             ->get();
     }
 
-    public function years(): \Illuminate\Support\Collection
+    public function years(): Collection
     {
         return Shipment::query()
             ->whereNotNull('created_at')
             ->latest('created_at')
             ->get(['created_at'])
-            ->map(fn(Shipment $shipment): ?string => $shipment->created_at?->format('Y'))
+            ->map(fn (Shipment $shipment): ?string => $shipment->created_at?->format('Y'))
             ->filter()
             ->unique()
             ->values();
@@ -142,13 +151,14 @@ new #[Title('Dashboard')] class extends Component {
     public function currentMonthName(): string
     {
         if ($this->filterMonth) {
-            return \Carbon\Carbon::create()->month((int) $this->filterMonth)->format('F');
+            return Carbon::create()->month((int) $this->filterMonth)->format('F');
         }
+
         return __('All Time');
     }
 
     #[Computed]
-    public function prealerts(): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    public function prealerts(): LengthAwarePaginator
     {
         return Prealert::query()
             ->with(['shipper.user', 'vehicles', 'destinationPort'])
@@ -157,7 +167,7 @@ new #[Title('Dashboard')] class extends Component {
     }
 
     #[Computed]
-    public function walletFundings(): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    public function walletFundings(): LengthAwarePaginator
     {
         return WalletTopUp::query()
             ->with(['shipper.user'])
@@ -469,7 +479,7 @@ new #[Title('Dashboard')] class extends Component {
                             </flux:select>
                         </div>
 
-                        <div class="-mx-4 sm:-mx-6 overflow-hidden border-t border-zinc-200 dark:border-zinc-800">
+                        <div class="overflow-hidden border-t border-zinc-200 dark:border-zinc-800">
                             <flux:table :paginate="$this->shipments">
                                 <flux:table.columns>
                                     <flux:table.column>{{ __('Ref / VIN') }}</flux:table.column>
@@ -525,87 +535,90 @@ new #[Title('Dashboard')] class extends Component {
                                 </flux:table.rows>
                             </flux:table>
                         </div>
+                    </div>
                 @endif
 
-                    @if ($activeTab === 'prealerts')
-                        <div class="space-y-6">
-                            <div class="-mx-4 sm:-mx-6 overflow-hidden border-t border-zinc-200 dark:border-zinc-800">
-                                <flux:table :paginate="$this->prealerts">
-                                    <flux:table.columns>
-                                        <flux:table.column>{{ __('Vehicle') }}</flux:table.column>
-                                        <flux:table.column>{{ __('Shipper') }}</flux:table.column>
-                                        <flux:table.column>{{ __('Carrier') }}</flux:table.column>
-                                        <flux:table.column>{{ __('Destination') }}</flux:table.column>
-                                        <flux:table.column>{{ __('Status') }}</flux:table.column>
-                                        <flux:table.column>{{ __('Date') }}</flux:table.column>
-                                    </flux:table.columns>
+                @if ($activeTab === 'prealerts')
+                    <div class="space-y-6">
+                        <div class="overflow-hidden border-t border-zinc-200 dark:border-zinc-800">
+                            <flux:table :paginate="$this->prealerts">
+                                <flux:table.columns>
+                                    <flux:table.column>{{ __('Vehicle') }}</flux:table.column>
+                                    <flux:table.column>{{ __('Shipper') }}</flux:table.column>
+                                    <flux:table.column>{{ __('Carrier') }}</flux:table.column>
+                                    <flux:table.column>{{ __('Destination') }}</flux:table.column>
+                                    <flux:table.column>{{ __('Status') }}</flux:table.column>
+                                    <flux:table.column>{{ __('Date') }}</flux:table.column>
+                                </flux:table.columns>
 
-                                    <flux:table.rows>
-                                        @foreach ($this->prealerts as $prealert)
-                                            <flux:table.row :key="$prealert->id">
-                                                <flux:table.cell>
-                                                    <div class="flex flex-col text-sm">
-                                                        @php $v = $prealert->vehicles->first(); @endphp
-                                                        <span class="font-medium">{{ $v?->year }} {{ $v?->make }}
-                                                            {{ $v?->model }}</span>
-                                                        <span class="text-xs text-zinc-500 font-mono">{{ $v?->vin }}</span>
-                                                    </div>
-                                                </flux:table.cell>
-                                                <flux:table.cell>{{ $prealert->shipper?->user?->name ?? '—' }}</flux:table.cell>
-                                                <flux:table.cell>{{ $prealert->carrier?->name ?? '—' }}</flux:table.cell>
-                                                <flux:table.cell>{{ $prealert->destinationPort?->name ?? '—' }}
-                                                </flux:table.cell>
-                                                <flux:table.cell>
-                                                    <flux:badge size="sm" variant="subtle">
-                                                        {{ $prealert->status->name }}
-                                                    </flux:badge>
-                                                </flux:table.cell>
-                                                <flux:table.cell class="text-xs text-zinc-500">
-                                                    {{ $prealert->created_at->format('M d, Y') }}
-                                                </flux:table.cell>
-                                            </flux:table.row>
-                                        @endforeach
-                                    </flux:table.rows>
-                                </flux:table>
-                            </div>
-                    @endif
-
-                        @if ($activeTab === 'wallet')
-                            <div class="space-y-6">
-                                <div class="-mx-4 sm:-mx-6 overflow-hidden border-t border-zinc-200 dark:border-zinc-800">
-                                    <flux:table :paginate="$this->walletFundings">
-                                        <flux:table.columns>
-                                            <flux:table.column>{{ __('Reference') }}</flux:table.column>
-                                            <flux:table.column>{{ __('Shipper') }}</flux:table.column>
-                                            <flux:table.column>{{ __('Amount') }}</flux:table.column>
-                                            <flux:table.column>{{ __('Status') }}</flux:table.column>
-                                            <flux:table.column>{{ __('Date') }}</flux:table.column>
-                                        </flux:table.columns>
-
-                                        <flux:table.rows>
-                                            @foreach ($this->walletFundings as $topup)
-                                                <flux:table.row :key="$topup->id">
-                                                    <flux:table.cell class="font-mono text-sm">{{ $topup->reference }}
-                                                    </flux:table.cell>
-                                                    <flux:table.cell>{{ $topup->shipper?->user?->name ?? '—' }}</flux:table.cell>
-                                                    <flux:table.cell class="font-bold text-emerald-600 dark:text-emerald-400">
-                                                        ${{ number_format((float) $topup->amount, 2) }}
-                                                    </flux:table.cell>
-                                                    <flux:table.cell>
-                                                        <flux:badge size="sm" variant="subtle">
-                                                            {{ $topup->status->name }}
-                                                        </flux:badge>
-                                                    </flux:table.cell>
-                                                    <flux:table.cell class="text-xs text-zinc-500">
-                                                        {{ $topup->created_at->format('M d, Y') }}
-                                                    </flux:table.cell>
-                                                </flux:table.row>
-                                            @endforeach
-                                        </flux:table.rows>
-                                    </flux:table>
-                                </div>
-                        @endif
+                                <flux:table.rows>
+                                    @foreach ($this->prealerts as $prealert)
+                                        <flux:table.row :key="$prealert->id">
+                                            <flux:table.cell>
+                                                <div class="flex flex-col text-sm">
+                                                    @php $v = $prealert->vehicles->first(); @endphp
+                                                    <span class="font-medium">{{ $v?->year }} {{ $v?->make }}
+                                                        {{ $v?->model }}</span>
+                                                    <span class="text-xs text-zinc-500 font-mono">{{ $v?->vin }}</span>
+                                                </div>
+                                            </flux:table.cell>
+                                            <flux:table.cell>{{ $prealert->shipper?->user?->name ?? '—' }}</flux:table.cell>
+                                            <flux:table.cell>{{ $prealert->carrier?->name ?? '—' }}</flux:table.cell>
+                                            <flux:table.cell>{{ $prealert->destinationPort?->name ?? '—' }}
+                                            </flux:table.cell>
+                                            <flux:table.cell>
+                                                <flux:badge size="sm" variant="subtle">
+                                                    {{ $prealert->status->name }}
+                                                </flux:badge>
+                                            </flux:table.cell>
+                                            <flux:table.cell class="text-xs text-zinc-500">
+                                                {{ $prealert->created_at->format('M d, Y') }}
+                                            </flux:table.cell>
+                                        </flux:table.row>
+                                    @endforeach
+                                </flux:table.rows>
+                            </flux:table>
                         </div>
+                    </div>
+                @endif
+
+                @if ($activeTab === 'wallet')
+                    <div class="space-y-6">
+                        <div class="overflow-hidden border-t border-zinc-200 dark:border-zinc-800">
+                            <flux:table :paginate="$this->walletFundings">
+                                <flux:table.columns>
+                                    <flux:table.column>{{ __('Reference') }}</flux:table.column>
+                                    <flux:table.column>{{ __('Shipper') }}</flux:table.column>
+                                    <flux:table.column>{{ __('Amount') }}</flux:table.column>
+                                    <flux:table.column>{{ __('Status') }}</flux:table.column>
+                                    <flux:table.column>{{ __('Date') }}</flux:table.column>
+                                </flux:table.columns>
+
+                                <flux:table.rows>
+                                    @foreach ($this->walletFundings as $topup)
+                                        <flux:table.row :key="$topup->id">
+                                            <flux:table.cell class="font-mono text-sm">{{ $topup->reference }}
+                                            </flux:table.cell>
+                                            <flux:table.cell>{{ $topup->shipper?->user?->name ?? '—' }}</flux:table.cell>
+                                            <flux:table.cell class="font-bold text-emerald-600 dark:text-emerald-400">
+                                                ${{ number_format((float) $topup->amount, 2) }}
+                                            </flux:table.cell>
+                                            <flux:table.cell>
+                                                <flux:badge size="sm" variant="subtle">
+                                                    {{ $topup->status->name }}
+                                                </flux:badge>
+                                            </flux:table.cell>
+                                            <flux:table.cell class="text-xs text-zinc-500">
+                                                {{ $topup->created_at->format('M d, Y') }}
+                                            </flux:table.cell>
+                                        </flux:table.row>
+                                    @endforeach
+                                </flux:table.rows>
+                            </flux:table>
+                        </div>
+                    </div>
+                @endif
+            </div>
         </x-crud.panel>
     @endcan
 </x-crud.page-shell>
