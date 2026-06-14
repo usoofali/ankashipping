@@ -16,7 +16,6 @@ use App\Modules\WhatsApp\Models\WhatsAppMenuState;
 use App\Support\ShipmentPdfSupport;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class DocumentService
 {

@@ -12,6 +12,7 @@ use App\Http\Controllers\ShipperOptionsController;
 use App\Http\Controllers\VehicleDocumentFileSignedDownloadController;
 use App\Http\Controllers\WarehouseOptionsController;
 use App\Models\User;
+use App\Modules\WhatsApp\Controllers\WhatsAppInboxController;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 
@@ -129,9 +130,23 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::livewire('/workshops', 'pages::workshops.index')->name('workshops.index');
 
     // WhatsApp
-    Route::livewire('/whatsapp', 'pages::whatsapp.index')
+    Route::view('/whatsapp', 'pages.whatsapp.index')
         ->middleware('permission:whatsapp.view_inbox')
         ->name('whatsapp.index');
+
+    // WhatsApp Inbox API (session-authenticated, for Vue frontend)
+    Route::prefix('whatsapp/api')->middleware('permission:whatsapp.view_inbox')->group(function () {
+        $ctrl = WhatsAppInboxController::class;
+        Route::get('/conversations', [$ctrl, 'conversations'])->name('whatsapp.api.conversations');
+        Route::get('/conversations/{id}/messages', [$ctrl, 'messages'])->name('whatsapp.api.messages');
+        Route::post('/conversations/{id}/read', [$ctrl, 'markRead'])->name('whatsapp.api.read');
+        Route::post('/conversations/{id}/send', [$ctrl, 'send'])->name('whatsapp.api.send');
+        Route::post('/conversations/{id}/claim', [$ctrl, 'claim'])->name('whatsapp.api.claim');
+        Route::post('/conversations/{id}/resolve', [$ctrl, 'resolve'])->name('whatsapp.api.resolve');
+        Route::post('/conversations/{id}/clear', [$ctrl, 'clear'])->name('whatsapp.api.clear');
+        Route::get('/messages/{id}/download', [$ctrl, 'downloadAttachment'])->name('whatsapp.api.download');
+    });
+
     Route::livewire('/whatsapp/categories', 'pages::whatsapp.categories.index')
         ->middleware('permission:whatsapp.manage_conversations')
         ->name('whatsapp.categories.index');

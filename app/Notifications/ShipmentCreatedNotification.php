@@ -15,7 +15,7 @@ use Illuminate\Notifications\Notification;
 
 final class ShipmentCreatedNotification extends Notification implements ShouldQueue
 {
-    use Queueable, HasWhatsAppNotification;
+    use HasWhatsAppNotification, Queueable;
 
     public function __construct(
         public readonly Shipment $shipment,
@@ -41,10 +41,10 @@ final class ShipmentCreatedNotification extends Notification implements ShouldQu
 
     public function toWhatsApp(object $notifiable): array
     {
-        $body = $this->isMerge 
+        $body = $this->isMerge
             ? "✨ Vehicles added to your shipment [{$this->shipment->reference_no}]. Total: {$this->shipment->vehicles->count()}."
             : "🚢 New Shipment Created: *{$this->shipment->reference_no}*.";
-        
+
         if ($this->shipment->shipping_mode === ShippingMode::Roro) {
             $vehicle = $this->shipment->vehicles->first();
             $body .= "\n🚗 {$vehicle->year} {$vehicle->make} {$vehicle->model}";

@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Storage;
 
 final class StampedDockReceiptNotification extends Notification implements ShouldQueue
 {
-    use Queueable, HasWhatsAppNotification;
+    use HasWhatsAppNotification, Queueable;
 
     /** @var int Maximum seconds this job may run before timing out. */
     public int $timeout = 80;

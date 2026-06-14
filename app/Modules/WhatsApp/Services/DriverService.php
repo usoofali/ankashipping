@@ -171,7 +171,7 @@ class DriverService
             'message_text' => $internalMessage,
             'media_url' => $tempPath, // Local path for the agent to download
             'message_type' => $messageType,
-            'status' => 'sent', 
+            'status' => 'sent',
         ]);
 
         $this->waService->sendMessage($conversation->phone_number, '✅ Document received! An agent will review and verify your submission shortly.');

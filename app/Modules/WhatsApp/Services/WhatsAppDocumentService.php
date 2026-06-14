@@ -17,13 +17,13 @@ class WhatsAppDocumentService
      * Generate a PDF and store it in the whatsapp-temp directory on the public disk.
      * Returns the public URL and the filename.
      *
-     * @param callable(): string $pdfGenerator
+     * @param  callable(): string  $pdfGenerator
      * @return array{url: string, name: string}
      */
     public function generateTempPdf(callable $pdfGenerator, string $filename): array
     {
-        $tempPath = 'whatsapp-temp/' . Str::uuid() . '_' . $filename;
-        
+        $tempPath = 'whatsapp-temp/'.Str::uuid().'_'.$filename;
+
         $pdfContent = $pdfGenerator();
         Storage::disk('public')->put($tempPath, $pdfContent);
 

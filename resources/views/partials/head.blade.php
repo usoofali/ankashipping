@@ -15,8 +15,11 @@
 <wireui:scripts />
 
 @if (file_exists(public_path('build/manifest.json')))
-    <link rel="stylesheet" href="{{ asset('build/assets/app-CbgVMOtQ.css') }}">
+    <link rel="stylesheet" href="{{ asset('build/assets/app-BFTYUcwQ.css') }}">
+    <link rel="stylesheet" href="{{ asset('build/assets/whatsapp-dXFKsUVW.css') }}">
+    <link rel="stylesheet" href="{{ asset('build/assets/app-DdpQrGx2.css') }}">
     <script type="module" src="{{ asset('build/assets/app-COUEiJ29.js') }}"></script>
+    <script type="module" src="{{ asset('build/assets/app-B3CmG9Dm.js') }}"></script>
 @else
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 @endif

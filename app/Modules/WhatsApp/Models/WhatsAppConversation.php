@@ -49,6 +49,11 @@ class WhatsAppConversation extends Model
         return $this->hasMany(WhatsAppMessage::class, 'conversation_id');
     }
 
+    public function latestMessage(): HasOne
+    {
+        return $this->hasOne(WhatsAppMessage::class, 'conversation_id')->latestOfMany();
+    }
+
     public function menuState(): HasOne
     {
         return $this->hasOne(WhatsAppMenuState::class, 'conversation_id');

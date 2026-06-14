@@ -14,7 +14,7 @@ trait HasWhatsAppNotification
     protected function shouldNotifyViaWhatsApp(object $notifiable, ?int $targetShipperId = null): bool
     {
         $shipper = $notifiable->shipper ?? null;
-        
+
         if (! $shipper) {
             return false;
         }

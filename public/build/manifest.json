@@ -8,8 +8,13 @@
     "src": "node_modules/intl-tel-input/dist/img/flags@2x.webp"
   },
   "resources/css/app.css": {
-    "file": "assets/app-CbgVMOtQ.css",
+    "file": "assets/app-DdpQrGx2.css",
     "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/css/whatsapp.css": {
+    "file": "assets/whatsapp-dXFKsUVW.css",
+    "src": "resources/css/whatsapp.css",
     "isEntry": true
   },
   "resources/js/app.js": {
@@ -17,5 +22,14 @@
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true
+  },
+  "resources/js/whatsapp/app.js": {
+    "file": "assets/app-B3CmG9Dm.js",
+    "name": "app",
+    "src": "resources/js/whatsapp/app.js",
+    "isEntry": true,
+    "css": [
+      "assets/app-BFTYUcwQ.css"
+    ]
   }
 }
