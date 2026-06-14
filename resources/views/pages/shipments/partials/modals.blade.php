@@ -195,7 +195,7 @@
 @endcan
 
 @can('shipments.update')
-    @if(auth()->user()?->hasRole('super_admin') || auth()->user()?->staff()->exists())
+    @if(auth()->user()?->hasRole('super_admin') || auth()->user()?->hasRole('Super Manager') || auth()->user()?->staff()->exists())
         <flux:modal wire:model.self="showToWorkshopModal" class="max-w-md">
             <form wire:submit="saveToWorkshop" class="space-y-4">
                 <div>
@@ -241,7 +241,7 @@
     @endif
 @endcan
 
-@if(auth()->user()?->hasRole('super_admin') || auth()->user()?->staff()->exists())
+@if(auth()->user()?->hasRole('super_admin') || auth()->user()?->hasRole('Super Manager') || auth()->user()?->staff()->exists())
     <flux:modal wire:model.self="showDeleteDocumentConfirmModal" class="max-w-md">
         <div class="space-y-4">
             <flux:heading size="lg">{{ __('Remove attachment?') }}</flux:heading>
@@ -285,7 +285,7 @@
         </div>
 
         @php
-            $isStaffOrAdmin = auth()->user()?->hasRole('super_admin') || auth()->user()?->staff()->exists();
+            $isStaffOrAdmin = auth()->user()?->hasRole('super_admin') || auth()->user()?->hasRole('Super Manager') || auth()->user()?->staff()->exists();
             $documents = $shipment->documents()->with(['files.uploader'])->get()->sortByDesc(fn($d) => $d->created_at?->timestamp ?? 0);
         @endphp
 

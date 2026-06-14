@@ -266,7 +266,7 @@ new #[Title('Prealerts')] class extends Component {
                                             {{ __('View Details') }}
                                         </flux:menu.item>
 
-                                        @if (auth()->user()?->hasRole('super_admin') || auth()->user()?->staff()->exists())
+                                        @if (auth()->user()?->hasRole('super_admin') || auth()->user()?->hasRole('Super Manager') || auth()->user()?->staff()->exists())
                                             <flux:menu.item icon="car-front" wire:click="convertToShipment({{ $prealert->id }})"
                                                 wire:key="convert-{{ $prealert->id }}">
                                                 {{ __('Convert to Shipment') }}
@@ -436,7 +436,7 @@ new #[Title('Prealerts')] class extends Component {
                 </div>
 
                 <div class="lg:col-span-3 mt-4 flex justify-end gap-3 pt-6 border-t border-zinc-100 dark:border-zinc-800">
-                    @if (auth()->user()?->hasRole('super_admin') || auth()->user()?->staff()->exists())
+                    @if (auth()->user()?->hasRole('super_admin') || auth()->user()?->hasRole('Super Manager') || auth()->user()?->staff()->exists())
                         <flux:button variant="primary" icon="car-front" wire:click="convertToShipment({{ $selectedPrealert->id }})">
                             {{ __('Convert to Shipment') }}
                         </flux:button>

@@ -54,6 +54,8 @@ new #[Title('Shipment Details')] class extends Component {
 
     public bool $showMakePaymentModal = false;
 
+    public bool $showReleaseBookingModal = false;
+
     public function workflow(): \App\ShippingWorkflow\ShippingWorkflow
     {
         return app(\App\ShippingWorkflow\ShippingWorkflow::class);
@@ -163,12 +165,135 @@ new #[Title('Shipment Details')] class extends Component {
             'paymentMethod',
             'vehicles.driver',
             'workshop',
+            'bookingAgent.user',
             'invoice.items',
             'documents.files',
             'activityLogs.user',
             'trackings.workshop',
             'trackings' => static fn($query) => $query->orderByDesc('recorded_at'),
         ]);
+    }
+
+    /**
+     * Claim this booking shipment for the authenticated staff member.
+     * Uses an atomic WHERE to prevent race conditions.
+     */
+    public function claimBooking(): void
+    {
+        $user = auth()->user();
+        $staffId = $user?->staff?->id;
+
+        if ($staffId === null) {
+            $this->notification()->error(__('Access Denied'), __('Only staff members can claim bookings.'));
+
+            return;
+        }
+
+        if ($this->shipment->shipment_status !== ShipmentStatus::Booking) {
+            $this->notification()->error(__('Invalid Status'), __('Only bookings can be claimed.'));
+
+            return;
+        }
+
+        $updated = Shipment::query()
+            ->where('id', $this->shipment->id)
+            ->whereNull('booking_agent_id')
+            ->update(['booking_agent_id' => $staffId]);
+
+        if ($updated === 0) {
+            $this->shipment->refresh();
+            $agentName = $this->shipment->bookingAgent?->user?->name ?? __('another agent');
+            $this->notification()->error(__('Already Claimed'), __('This booking is already managed by :agent.', ['agent' => $agentName]));
+
+            return;
+        }
+
+        $this->shipment->refresh();
+        $this->shipment->load('bookingAgent.user');
+
+        ActivityLog::query()->create([
+            'shipment_id' => $this->shipment->id,
+            'user_id' => Auth::id(),
+            'action' => 'booking_claimed',
+            'properties' => [
+                'reference_no' => $this->shipment->reference_no,
+                'booking_agent_id' => $staffId,
+            ],
+        ]);
+
+        $this->notification()->success(__('Booking Claimed'), __('You are now managing this booking.'));
+    }
+
+    /**
+     * Release (unclaim) this booking shipment.
+     * Admins can force-release bookings claimed by other agents.
+     */
+    public function releaseBooking(): void
+    {
+        $user = auth()->user();
+
+        if ($this->shipment->shipment_status !== ShipmentStatus::Booking) {
+            $this->notification()->error(__('Invalid Status'), __('Only bookings can be released.'));
+
+            return;
+        }
+
+        if ($this->shipment->booking_agent_id === null) {
+            $this->notification()->error(__('Not Claimed'), __('This booking is not claimed by anyone.'));
+
+            return;
+        }
+
+        $isAdmin = $user?->hasRole(['super_admin', 'staff_admin']);
+        $isOwner = $user?->staff?->id === $this->shipment->booking_agent_id;
+
+        if (!$isAdmin && !$isOwner) {
+            $this->notification()->error(__('Access Denied'), __('You cannot release a booking claimed by another agent.'));
+
+            return;
+        }
+
+        $previousAgentId = $this->shipment->booking_agent_id;
+        $previousAgentName = $this->shipment->bookingAgent?->user?->name;
+
+        $this->shipment->update(['booking_agent_id' => null]);
+        $this->shipment->load('bookingAgent.user');
+
+        ActivityLog::query()->create([
+            'shipment_id' => $this->shipment->id,
+            'user_id' => Auth::id(),
+            'action' => 'booking_released',
+            'properties' => array_filter([
+                'reference_no' => $this->shipment->reference_no,
+                'previous_agent_id' => $previousAgentId,
+                'previous_agent_name' => $previousAgentName,
+                'released_by_admin' => $isAdmin && !$isOwner ? true : null,
+            ], fn($v) => $v !== null),
+        ]);
+
+        $this->showReleaseBookingModal = false;
+        $this->notification()->success(__('Booking Released'), __('This booking is now unclaimed.'));
+    }
+
+    /**
+     * Guard mutating actions against the booking lock.
+     * Returns true if the action should be blocked.
+     */
+    protected function checkBookingLock(): bool
+    {
+        if ($this->shipment->isBookingLockedForUser(auth()->user())) {
+            $agentName = $this->shipment->bookingAgent?->user?->name;
+
+            if ($this->shipment->booking_agent_id === null) {
+                $this->notification()->error(__('Booking Unclaimed'), __('You must claim this booking before making changes.'));
+            } else {
+                $this->notification()->error(__('Booking Locked'), __('This booking is managed by :agent.', ['agent' => $agentName ?? __('another agent')]));
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
     public function updatedShowInvoiceStatusConfirmModal(bool $value): void
@@ -255,6 +380,10 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function addOrUpdateItem(): void
     {
+        if ($this->checkBookingLock()) {
+            return;
+        }
+
         if (!auth()->user()->can('invoices.edit')) {
             $this->notification()->error(__('Access Denied'), __('You do not have permission to edit invoice items.'));
 
@@ -368,6 +497,10 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function editItem(int $itemId): void
     {
+        if ($this->checkBookingLock()) {
+            return;
+        }
+
         if (!auth()->user()->can('invoices.edit')) {
             $this->notification()->error(__('Access Denied'), __('You do not have permission to edit invoice items.'));
 
@@ -424,6 +557,10 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function deleteItem(int $itemId): void
     {
+        if ($this->checkBookingLock()) {
+            return;
+        }
+
         if (!auth()->user()->can('invoices.delete')) {
             $this->notification()->error(__('Access Denied'), __('You do not have permission to delete invoice items.'));
 
@@ -469,6 +606,10 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function openInvoiceStatusConfirm(string $value): void
     {
+        if ($this->checkBookingLock()) {
+            return;
+        }
+
         $targetStatus = InvoiceStatus::from($value);
         $user = auth()->user();
 
@@ -502,6 +643,10 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function confirmInvoiceStatusChange(): void
     {
+        if ($this->checkBookingLock()) {
+            return;
+        }
+
         $this->authorize('invoices.manage');
 
         $validated = $this->validate([
@@ -635,6 +780,10 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function assignDriver(): void
     {
+        if ($this->checkBookingLock()) {
+            return;
+        }
+
         $this->authorize('shipments.update');
 
         $validated = $this->validate([
@@ -737,6 +886,10 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function createDriver(): void
     {
+        if ($this->checkBookingLock()) {
+            return;
+        }
+
         $this->authorize('drivers.create');
 
         $validated = $this->validate([
@@ -770,6 +923,10 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function openAttachDocumentModal(?int $vehicleId = null, ?string $documentType = null): void
     {
+        if ($this->checkBookingLock()) {
+            return;
+        }
+
         $this->authorize('documents.manage');
 
         if ($documentType === null) {
@@ -786,6 +943,10 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function saveAttachedDocuments(): void
     {
+        if ($this->checkBookingLock()) {
+            return;
+        }
+
         $this->authorize('documents.manage');
 
         $rules = [
@@ -927,6 +1088,10 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function openAttachVehicleDocumentModal(int $vehicleId, ?string $documentType = null): void
     {
+        if ($this->checkBookingLock()) {
+            return;
+        }
+
         $this->authorize('documents.manage');
         $this->attachVehicleDocumentType = $documentType ?? '';
         $this->attachVehicleDocumentNotes = '';
@@ -938,6 +1103,10 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function saveAttachedVehicleDocuments(): void
     {
+        if ($this->checkBookingLock()) {
+            return;
+        }
+
         $this->authorize('documents.manage');
 
         $this->validate([
@@ -1077,6 +1246,10 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function markContainerFilled(bool $force = false): void
     {
+        if ($this->checkBookingLock()) {
+            return;
+        }
+
         $this->authorize('shipments.update');
 
         if (!$force) {
@@ -1128,6 +1301,10 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function editLogistics(): void
     {
+        if ($this->checkBookingLock()) {
+            return;
+        }
+
         if (!auth()->user()->can('workflow.manage_logistics')) {
             $this->notification()->error(__('Access Denied'), __('You do not have permission to manage logistics.'));
             return;
@@ -1173,6 +1350,10 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function saveLogistics(bool $isDraft = false): void
     {
+        if ($this->checkBookingLock()) {
+            return;
+        }
+
         if (!auth()->user()->can('workflow.manage_logistics')) {
             $this->notification()->error(__('Access Denied'), __('You do not have permission to manage logistics.'));
             return;
@@ -1301,6 +1482,10 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function markShipmentDelivered(): void
     {
+        if ($this->checkBookingLock()) {
+            return;
+        }
+
         $this->authorize('shipments.update');
         $this->authorize('workflow.mark_delivered');
 
@@ -1336,6 +1521,10 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function markShipmentLoaded(): void
     {
+        if ($this->checkBookingLock()) {
+            return;
+        }
+
         $this->authorize('shipments.update');
         $this->authorize('workflow.mark_loaded');
 
@@ -1382,6 +1571,10 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function completeShipment(): void
     {
+        if ($this->checkBookingLock()) {
+            return;
+        }
+
         $this->authorize('shipments.update');
         $this->authorize('workflow.complete');
 
@@ -1421,6 +1614,10 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function openToWorkshopModal(?int $vehicleId = null): void
     {
+        if ($this->checkBookingLock()) {
+            return;
+        }
+
         $this->authorize('shipments.update');
         $this->authorize('workflow.to_workshop');
 
@@ -1438,6 +1635,10 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function saveToWorkshop(): void
     {
+        if ($this->checkBookingLock()) {
+            return;
+        }
+
         $this->authorize('shipments.update');
         $this->authorize('workflow.to_workshop');
 
@@ -1489,6 +1690,10 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function openFromWorkshopConfirmModal(?int $vehicleId = null): void
     {
+        if ($this->checkBookingLock()) {
+            return;
+        }
+
         $this->authorize('shipments.update');
         $this->authorize('workflow.from_workshop');
 
@@ -1498,6 +1703,10 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function fromWorkshop(): void
     {
+        if ($this->checkBookingLock()) {
+            return;
+        }
+
         $this->authorize('shipments.update');
         $this->authorize('workflow.from_workshop');
 
@@ -1560,6 +1769,10 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function deleteShipmentDocumentConfirmed(): void
     {
+        if ($this->checkBookingLock()) {
+            return;
+        }
+
         $this->authorize('documents.delete');
 
         if ($this->pendingDeleteShipmentDocumentId === null) {
@@ -1608,6 +1821,10 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function deleteShipmentDocumentFileConfirmed(): void
     {
+        if ($this->checkBookingLock()) {
+            return;
+        }
+
         $this->authorize('documents.delete');
 
         if ($this->pendingDeleteShipmentDocumentFileId === null) {
@@ -1659,6 +1876,10 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function deleteShipment(): void
     {
+        if ($this->checkBookingLock()) {
+            return;
+        }
+
         $this->authorize('shipments.delete');
 
         if ($this->deleteConfirmationReference !== $this->shipment->reference_no) {
@@ -1915,6 +2136,55 @@ new #[Title('Shipment Details')] class extends Component {
                 @endif
             </div>
         </div>
+
+        {{-- Booking Claim / Lock Banners --}}
+        @if($shipment->shipment_status === \App\Enums\ShipmentStatus::Booking)
+            @php
+                $currentUser = auth()->user();
+                $currentStaffId = $currentUser?->staff?->id;
+                $isAdmin = $currentUser?->hasRole(['super_admin', 'staff_admin']);
+                $agentId = $shipment->booking_agent_id;
+                $agentName = $shipment->bookingAgent?->user?->name;
+            @endphp
+
+            @if($agentId === null)
+                {{-- Unclaimed booking --}}
+                <flux:callout variant="warning" icon="exclamation-triangle" class="mt-4">
+                    <div class="flex items-center justify-between gap-4 w-full">
+                        <flux:text>{{ __('This booking has not been claimed. Claim it to start managing.') }}</flux:text>
+                        @if($currentStaffId)
+                            <flux:button variant="primary" size="sm" icon="hand-raised" wire:click="claimBooking">
+                                {{ __('Claim Booking') }}
+                            </flux:button>
+                        @endif
+                    </div>
+                </flux:callout>
+            @elseif($currentStaffId === $agentId)
+                {{-- Claimed by current user --}}
+                <flux:callout variant="info" icon="check-circle" class="mt-4">
+                    <div class="flex items-center justify-between gap-4 w-full">
+                        <flux:text>{{ __('You are managing this booking.') }}</flux:text>
+                        <flux:button variant="ghost" size="sm" icon="x-mark"
+                            wire:click="$set('showReleaseBookingModal', true)">
+                            {{ __('Release') }}
+                        </flux:button>
+                    </div>
+                </flux:callout>
+            @else
+                {{-- Claimed by another agent --}}
+                <flux:callout variant="danger" icon="lock-closed" class="mt-4">
+                    <div class="flex items-center justify-between gap-4 w-full">
+                        <flux:text>{{ __('This booking is managed by :agent.', ['agent' => $agentName ?? __('Unknown')]) }}</flux:text>
+                        @if($isAdmin)
+                            <flux:button variant="danger" size="sm" icon="arrow-path"
+                                wire:click="$set('showReleaseBookingModal', true)">
+                                {{ __('Force Release') }}
+                            </flux:button>
+                        @endif
+                    </div>
+                </flux:callout>
+            @endif
+        @endif
 
         {{-- At-a-glance row --}}
         <x-crud.panel class="p-4">
@@ -2304,4 +2574,32 @@ new #[Title('Shipment Details')] class extends Component {
             </div>
         </div>
     </flux:modal>
+
+    {{-- Release Booking Confirm Modal --}}
+    @if($shipment->shipment_status === \App\Enums\ShipmentStatus::Booking && $shipment->booking_agent_id !== null)
+        <flux:modal name="release-booking" wire:model="showReleaseBookingModal" variant="filled" class="md:w-[400px]">
+            <div class="space-y-6">
+                <div>
+                    <flux:heading size="lg">{{ __('Release Booking') }}</flux:heading>
+                    <flux:subheading>
+                        @if($shipment->booking_agent_id === auth()->user()?->staff?->id)
+                            {{ __('Are you sure you want to release this booking? It will become available for other agents to claim.') }}
+                        @else
+                            {{ __('Are you sure you want to force-release this booking from :agent?', ['agent' => $shipment->bookingAgent?->user?->name ?? __('Unknown')]) }}
+                        @endif
+                    </flux:subheading>
+                </div>
+
+                <div class="flex gap-2">
+                    <flux:spacer />
+                    <flux:button variant="ghost" wire:click="$set('showReleaseBookingModal', false)">
+                        {{ __('Cancel') }}
+                    </flux:button>
+                    <flux:button variant="danger" icon="arrow-path" wire:click="releaseBooking">
+                        {{ __('Release') }}
+                    </flux:button>
+                </div>
+            </div>
+        </flux:modal>
+    @endif
 </x-crud.page-shell>

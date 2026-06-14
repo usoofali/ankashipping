@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Enums\ShipmentStatus;
 use App\Models\Shipment;
+use App\Models\Staff;
 use App\Models\Shipper;
 use App\Concerns\HandlesShipmentPayments;
 use WireUi\Traits\WireUiActions;
@@ -19,6 +20,9 @@ new #[Title('Shipments')] class extends Component {
 
     public bool $showMakePaymentModal = false;
     public ?Shipment $selectedShipmentForPayment = null;
+
+    public bool $showReleaseBookingModal = false;
+    public ?int $pendingReleaseShipmentId = null;
 
     public string $search = '';
 
@@ -46,7 +50,7 @@ new #[Title('Shipments')] class extends Component {
         $user = auth()->user();
 
         return Shipment::query()
-            ->with(['shipper.user', 'vehicles.driver', 'invoice', 'originPort.state', 'originPort.country', 'workshop'])
+            ->with(['shipper.user', 'vehicles.driver', 'invoice', 'originPort.state', 'originPort.country', 'workshop', 'bookingAgent.user'])
             ->when(!($user?->hasRole('super_admin') || $user?->staff()->exists()), function ($query) use ($user): void {
                 $query->where('shipper_id', $user?->shipper?->id);
             })
@@ -127,6 +131,56 @@ new #[Title('Shipments')] class extends Component {
             $this->selectedShipmentForPayment = null;
         }
     }
+
+    public function claimBooking(int $shipmentId): void
+    {
+        $user = auth()->user();
+        $staffId = $user?->staff?->id;
+
+        if ($staffId === null) {
+            $this->notification()->error(__('Access Denied'), __('Only staff members can claim bookings.'));
+
+            return;
+        }
+
+        $updated = Shipment::query()
+            ->where('id', $shipmentId)
+            ->where('shipment_status', ShipmentStatus::Booking)
+            ->whereNull('booking_agent_id')
+            ->update(['booking_agent_id' => $staffId]);
+
+        if ($updated === 0) {
+            $this->notification()->error(__('Already Claimed'), __('This booking is already claimed by another agent.'));
+
+            return;
+        }
+
+        $this->notification()->success(__('Booking Claimed'), __('You are now managing this booking.'));
+    }
+
+    public function releaseBooking(int $shipmentId): void
+    {
+        $user = auth()->user();
+        $shipment = Shipment::query()->findOrFail($shipmentId);
+
+        if ($shipment->booking_agent_id === null) {
+            return;
+        }
+
+        $isAdmin = $user?->hasRole(['super_admin', 'staff_admin']);
+        $isOwner = $user?->staff?->id === $shipment->booking_agent_id;
+
+        if (!$isAdmin && !$isOwner) {
+            $this->notification()->error(__('Access Denied'), __('You cannot release a booking claimed by another agent.'));
+
+            return;
+        }
+
+        $shipment->update(['booking_agent_id' => null]);
+        $this->showReleaseBookingModal = false;
+        $this->pendingReleaseShipmentId = null;
+        $this->notification()->success(__('Booking Released'), __('This booking is now unclaimed.'));
+    }
 }; ?>
 
 <x-crud.page-shell>
@@ -159,7 +213,7 @@ new #[Title('Shipments')] class extends Component {
             @endforeach
         </flux:select>
 
-        @if (auth()->user()?->hasRole('super_admin') || auth()->user()?->staff()->exists())
+        @if (auth()->user()?->hasRole('super_admin') || auth()->user()?->hasRole('Super Manager') || auth()->user()?->staff()->exists())
             <flux:select wire:model.live="filterShipper" label="{{ __('Shipper') }}" icon="user-group">
                 <flux:select.option value="">{{ __('All Shippers') }}</flux:select.option>
                 @foreach($this->shippers() as $shipper)
@@ -267,9 +321,29 @@ new #[Title('Shipments')] class extends Component {
                             @endif
                         </flux:table.cell>
                         <flux:table.cell>
-                            <flux:badge size="sm" color="zinc" variant="subtle">
-                                {{ $shipment->shipmentStatusDisplay() }}
-                            </flux:badge>
+                            <div class="flex items-center gap-1.5">
+                                <flux:badge size="sm" color="zinc" variant="subtle">
+                                    {{ $shipment->shipmentStatusDisplay() }}
+                                </flux:badge>
+                                @if($shipment->shipment_status === \App\Enums\ShipmentStatus::Booking && (auth()->user()?->hasRole('super_admin') || auth()->user()?->hasRole('Super Manager') || auth()->user()?->staff()?->exists()))
+                                    @if($shipment->booking_agent_id === null)
+                                        <flux:button size="xs" variant="subtle" icon="hand-raised"
+                                            wire:click="claimBooking({{ $shipment->id }})">
+                                            {{ __('Claim') }}
+                                        </flux:button>
+                                    @elseif($shipment->booking_agent_id === auth()->user()?->staff?->id)
+                                        <flux:badge size="sm" color="sky" variant="subtle" icon="check-circle">
+                                            {{ __('You') }}
+                                        </flux:badge>
+                                        <flux:button size="xs" variant="ghost" icon="x-mark"
+                                            wire:click="$set('pendingReleaseShipmentId', {{ $shipment->id }}); $set('showReleaseBookingModal', true)" />
+                                    @else
+                                        <flux:badge size="sm" color="rose" variant="subtle" icon="lock-closed">
+                                            {{ $shipment->bookingAgent?->user?->name ?? __('Agent') }}
+                                        </flux:badge>
+                                    @endif
+                                @endif
+                            </div>
                         </flux:table.cell>
                         <flux:table.cell>
                             <flux:badge size="sm" color="amber" variant="subtle">
@@ -336,4 +410,26 @@ new #[Title('Shipments')] class extends Component {
             </div>
         </flux:modal>
     @endif
+    {{-- Release Booking Confirm Modal --}}
+    <flux:modal name="release-booking" wire:model="showReleaseBookingModal" variant="filled" class="md:w-[400px]">
+        <div class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('Release Booking') }}</flux:heading>
+                <flux:subheading>
+                    {{ __('Are you sure you want to release this booking? It will become available for other agents to claim.') }}
+                </flux:subheading>
+            </div>
+
+            <div class="flex gap-2">
+                <flux:spacer />
+                <flux:button variant="ghost" wire:click="$set('showReleaseBookingModal', false)">
+                    {{ __('Cancel') }}
+                </flux:button>
+                <flux:button variant="danger" icon="arrow-path"
+                    wire:click="releaseBooking({{ $pendingReleaseShipmentId }})">
+                    {{ __('Release') }}
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </x-crud.page-shell>

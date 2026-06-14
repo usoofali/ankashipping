@@ -210,4 +210,43 @@ final class Shipment extends Model
     {
         return $this->sealed_at !== null;
     }
+
+    /**
+     * Determine if this booking shipment is locked for the given user.
+     *
+     * Returns false when:
+     * - Shipment is not in Booking status
+     * - User is a super_admin or staff_admin
+     * - User's staff record matches the booking_agent_id
+     *
+     * Returns true when:
+     * - Shipment is unclaimed (booking_agent_id is null)
+     * - Shipment is claimed by a different agent
+     */
+    public function isBookingLockedForUser(?User $user): bool
+    {
+        if ($this->shipment_status !== ShipmentStatus::Booking) {
+            return false;
+        }
+
+        if ($user === null) {
+            return true;
+        }
+
+        if ($user->hasRole(['super_admin', 'staff_admin'])) {
+            return false;
+        }
+
+        $staffId = $user->staff?->id;
+
+        if ($staffId === null) {
+            return true;
+        }
+
+        if ($this->booking_agent_id === null) {
+            return true;
+        }
+
+        return $this->booking_agent_id !== $staffId;
+    }
 }

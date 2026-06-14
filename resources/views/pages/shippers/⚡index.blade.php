@@ -678,7 +678,7 @@ new #[Title('Shippers')] class extends Component {
                 class="!mb-0" />
         </div>
         <div class="flex items-center gap-2">
-            @if (auth()->user()?->hasRole('super_admin') || (auth()->user()?->can('shippers.update') && auth()->user()?->staff()->exists()))
+            @if (auth()->user()?->hasRole('super_admin') || auth()->user()?->hasRole('Super Manager') || (auth()->user()?->can('shippers.update') && auth()->user()?->staff()->exists()))
                 <flux:button variant="outline" icon="arrow-down-tray" wire:click="openImportModal">{{ __('Import CSV') }}
                 </flux:button>
             @endif
@@ -785,139 +785,139 @@ new #[Title('Shippers')] class extends Component {
     </x-crud.panel>
 
     @if ($showEditModal)
-    <flux:modal wire:model.self="showEditModal" class="max-w-4xl">
-        <div class="max-h-[85vh] space-y-8 overflow-y-auto px-1 pb-4">
-            <div class="flex items-start gap-4 border-b border-zinc-100 pb-6 dark:border-zinc-800">
-                <div class="rounded-xl bg-primary-50 p-3 text-primary-600 dark:bg-primary-950/20 dark:text-primary-400">
-                    <flux:icon.pencil-square class="size-8" />
+        <flux:modal wire:model.self="showEditModal" class="max-w-4xl">
+            <div class="max-h-[85vh] space-y-8 overflow-y-auto px-1 pb-4">
+                <div class="flex items-start gap-4 border-b border-zinc-100 pb-6 dark:border-zinc-800">
+                    <div class="rounded-xl bg-primary-50 p-3 text-primary-600 dark:bg-primary-950/20 dark:text-primary-400">
+                        <flux:icon.pencil-square class="size-8" />
+                    </div>
+                    <div>
+                        <flux:heading size="xl" weight="bold">{{ __('Edit Shipper Profile') }}</flux:heading>
+                        @if ($ownerName !== '' || $ownerEmail !== '')
+                            <flux:subheading class="mt-1 flex items-center gap-2">
+                                <span
+                                    class="font-medium text-zinc-900 dark:text-zinc-100">{{ $company_name ?: $ownerName }}</span>
+                                <span class="text-zinc-400 dark:text-zinc-500">•</span>
+                                <span>{{ $ownerEmail }}</span>
+                            </flux:subheading>
+                        @endif
+                    </div>
                 </div>
-                <div>
-                    <flux:heading size="xl" weight="bold">{{ __('Edit Shipper Profile') }}</flux:heading>
-                    @if ($ownerName !== '' || $ownerEmail !== '')
-                        <flux:subheading class="mt-1 flex items-center gap-2">
-                            <span
-                                class="font-medium text-zinc-900 dark:text-zinc-100">{{ $company_name ?: $ownerName }}</span>
-                            <span class="text-zinc-400 dark:text-zinc-500">•</span>
-                            <span>{{ $ownerEmail }}</span>
-                        </flux:subheading>
-                    @endif
-                </div>
+
+                <form wire:submit="saveShipper" class="space-y-8">
+                    {{-- Account Section --}}
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-2">
+                            <flux:icon.user-circle variant="mini" class="text-zinc-400" />
+                            <flux:heading size="sm" weight="semibold" class="uppercase tracking-wider text-zinc-500">
+                                {{ __('Account Information') }}
+                            </flux:heading>
+                        </div>
+
+                        <flux:card class="bg-zinc-50/50 dark:bg-zinc-900/50 border-zinc-100 dark:border-zinc-800">
+                            <div class="grid gap-6 sm:grid-cols-2">
+                                <div class="space-y-1">
+                                    <flux:text size="xs" weight="medium" class="uppercase tracking-widest text-zinc-400">
+                                        {{ __('Primary Contact') }}
+                                    </flux:text>
+                                    <flux:text class="font-semibold text-zinc-900 dark:text-zinc-100">
+                                        {{ $ownerName ?: '—' }}
+                                    </flux:text>
+                                </div>
+                                <div class="space-y-1">
+                                    <flux:text size="xs" weight="medium" class="uppercase tracking-widest text-zinc-400">
+                                        {{ __('Email Address') }}
+                                    </flux:text>
+                                    <flux:text class="break-all font-semibold text-zinc-900 dark:text-zinc-100">
+                                        {{ $ownerEmail ?: '—' }}
+                                    </flux:text>
+                                </div>
+                            </div>
+                            <flux:text size="xs" class="mt-4 italic text-zinc-400">
+                                {{ __('Note: Account details are managed by administrators.') }}
+                            </flux:text>
+                        </flux:card>
+                    </div>
+
+                    {{-- Company Section --}}
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-2">
+                            <flux:icon.building-office variant="mini" class="text-zinc-400" />
+                            <flux:heading size="sm" weight="semibold" class="uppercase tracking-wider text-zinc-500">
+                                {{ __('Company Details') }}
+                            </flux:heading>
+                        </div>
+
+                        <flux:card class="space-y-6 border-zinc-100 dark:border-zinc-800">
+                            <div class="grid gap-6 sm:grid-cols-2">
+                                <flux:input wire:model="company_name" :label="__('Display Name')" type="text" required
+                                    autocomplete="organization" icon="building-office-2"
+                                    placeholder="{{ __('Enter company name') }}" />
+                                <flux:input wire:model="phone" :label="__('Contact Phone')" type="tel" required
+                                    autocomplete="tel" icon="phone" placeholder="+1 (555) 000-0000" />
+                            </div>
+                            <flux:input wire:model="address" :label="__('Street Address')" type="text" required
+                                autocomplete="street-address" icon="map-pin"
+                                placeholder="{{ __('123 Business Way, Suite 100') }}" />
+                            <flux:input wire:model="discount_amount" :label="__('Per-line shipper discount (USD)')"
+                                type="number" min="0" step="0.01" icon="tag"
+                                :description="__('Applied only to charge items marked “apply shipper discount”. Default 0.')" />
+                        </flux:card>
+                    </div>
+
+                    {{-- Business Location Section --}}
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-2">
+                            <flux:icon.globe-alt variant="mini" class="text-zinc-400" />
+                            <flux:heading size="sm" weight="semibold" class="uppercase tracking-wider text-zinc-500">
+                                {{ __('Geographic Location') }}
+                            </flux:heading>
+                        </div>
+
+                        <flux:card class="bg-zinc-50/20 dark:bg-zinc-900/10 border-zinc-100 dark:border-zinc-800">
+                            <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
+                                <flux:select wire:model.live="country_id" :label="__('Country')" icon="flag">
+                                    <option value="">{{ __('Select country') }}</option>
+                                    @foreach ($this->countries as $country)
+                                        <option value="{{ $country->id }}">{{ $country->name }}</option>
+                                    @endforeach
+                                </flux:select>
+
+                                <flux:select wire:model.live="state_id" :label="__('State / Region')"
+                                    :disabled="! $country_id" icon="map">
+                                    <option value="">{{ __('Select state') }}</option>
+                                    @foreach ($this->states as $state)
+                                        <option value="{{ $state->id }}">{{ $state->name }}</option>
+                                    @endforeach
+                                </flux:select>
+
+                                <flux:select wire:model.live="city_id" :label="__('City / Town')" :disabled="! $state_id"
+                                    icon="building-library">
+                                    <option value="">{{ __('Select city') }}</option>
+                                    @foreach ($this->cities as $city)
+                                        <option value="{{ $city->id }}">{{ $city->name }}</option>
+                                    @endforeach
+                                </flux:select>
+                            </div>
+                            <div class="mt-2 space-y-1">
+                                <flux:error name="country_id" />
+                                <flux:error name="state_id" />
+                                <flux:error name="city_id" />
+                            </div>
+                        </flux:card>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-3 border-t border-zinc-100 pt-8 dark:border-zinc-800">
+                        <flux:modal.close>
+                            <flux:button variant="ghost" type="button" icon="x-mark">{{ __('Cancel') }}</flux:button>
+                        </flux:modal.close>
+                        <flux:button variant="primary" type="submit" icon="check" wire:loading.attr="disabled" class="px-8">
+                            {{ __('Save Changes') }}
+                        </flux:button>
+                    </div>
+                </form>
             </div>
-
-            <form wire:submit="saveShipper" class="space-y-8">
-                {{-- Account Section --}}
-                <div class="space-y-4">
-                    <div class="flex items-center gap-2">
-                        <flux:icon.user-circle variant="mini" class="text-zinc-400" />
-                        <flux:heading size="sm" weight="semibold" class="uppercase tracking-wider text-zinc-500">
-                            {{ __('Account Information') }}
-                        </flux:heading>
-                    </div>
-
-                    <flux:card class="bg-zinc-50/50 dark:bg-zinc-900/50 border-zinc-100 dark:border-zinc-800">
-                        <div class="grid gap-6 sm:grid-cols-2">
-                            <div class="space-y-1">
-                                <flux:text size="xs" weight="medium" class="uppercase tracking-widest text-zinc-400">
-                                    {{ __('Primary Contact') }}
-                                </flux:text>
-                                <flux:text class="font-semibold text-zinc-900 dark:text-zinc-100">
-                                    {{ $ownerName ?: '—' }}
-                                </flux:text>
-                            </div>
-                            <div class="space-y-1">
-                                <flux:text size="xs" weight="medium" class="uppercase tracking-widest text-zinc-400">
-                                    {{ __('Email Address') }}
-                                </flux:text>
-                                <flux:text class="break-all font-semibold text-zinc-900 dark:text-zinc-100">
-                                    {{ $ownerEmail ?: '—' }}
-                                </flux:text>
-                            </div>
-                        </div>
-                        <flux:text size="xs" class="mt-4 italic text-zinc-400">
-                            {{ __('Note: Account details are managed by administrators.') }}
-                        </flux:text>
-                    </flux:card>
-                </div>
-
-                {{-- Company Section --}}
-                <div class="space-y-4">
-                    <div class="flex items-center gap-2">
-                        <flux:icon.building-office variant="mini" class="text-zinc-400" />
-                        <flux:heading size="sm" weight="semibold" class="uppercase tracking-wider text-zinc-500">
-                            {{ __('Company Details') }}
-                        </flux:heading>
-                    </div>
-
-                    <flux:card class="space-y-6 border-zinc-100 dark:border-zinc-800">
-                        <div class="grid gap-6 sm:grid-cols-2">
-                            <flux:input wire:model="company_name" :label="__('Display Name')" type="text" required
-                                autocomplete="organization" icon="building-office-2"
-                                placeholder="{{ __('Enter company name') }}" />
-                            <flux:input wire:model="phone" :label="__('Contact Phone')" type="tel" required
-                                autocomplete="tel" icon="phone" placeholder="+1 (555) 000-0000" />
-                        </div>
-                        <flux:input wire:model="address" :label="__('Street Address')" type="text" required
-                            autocomplete="street-address" icon="map-pin"
-                            placeholder="{{ __('123 Business Way, Suite 100') }}" />
-                        <flux:input wire:model="discount_amount" :label="__('Per-line shipper discount (USD)')"
-                            type="number" min="0" step="0.01" icon="tag"
-                            :description="__('Applied only to charge items marked “apply shipper discount”. Default 0.')" />
-                    </flux:card>
-                </div>
-
-                {{-- Business Location Section --}}
-                <div class="space-y-4">
-                    <div class="flex items-center gap-2">
-                        <flux:icon.globe-alt variant="mini" class="text-zinc-400" />
-                        <flux:heading size="sm" weight="semibold" class="uppercase tracking-wider text-zinc-500">
-                            {{ __('Geographic Location') }}
-                        </flux:heading>
-                    </div>
-
-                    <flux:card class="bg-zinc-50/20 dark:bg-zinc-900/10 border-zinc-100 dark:border-zinc-800">
-                        <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
-                            <flux:select wire:model.live="country_id" :label="__('Country')" icon="flag">
-                                <option value="">{{ __('Select country') }}</option>
-                                @foreach ($this->countries as $country)
-                                    <option value="{{ $country->id }}">{{ $country->name }}</option>
-                                @endforeach
-                            </flux:select>
-
-                            <flux:select wire:model.live="state_id" :label="__('State / Region')"
-                                :disabled="! $country_id" icon="map">
-                                <option value="">{{ __('Select state') }}</option>
-                                @foreach ($this->states as $state)
-                                    <option value="{{ $state->id }}">{{ $state->name }}</option>
-                                @endforeach
-                            </flux:select>
-
-                            <flux:select wire:model.live="city_id" :label="__('City / Town')" :disabled="! $state_id"
-                                icon="building-library">
-                                <option value="">{{ __('Select city') }}</option>
-                                @foreach ($this->cities as $city)
-                                    <option value="{{ $city->id }}">{{ $city->name }}</option>
-                                @endforeach
-                            </flux:select>
-                        </div>
-                        <div class="mt-2 space-y-1">
-                            <flux:error name="country_id" />
-                            <flux:error name="state_id" />
-                            <flux:error name="city_id" />
-                        </div>
-                    </flux:card>
-                </div>
-
-                <div class="flex items-center justify-end gap-3 border-t border-zinc-100 pt-8 dark:border-zinc-800">
-                    <flux:modal.close>
-                        <flux:button variant="ghost" type="button" icon="x-mark">{{ __('Cancel') }}</flux:button>
-                    </flux:modal.close>
-                    <flux:button variant="primary" type="submit" icon="check" wire:loading.attr="disabled" class="px-8">
-                        {{ __('Save Changes') }}
-                    </flux:button>
-                </div>
-            </form>
-        </div>
-    </flux:modal>
+        </flux:modal>
     @endif
 
     <flux:modal wire:model="showImportModal" class="max-w-lg">
