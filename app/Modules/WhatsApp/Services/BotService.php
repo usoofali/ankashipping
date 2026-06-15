@@ -72,6 +72,8 @@ class BotService
         }
 
         if ($text === '2' && $conversation->status === 'pending_flush') {
+            // Mark all pending messages as skipped so they don't re-surface on next contact.
+            $conversation->messages()->where('status', 'pending')->update(['status' => 'skipped']);
             $conversation->update(['status' => 'bot']);
             $this->sendGreeting($conversation);
 
@@ -180,7 +182,7 @@ Thank you!";
             return;
         }
 
-        $message = '*Welcome to ANKA Shipping & Logistics* 🚢
+        $message = '*Welcome to Anka Shipping & Logistics* 🚢
 
 Please choose an option:
 
@@ -314,7 +316,8 @@ Please choose an option:
         }
 
         $conversation->update(['status' => 'bot']);
-        $this->sendGreeting($conversation);
+        // Do NOT send the greeting here — the customer has just received their updates.
+        // They can type anything or 'Menu' to get back to the main menu.
     }
 
     protected function handleRoutingDirective(WhatsAppConversation $conversation, string $tag): void

@@ -137,11 +137,16 @@ class ProcessIncomingMessage implements ShouldQueue
         $router->route($conversation, $message);
 
         // 6. Update Window and Flush Pending Notifications
-        $this->flushPendingMessages($conversation, $waService);
+        $flushed = $this->flushPendingMessages($conversation, $waService);
 
         $conversation->update(['last_message_at' => now()]);
 
         // 7. Trigger Bot Logic (Phase 3)
+        // Skip if we just issued a pending_flush prompt — the customer must reply first.
+        if ($flushed) {
+            return;
+        }
+
         app(BotService::class)->handle($conversation, $messageData);
     }
 
@@ -164,15 +169,21 @@ class ProcessIncomingMessage implements ShouldQueue
         }
     }
 
-    protected function flushPendingMessages(WhatsAppConversation $conversation, WhatsAppService $waService): void
+    protected function flushPendingMessages(WhatsAppConversation $conversation, WhatsAppService $waService): bool
     {
+        // Only send the prompt when the conversation is NOT already waiting for a flush reply.
+        // If it is already pending_flush it means the customer hasn't replied yet — don't re-prompt.
+        if ($conversation->status === 'pending_flush') {
+            return false;
+        }
+
         $pendingMessages = $conversation->messages()
             ->where('status', 'pending')
             ->orderBy('created_at', 'asc')
             ->get();
 
         if ($pendingMessages->isEmpty()) {
-            return;
+            return false;
         }
 
         // Apply Deduplication Logic (Latest Status Only per Entity)
@@ -186,9 +197,6 @@ class ProcessIncomingMessage implements ShouldQueue
             return $group->last(); // Keep only the latest for each entity
         });
 
-        // Send Interactive Prompt if there are multiple, or just send them if few?
-        // User agreed to: "Interactive Prompt Phase: 'You have X missed updates. Reply 1 to read them.'"
-
         $count = $deduplicated->count();
         $waService->sendMessage(
             $conversation->phone_number,
@@ -196,8 +204,7 @@ class ProcessIncomingMessage implements ShouldQueue
         );
 
         $conversation->update(['status' => 'pending_flush']);
-        // This reply will be handled by the BotService in Phase 3.
-        // For now, we'll mark the deduplicated messages as 'ready_to_flush' or similar,
-        // or just leave them as pending and have the bot handle them.
+
+        return true;
     }
 }

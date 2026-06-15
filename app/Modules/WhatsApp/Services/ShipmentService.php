@@ -51,9 +51,9 @@ class ShipmentService
 
         $message = "🚗 *Shipment Status*
 
-*Reference:* {$shipment->reference_no}
-*Status:* {$status}
-*Mode:* {$mode}";
+            *Reference:* {$shipment->reference_no}
+            *Status:* {$status}
+            *Mode:* {$mode}";
 
         if ($shipment->isContainer() && $shipment->vehicles) {
             $message .= " ({$shipment->vehicles->count()} Vehicles)";
