@@ -85,7 +85,7 @@ new #[Title('Shipments')] class extends Component {
                 $query->where('shipment_status', $this->filterShipmentStatus);
             })
             ->latest()
-            ->paginate(15);
+            ->paginate(25);
     }
 
     public function shippers(): \Illuminate\Support\Collection|\Illuminate\Database\Eloquent\Collection

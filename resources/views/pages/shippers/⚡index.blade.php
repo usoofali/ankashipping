@@ -625,9 +625,9 @@ new #[Title('Shippers')] class extends Component {
             ->latest();
 
         if ($user?->hasRole('super_admin') || $user?->staff()->exists()) {
-            $shippers = $query->paginate(15);
+            $shippers = $query->paginate(25);
         } elseif ($user?->shipper) {
-            $shippers = $query->whereKey($user->shipper->id)->paginate(15);
+            $shippers = $query->whereKey($user->shipper->id)->paginate(25);
         } else {
             abort(403);
         }

@@ -233,7 +233,7 @@ final class Shipment extends Model
             return true;
         }
 
-        if ($user->hasRole(['super_admin', 'staff_admin'])) {
+        if ($user->hasRole(['super_admin', 'Super Manager'])) {
             return false;
         }
 

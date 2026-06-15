@@ -675,7 +675,7 @@
             <flux:button type="button" wire:click="saveLogistics(true)" variant="outline" wire:loading.attr="disabled">
                 {{ __('Save as Draft') }}
             </flux:button>
-            <flux:button type="submit" variant="primary" wire:loading.attr="disabled">{{ __('Save Logistics') }}
+            <flux:button type="submit" variant="primary" wire:loading.attr="disabled">{{ __('Book') }}
             </flux:button>
         </div>
     </form>

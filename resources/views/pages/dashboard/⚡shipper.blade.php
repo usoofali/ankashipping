@@ -63,6 +63,7 @@ new #[Title('My Dashboard')] class extends Component
             'loaded' => Shipment::where('shipper_id', $shipperId)->where('shipment_status', ShipmentStatus::Loaded)->count(),
             'paid_invoices' => Invoice::whereHas('shipment', fn ($q) => $q->where('shipper_id', $shipperId)->where('payment_status', PaymentStatus::Paid))->count(),
             'due_invoices' => Invoice::where('status', InvoiceStatus::Completed)
+                ->where('updated_at', '<=', now()->subWeeks(3))
                 ->whereHas('shipment', fn ($q) => $q->where('shipper_id', $shipperId)->where('payment_status', '!=', PaymentStatus::Paid))
                 ->count(),
             'wallet_balance' => auth()->user()->shipper?->wallet?->balance ?? 0,

@@ -82,21 +82,14 @@
                 <flux:sidebar.group :heading="__('WhatsApp')" class="grid" expandable expanded="false">
                     @can('whatsapp.view_inbox')
                         @php
-                            $unreadCount = \App\Modules\WhatsApp\Models\WhatsAppMessage::where('sender_type', 'customer')
-                                ->where('status', '!=', 'read')
-                                ->count();
+        $unreadCount = \App\Modules\WhatsApp\Models\WhatsAppMessage::where('sender_type', 'customer')
+            ->where('status', '!=', 'read')
+            ->count();
                         @endphp
                         <flux:sidebar.item icon="chat-bubble-left-right" icon-class="text-green-500"
-                            :href="route('whatsapp.index')" :current="request()->routeIs('whatsapp.index')" wire:navigate
+                            :href="route('whatsapp.index')" :current="request()->routeIs('whatsapp.index')"
                             :badge="$unreadCount > 0 ? $unreadCount : null">
                             {{ __('Inbox') }}
-                        </flux:sidebar.item>
-                    @endcan
-                    @can('whatsapp.manage_conversations')
-                        <flux:sidebar.item icon="hashtag" icon-class="text-indigo-500"
-                            :href="route('whatsapp.categories.index')" :current="request()->routeIs('whatsapp.categories.*')"
-                            wire:navigate>
-                            {{ __('Categories') }}
                         </flux:sidebar.item>
                     @endcan
                 </flux:sidebar.group>
@@ -184,6 +177,12 @@
                         <flux:sidebar.item icon="ticket" icon-class="text-amber-500" :href="route('charge-items.index')"
                             :current="request()->routeIs('charge-items.*')" wire:navigate>
                             {{ __('Charge Items') }}
+                        </flux:sidebar.item>
+                    @endcan
+                    @can('whatsapp.manage_conversations')
+                        <flux:sidebar.item icon="hashtag" icon-class="text-indigo-500" :href="route('whatsapp.categories.index')"
+                            :current="request()->routeIs('whatsapp.categories.*')" wire:navigate>
+                            {{ __('Categories') }}
                         </flux:sidebar.item>
                     @endcan
                 </flux:sidebar.group>

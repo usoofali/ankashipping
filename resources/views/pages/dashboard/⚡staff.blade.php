@@ -65,6 +65,7 @@ new #[Title('Dashboard')] class extends Component
             'loaded' => Shipment::where('shipment_status', ShipmentStatus::Loaded)->count(),
             'paid_invoices' => Invoice::whereHas('shipment', fn ($q) => $q->where('payment_status', PaymentStatus::Paid))->count(),
             'due_invoices' => Invoice::where('status', InvoiceStatus::Completed)
+                ->where('updated_at', '<=', now()->subWeeks(3))
                 ->whereHas('shipment', fn ($q) => $q->where('payment_status', '!=', PaymentStatus::Paid))
                 ->count(),
             'total_wallet_balance' => Wallet::sum('balance'),
@@ -210,19 +211,20 @@ new #[Title('Dashboard')] class extends Component
         @endcan
 
         @can('whatsapp.view_inbox')
-            <flux:card as="a" href="{{ route('whatsapp.index') }}" wire:navigate
-                class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
-                <div class="flex items-center justify-between">
-                    <flux:icon.chat-bubble-left-right class="size-8 text-green-500" />
-                    <flux:badge color="green" size="sm" variant="subtle">{{ __('WhatsApp') }}</flux:badge>
-                </div>
-                <div>
-                    <flux:heading level="3" size="xl" class="font-bold text-green-600 dark:text-green-400">
-                        {{ number_format($this->stats['unread_whatsapp'] ?? 0) }}
-                    </flux:heading>
-                    <flux:subheading>{{ __('Unread Messages') }}</flux:subheading>
-                </div>
-            </flux:card>
+            <a href="{{ route('whatsapp.index') }}" class="block">
+                <flux:card class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow cursor-pointer">
+                    <div class="flex items-center justify-between">
+                        <flux:icon.chat-bubble-left-right class="size-8 text-green-500" />
+                        <flux:badge color="green" size="sm" variant="subtle">{{ __('WhatsApp') }}</flux:badge>
+                    </div>
+                    <div>
+                        <flux:heading level="3" size="xl" class="font-bold text-green-600 dark:text-green-400">
+                            {{ number_format($this->stats['unread_whatsapp'] ?? 0) }}
+                        </flux:heading>
+                        <flux:subheading>{{ __('Unread Messages') }}</flux:subheading>
+                    </div>
+                </flux:card>
+            </a>
         @endcan
 
         @can('dashboard.view.stats.delivered')
