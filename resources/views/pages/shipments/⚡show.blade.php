@@ -1448,44 +1448,43 @@ new #[Title('Shipment Details')] class extends Component {
             }
         }
 
-        if (!$isDraft && $this->shipment->shipment_status === ShipmentStatus::Booking && $this->workflow()->canTransitionToInland($this->shipment)) {
-            
-            DB::transaction(function () use ($validated, $isTowing, $isDraft): void {
-                
-                $this->shipment->update($validated['logisticsForm']['shipment']);
+        DB::transaction(function () use ($validated, $isTowing, $isDraft): void {
+            $this->shipment->update($validated['logisticsForm']['shipment']);
 
-                foreach ($validated['logisticsForm']['vehicles'] as $vehicleId => $data) {
-                    $vehicle = \App\Models\Vehicle::find($vehicleId);
-                    if ($vehicle) {
-                        $vehicle->update($data);
-                    }
+            foreach ($validated['logisticsForm']['vehicles'] as $vehicleId => $data) {
+                $vehicle = \App\Models\Vehicle::find($vehicleId);
+                if ($vehicle) {
+                    $vehicle->update($data);
                 }
+            }
 
+            // AUTO-TRANSITION: BOOKING -> INLAND (only when booking, not drafting)
+            if (!$isDraft
+                && $this->shipment->shipment_status === ShipmentStatus::Booking
+                && $this->workflow()->canTransitionToInland($this->shipment)
+            ) {
                 $this->shipment->update(['shipment_status' => $isTowing ? ShipmentStatus::Inland : ShipmentStatus::Delivered]);
+
                 ShipmentTracking::query()->create([
                     'shipment_id' => $this->shipment->id,
                     'status' => $isTowing ? ShipmentStatus::Inland : ShipmentStatus::Delivered,
                     'note' => __('Shipment transitioned to INLAND after logistics & booking update.'),
                     'recorded_at' => now(),
                 ]);
+            }
 
-                ActivityLog::query()->create([
-                    'shipment_id' => $this->shipment->id,
-                    'user_id' => Auth::id(),
-                    'action' => $isDraft ? 'logistics_draft_saved' : 'logistics_updated',
-                    'properties' => [
-                        'reference_no' => $this->shipment->reference_no,
-                        'source' => 'shipment_show_logistics_modal',
-                        'transitioned_to_inland' => $this->shipment->shipment_status === ShipmentStatus::Inland,
-                        'is_draft' => $isDraft,
-                    ],
-                ]);
-            });
-
-        } else {
-            $this->notification()->error(__('Booking Failed'), __('Please fill all required logistics information (Vessel, Voyage, ITN, etc.).'));
-            return;
-        }
+            ActivityLog::query()->create([
+                'shipment_id' => $this->shipment->id,
+                'user_id' => Auth::id(),
+                'action' => $isDraft ? 'logistics_draft_saved' : 'logistics_updated',
+                'properties' => [
+                    'reference_no' => $this->shipment->reference_no,
+                    'source' => 'shipment_show_logistics_modal',
+                    'transitioned_to_inland' => $this->shipment->shipment_status === ShipmentStatus::Inland,
+                    'is_draft' => $isDraft,
+                ],
+            ]);
+        });
 
         $this->showLogisticsModal = false;
         $this->notification()->success($isDraft ? __('Draft saved successfully.') : __('Shipment booked successfully.'));
