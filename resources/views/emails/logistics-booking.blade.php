@@ -5,13 +5,21 @@
 </p>
 @endif
 
-# {{ __('Logistics Updated') }}
+# {{ $shipment->booked_without_title ? __('Booked Without Title') : __('Logistics Updated') }}
 
 {{ __('Hello :name!', ['name' => $notifiable->name]) }}
 
+@if($shipment->booked_without_title)
+{{ __('The logistics and booking information for shipment :ref has been completed, but the shipment was booked WITHOUT a Title Document.', [
+    'ref' => $shipment->reference_no,
+]) }}
+
+**{{ __('ACTION REQUIRED: Please provide the Title Document for this shipment as soon as possible.') }}**
+@else
 {{ __('The logistics and booking information for shipment :ref has been updated.', [
     'ref' => $shipment->reference_no,
 ]) }}
+@endif
 
 {{ __('Please find the latest Dock Receipt attached to this email.') }}
 

@@ -69,6 +69,7 @@ final class Shipment extends Model
         'exporter_zipcode',
         'towing',
         'booking_agent_id',
+        'booked_without_title',
     ];
 
     protected function casts(): array
@@ -87,6 +88,7 @@ final class Shipment extends Model
             'departure_date' => 'date',
             'arrival_date' => 'date',
             'towing' => 'boolean',
+            'booked_without_title' => 'boolean',
         ];
     }
 

@@ -74,6 +74,7 @@ new #[Title('Dashboard')] class extends Component
             'total_container' => Shipment::where('shipping_mode', ShippingMode::Container)->count(),
             'booking' => Shipment::where('shipment_status', ShipmentStatus::Booking)->count(),
             'booking_unclaimed' => Shipment::where('shipment_status', ShipmentStatus::Booking)->whereNull('booking_agent_id')->count(),
+            'booked_without_title' => Shipment::where('booked_without_title', true)->count(),
             'unread_whatsapp' => WhatsAppMessage::where('sender_type', 'customer')
                 ->where('status', '!=', 'read')
                 ->count(),
@@ -278,6 +279,20 @@ new #[Title('Dashboard')] class extends Component
                 </div>
             </flux:card>
         @endcan
+
+        <flux:card as="a" href="{{ route('shipments.index') }}" wire:navigate
+            class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between">
+                <flux:icon.document-minus class="size-8 text-rose-500" />
+                <flux:badge color="rose" size="sm" variant="subtle">{{ __('No Title') }}</flux:badge>
+            </div>
+            <div>
+                <flux:heading level="3" size="xl" class="font-bold text-rose-600 dark:text-rose-400">
+                    {{ number_format($this->stats['booked_without_title'] ?? 0) }}
+                </flux:heading>
+                <flux:subheading>{{ __('Booked Without Title') }}</flux:subheading>
+            </div>
+        </flux:card>
 
         @can('dashboard.view.stats.loaded')
             <flux:card as="a" href="{{ route('shipments.index', ['filterShipmentStatus' => 'LOADED']) }}" wire:navigate

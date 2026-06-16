@@ -47,6 +47,15 @@ class ShippingWorkflow
         }
 
         if ($shipment->shipping_mode === ShippingMode::Roro) {
+            if ($shipment->booked_without_title) {
+                return in_array($shipment->shipment_status, [
+                    ShipmentStatus::Booking,
+                    ShipmentStatus::Inland,
+                    ShipmentStatus::Delivered,
+                    ShipmentStatus::Loaded,
+                ], true);
+            }
+
             return $shipment->shipment_status === ShipmentStatus::Dispatched
                 && $vehicle->tracking_status === VehicleStatus::Dispatched;
         }
@@ -261,6 +270,9 @@ class ShippingWorkflow
 
     public function hasLogisticsInfo(Shipment $shipment): bool
     {
+        if($shipment->booked_without_title) {
+            return true;
+        }
         $required = [
             'vessel_name',
             'voyage_no',

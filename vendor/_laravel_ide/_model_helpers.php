@@ -5786,6 +5786,7 @@ namespace App\Models {
      * @property \Illuminate\Support\Carbon|null $seal_closed_at
      * @property \Illuminate\Support\Carbon|null $completed_at
      * @property \Illuminate\Support\Carbon|null $sealed_at
+     * @property boolean $booked_without_title
      * @property \App\Enums\ShipmentStatus $shipment_status
      * @property mixed $capacity
      * @property \App\Enums\ShippingMode $shipping_mode
@@ -5835,6 +5836,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereShippingMode($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereCapacity($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereShipmentStatus($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereBookedWithoutTitle($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereSealedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereCompletedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereSealClosedAt($value)

@@ -321,10 +321,15 @@ new #[Title('Shipments')] class extends Component {
                             @endif
                         </flux:table.cell>
                         <flux:table.cell>
-                            <div class="flex items-center gap-1.5">
+                            <div class="flex items-center gap-1.5 flex-wrap">
                                 <flux:badge size="sm" color="zinc" variant="subtle">
                                     {{ $shipment->shipmentStatusDisplay() }}
                                 </flux:badge>
+                                @if($shipment->booked_without_title)
+                                    <flux:badge size="sm" color="rose" variant="subtle" icon="document-minus">
+                                        {{ __('No Title') }}
+                                    </flux:badge>
+                                @endif
                                 @if($shipment->shipment_status === \App\Enums\ShipmentStatus::Booking && (auth()->user()?->hasRole('super_admin') || auth()->user()?->hasRole('Super Manager') || auth()->user()?->staff()?->exists()))
                                     @if($shipment->booking_agent_id === null)
                                         <flux:button size="xs" variant="subtle" icon="hand-raised"

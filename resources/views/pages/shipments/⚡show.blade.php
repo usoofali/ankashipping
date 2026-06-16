@@ -97,7 +97,7 @@ new #[Title('Shipment Details')] class extends Component {
     public bool $showAttachVehicleDocumentModal = false;
 
     public string $attachVehicleDocumentType = '';
-
+    public bool $attachVehicleBookWithoutTitle = false;
     public string $attachVehicleDocumentNotes = '';
 
     /** @var array<int, \Livewire\Features\SupportFileUploads\TemporaryUploadedFile> */
@@ -1002,7 +1002,10 @@ new #[Title('Shipment Details')] class extends Component {
             }
 
             if ($documentType === ShipmentDocumentType::BillOfLading) {
-                $this->shipment->update(['shipment_status' => \App\Enums\ShipmentStatus::Loaded]);
+                $this->shipment->update([
+                    'shipment_status' => \App\Enums\ShipmentStatus::Loaded,
+                    'booked_without_title' => false,
+                ]);
             }
 
             /** @var ShipmentDocument $document */
@@ -1112,11 +1115,14 @@ new #[Title('Shipment Details')] class extends Component {
         $this->validate([
             'attachVehicleDocumentType' => ['required', 'string', Rule::enum(VehicleDocumentType::class)],
             'attachVehicleDocumentNotes' => ['nullable', 'string', 'max:2000'],
-            'attachVehicleFiles' => ['required', 'array', 'min:1'],
+            'attachVehicleFiles' => [
+                Rule::requiredIf(fn() => !$this->attachVehicleBookWithoutTitle),
+                'array'
+            ],
             'attachVehicleFiles.*' => ['file', 'max:20480'],
             'selectedVehicleId' => ['required', 'integer', 'exists:vehicles,id'],
             'attachVehicleTitleVehicleIs' => [
-                Rule::requiredIf(fn() => $this->attachVehicleDocumentType === VehicleDocumentType::TitleDocument->value),
+                Rule::requiredIf(fn() => $this->attachVehicleDocumentType === VehicleDocumentType::TitleDocument->value && !$this->attachVehicleBookWithoutTitle),
                 'nullable',
                 'string',
                 Rule::enum(VehicleIs::class),
@@ -1156,14 +1162,48 @@ new #[Title('Shipment Details')] class extends Component {
             // No longer checking logistics info here, as we transition to BOOKING status first
         }
 
-        DB::transaction(function () use ($documentType): void {
+        $isBookingWithoutTitle = $this->attachVehicleBookWithoutTitle && $documentType === VehicleDocumentType::TitleDocument;
+
+        DB::transaction(function () use ($documentType, $isBookingWithoutTitle): void {
             $vehicle = \App\Models\Vehicle::query()->findOrFail($this->selectedVehicleId);
 
             abort_unless($vehicle->shipment_id === $this->shipment->id, 403);
 
+            if ($isBookingWithoutTitle) {
+                $this->shipment->update([
+                    'shipment_status' => ShipmentStatus::Booking,
+                    'booked_without_title' => true,
+                ]);
+
+                $this->shipment->vehicles()->update(['tracking_status' => VehicleStatus::Dispatched]);
+
+                ShipmentTracking::query()->create([
+                    'shipment_id' => $this->shipment->id,
+                    'status' => ShipmentStatus::Booking,
+                    'note' => __('Shipment booked without title.'),
+                    'recorded_at' => now(),
+                ]);
+
+                ActivityLog::query()->create([
+                    'shipment_id' => $this->shipment->id,
+                    'user_id' => Auth::id(),
+                    'action' => 'shipment_booked_without_title',
+                    'properties' => [
+                        'reference_no' => $this->shipment->reference_no,
+                        'source' => 'shipment_show',
+                    ],
+                ]);
+
+                return;
+            }
+
             if ($documentType === VehicleDocumentType::TitleDocument) {
                 $vehicle->vehicle_is = VehicleIs::from($this->attachVehicleTitleVehicleIs);
                 $vehicle->save();
+
+                if ($this->shipment->booked_without_title) {
+                    $this->shipment->update(['booked_without_title' => false]);
+                }
             }
 
             /** @var VehicleDocument $document */
@@ -1220,18 +1260,20 @@ new #[Title('Shipment Details')] class extends Component {
             } else {
                 // RoRo Logic
                 if ($documentType === VehicleDocumentType::TitleDocument) {
-                    $this->shipment->update([
-                        'shipment_status' => ShipmentStatus::Booking,
-                    ]);
+                    if ($this->shipment->shipment_status === ShipmentStatus::Dispatched) {
+                        $this->shipment->update([
+                            'shipment_status' => ShipmentStatus::Booking,
+                        ]);
 
-                    $this->shipment->vehicles()->update(['tracking_status' => VehicleStatus::Dispatched]);
+                        $this->shipment->vehicles()->update(['tracking_status' => VehicleStatus::Dispatched]);
 
-                    ShipmentTracking::query()->create([
-                        'shipment_id' => $this->shipment->id,
-                        'status' => ShipmentStatus::Booking,
-                        'note' => $statusNote,
-                        'recorded_at' => now(),
-                    ]);
+                        ShipmentTracking::query()->create([
+                            'shipment_id' => $this->shipment->id,
+                            'status' => ShipmentStatus::Booking,
+                            'note' => $statusNote,
+                            'recorded_at' => now(),
+                        ]);
+                    }
                 }
             }
         });
@@ -1239,9 +1281,14 @@ new #[Title('Shipment Details')] class extends Component {
         $this->reloadShipmentPageData();
 
         $this->showAttachVehicleDocumentModal = false;
-        $this->reset(['attachVehicleDocumentType', 'attachVehicleDocumentNotes', 'attachVehicleFiles']);
+        $this->reset(['attachVehicleDocumentType', 'attachVehicleDocumentNotes', 'attachVehicleFiles', 'attachVehicleBookWithoutTitle']);
         $this->attachVehicleTitleVehicleIs = 'runner';
-        $this->notification()->success(__('Vehicle document(s) attached.'));
+
+        if ($this->attachVehicleBookWithoutTitle) {
+            $this->notification()->success(__('Shipment booked without title.'));
+        } else {
+            $this->notification()->success(__('Vehicle document(s) attached.'));
+        }
     }
 
     public function markContainerFilled(bool $force = false): void
@@ -1388,40 +1435,55 @@ new #[Title('Shipment Details')] class extends Component {
             'logisticsForm.vehicles.*.vehicle_is' => ['nullable', 'string', Rule::enum(\App\Enums\VehicleIs::class)],
         ]);
         $isTowing = $this->shipment?->towing ?? false;
-        DB::transaction(function () use ($validated, $isTowing, $isDraft): void {
-            $this->shipment->update($validated['logisticsForm']['shipment']);
 
-            foreach ($validated['logisticsForm']['vehicles'] as $vehicleId => $data) {
-                $vehicle = \App\Models\Vehicle::find($vehicleId);
-                if ($vehicle) {
-                    $vehicle->update($data);
+        if (!$isDraft) {
+            $tempShipment = clone $this->shipment;
+            $tempShipment->fill($validated['logisticsForm']['shipment']);
+
+            if (!$this->workflow()->hasLogisticsInfo($tempShipment)) {
+                if (!$this->shipment->booked_without_title) {
+                    $this->notification()->error(__('Missing Logistics Info'), __('Please fill all required logistics information (Vessel, Voyage, ITN, etc.).'));
+                    return;
                 }
             }
+        }
 
-            // AUTO-TRANSITION: BOOKING -> INLAND
-            if (!$isDraft && $this->shipment->shipment_status === ShipmentStatus::Booking && $this->workflow()->canTransitionToInland($this->shipment)) {
+        if (!$isDraft && $this->shipment->shipment_status === ShipmentStatus::Booking && $this->workflow()->canTransitionToInland($this->shipment)) {
+            DB::transaction(function () use ($validated, $isTowing, $isDraft): void {
+                $this->shipment->update($validated['logisticsForm']['shipment']);
+
+                foreach ($validated['logisticsForm']['vehicles'] as $vehicleId => $data) {
+                    $vehicle = \App\Models\Vehicle::find($vehicleId);
+                    if ($vehicle) {
+                        $vehicle->update($data);
+                    }
+                }
+
                 $this->shipment->update(['shipment_status' => $isTowing ? ShipmentStatus::Inland : ShipmentStatus::Delivered]);
-
                 ShipmentTracking::query()->create([
                     'shipment_id' => $this->shipment->id,
                     'status' => $isTowing ? ShipmentStatus::Inland : ShipmentStatus::Delivered,
                     'note' => __('Shipment transitioned to INLAND after logistics & booking update.'),
                     'recorded_at' => now(),
                 ]);
-            }
 
-            ActivityLog::query()->create([
-                'shipment_id' => $this->shipment->id,
-                'user_id' => Auth::id(),
-                'action' => $isDraft ? 'logistics_draft_saved' : 'logistics_updated',
-                'properties' => [
-                    'reference_no' => $this->shipment->reference_no,
-                    'source' => 'shipment_show_logistics_modal',
-                    'transitioned_to_inland' => $this->shipment->shipment_status === ShipmentStatus::Inland,
-                    'is_draft' => $isDraft,
-                ],
-            ]);
-        });
+                ActivityLog::query()->create([
+                    'shipment_id' => $this->shipment->id,
+                    'user_id' => Auth::id(),
+                    'action' => $isDraft ? 'logistics_draft_saved' : 'logistics_updated',
+                    'properties' => [
+                        'reference_no' => $this->shipment->reference_no,
+                        'source' => 'shipment_show_logistics_modal',
+                        'transitioned_to_inland' => $this->shipment->shipment_status === ShipmentStatus::Inland,
+                        'is_draft' => $isDraft,
+                    ],
+                ]);
+            });
+
+        } else {
+            $this->notification()->error(__('Booking Failed'), __('Please fill all required logistics information (Vessel, Voyage, ITN, etc.).'));
+            return;
+        }
 
         $this->showLogisticsModal = false;
         $this->notification()->success($isDraft ? __('Draft saved successfully.') : __('Shipment booked successfully.'));
@@ -2012,6 +2074,11 @@ new #[Title('Shipment Details')] class extends Component {
                             <flux:badge color="indigo" variant="subtle" size="sm"
                                 :icon="$shipment->isContainer() ? 'container' : 'car-front'">
                                 {{ $shipment->shipmentStatusDisplay() }}
+                            </flux:badge>
+                        @endif
+                        @if($shipment->booked_without_title)
+                            <flux:badge color="rose" variant="subtle" size="sm" icon="document-minus">
+                                {{ __('No Title') }}
                             </flux:badge>
                         @endif
                         @if($shipment->invoice_status)

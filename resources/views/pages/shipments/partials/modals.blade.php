@@ -160,27 +160,37 @@
             <flux:error name="attachVehicleDocumentType" />
 
             @if($attachVehicleDocumentType === \App\Enums\VehicleDocumentType::TitleDocument->value)
-                <flux:radio.group wire:model="attachVehicleTitleVehicleIs" :label="__('Vehicle condition')" variant="segmented">
-                    @foreach(\App\Enums\VehicleIs::cases() as $v)
-                        <flux:radio :value="$v->value" :label="$v->label()" />
-                    @endforeach
-                </flux:radio.group>
-                <flux:error name="attachVehicleTitleVehicleIs" />
+                @if($shipment->shipping_mode === \App\Enums\ShippingMode::Roro)
+                    <div class="mb-4">
+                        <flux:checkbox wire:model.live="attachVehicleBookWithoutTitle" :label="__('Book without Title (Title to be provided later)')" />
+                    </div>
+                @endif
+
+                @if(!$attachVehicleBookWithoutTitle)
+                    <flux:radio.group wire:model="attachVehicleTitleVehicleIs" :label="__('Vehicle condition')" variant="segmented">
+                        @foreach(\App\Enums\VehicleIs::cases() as $v)
+                            <flux:radio :value="$v->value" :label="$v->label()" />
+                        @endforeach
+                    </flux:radio.group>
+                    <flux:error name="attachVehicleTitleVehicleIs" />
+                @endif
             @endif
 
             <flux:textarea wire:model="attachVehicleDocumentNotes" :label="__('Notes (optional)')" rows="2" />
 
-            <div>
-                <flux:text class="mb-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">{{ __('Files') }}
-                </flux:text>
-                <input type="file" wire:model="attachVehicleFiles" multiple
-                    class="block w-full text-sm text-zinc-600 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-indigo-700 hover:file:bg-indigo-100 dark:text-zinc-400 dark:file:bg-indigo-950 dark:file:text-indigo-300" />
-                <flux:error name="attachVehicleFiles" />
-                <flux:error name="attachVehicleFiles.*" />
-                <div wire:loading wire:target="attachVehicleFiles" class="mt-1 text-xs text-zinc-500">
-                    {{ __('Uploading…') }}
+            @if(!$attachVehicleBookWithoutTitle)
+                <div>
+                    <flux:text class="mb-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">{{ __('Files') }}
+                    </flux:text>
+                    <input type="file" wire:model="attachVehicleFiles" multiple
+                        class="block w-full text-sm text-zinc-600 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-indigo-700 hover:file:bg-indigo-100 dark:text-zinc-400 dark:file:bg-indigo-950 dark:file:text-indigo-300" />
+                    <flux:error name="attachVehicleFiles" />
+                    <flux:error name="attachVehicleFiles.*" />
+                    <div wire:loading wire:target="attachVehicleFiles" class="mt-1 text-xs text-zinc-500">
+                        {{ __('Uploading…') }}
+                    </div>
                 </div>
-            </div>
+            @endif
 
             <div class="flex justify-end gap-2">
                 <flux:modal.close>

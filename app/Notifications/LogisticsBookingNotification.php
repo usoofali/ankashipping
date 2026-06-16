@@ -100,10 +100,10 @@ final class LogisticsBookingNotification extends Notification implements ShouldQ
     public function toArray(object $notifiable): array
     {
         return [
-            'title' => __('Logistics Updated'),
-            'body' => __('Logistics booking information for :ref has been updated.', [
-                'ref' => $this->shipment->reference_no,
-            ]),
+            'title' => $this->shipment->booked_without_title ? __('Booked Without Title') : __('Logistics Updated'),
+            'body' => $this->shipment->booked_without_title
+                ? __('Logistics booking for :ref is completed, but is missing a Title Document.', ['ref' => $this->shipment->reference_no])
+                : __('Logistics booking information for :ref has been updated.', ['ref' => $this->shipment->reference_no]),
             'shipment_id' => $this->shipment->id,
             'reference_no' => $this->shipment->reference_no,
             'url' => route('shipments.show', $this->shipment, absolute: true),
