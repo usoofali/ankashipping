@@ -1172,13 +1172,14 @@ new #[Title('Shipment Details')] class extends Component {
             if ($isBookingWithoutTitle) {
                 $this->shipment->update([
                     'shipment_status' => ShipmentStatus::Booking,
-                    'booked_without_title' => true,
+                    'booked_without_title' => true
                 ]);
 
-                $this->shipment->vehicles()->update(['tracking_status' => VehicleStatus::Dispatched]);
+                $this->shipment->vehicles()->update(['tracking_status' => VehicleStatus::Dispatched, 'vehicle_is' => VehicleIs::from($this->attachVehicleTitleVehicleIs)]);
 
                 ShipmentTracking::query()->create([
                     'shipment_id' => $this->shipment->id,
+                    'vehicle_id' => $vehicle->id,
                     'status' => ShipmentStatus::Booking,
                     'note' => __('Shipment booked without title.'),
                     'recorded_at' => now(),
@@ -1459,7 +1460,8 @@ new #[Title('Shipment Details')] class extends Component {
             }
 
             // AUTO-TRANSITION: BOOKING -> INLAND (only when booking, not drafting)
-            if (!$isDraft
+            if (
+                !$isDraft
                 && $this->shipment->shipment_status === ShipmentStatus::Booking
                 && $this->workflow()->canTransitionToInland($this->shipment)
             ) {

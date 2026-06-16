@@ -162,18 +162,16 @@
             @if($attachVehicleDocumentType === \App\Enums\VehicleDocumentType::TitleDocument->value)
                 @if($shipment->shipping_mode === \App\Enums\ShippingMode::Roro)
                     <div class="mb-4">
-                        <flux:checkbox wire:model.live="attachVehicleBookWithoutTitle" :label="__('Book without Title (Title to be provided later)')" />
+                        <flux:checkbox wire:model.live="attachVehicleBookWithoutTitle"
+                            :label="__('Book without Title (Title to be provided later)')" />
                     </div>
                 @endif
-
-                @if(!$attachVehicleBookWithoutTitle)
-                    <flux:radio.group wire:model="attachVehicleTitleVehicleIs" :label="__('Vehicle condition')" variant="segmented">
-                        @foreach(\App\Enums\VehicleIs::cases() as $v)
-                            <flux:radio :value="$v->value" :label="$v->label()" />
-                        @endforeach
-                    </flux:radio.group>
-                    <flux:error name="attachVehicleTitleVehicleIs" />
-                @endif
+                <flux:radio.group wire:model="attachVehicleTitleVehicleIs" :label="__('Vehicle condition')" variant="segmented">
+                    @foreach(\App\Enums\VehicleIs::cases() as $v)
+                        <flux:radio :value="$v->value" :label="$v->label()" />
+                    @endforeach
+                </flux:radio.group>
+                <flux:error name="attachVehicleTitleVehicleIs" />
             @endif
 
             <flux:textarea wire:model="attachVehicleDocumentNotes" :label="__('Notes (optional)')" rows="2" />
