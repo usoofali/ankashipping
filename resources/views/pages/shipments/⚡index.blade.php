@@ -341,7 +341,7 @@ new #[Title('Shipments')] class extends Component {
                                             {{ __('You') }}
                                         </flux:badge>
                                         <flux:button size="xs" variant="ghost" icon="x-mark"
-                                            wire:click="$set('pendingReleaseShipmentId', {{ $shipment->id }}); $set('showReleaseBookingModal', true)" />
+                                            wire:click="$wire.pendingReleaseShipmentId = {{ $shipment->id }}; $wire.showReleaseBookingModal = true" />
                                     @else
                                         <flux:badge size="sm" color="rose" variant="subtle" icon="lock-closed">
                                             {{ $shipment->bookingAgent?->user?->name ?? __('Agent') }}

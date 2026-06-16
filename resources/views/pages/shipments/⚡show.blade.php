@@ -1449,7 +1449,9 @@ new #[Title('Shipment Details')] class extends Component {
         }
 
         if (!$isDraft && $this->shipment->shipment_status === ShipmentStatus::Booking && $this->workflow()->canTransitionToInland($this->shipment)) {
+            
             DB::transaction(function () use ($validated, $isTowing, $isDraft): void {
+                
                 $this->shipment->update($validated['logisticsForm']['shipment']);
 
                 foreach ($validated['logisticsForm']['vehicles'] as $vehicleId => $data) {
