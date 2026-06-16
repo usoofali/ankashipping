@@ -1348,7 +1348,7 @@ new #[Title('Shipment Details')] class extends Component {
         $this->showLogisticsModal = true;
     }
 
-    public function saveLogistics(bool $isDraft = false): void
+    public function bookShipment(bool $isDraft = false): void
     {
         if ($this->checkBookingLock()) {
             return;
@@ -2164,8 +2164,7 @@ new #[Title('Shipment Details')] class extends Component {
                 <flux:callout variant="info" icon="check-circle" class="mt-4">
                     <div class="flex items-center justify-between gap-4 w-full">
                         <flux:text>{{ __('You are managing this booking.') }}</flux:text>
-                        <flux:button variant="ghost" size="sm" icon="x-mark"
-                            wire:click="$set('showReleaseBookingModal', true)">
+                        <flux:button variant="ghost" size="sm" icon="x-mark" wire:click="$set('showReleaseBookingModal', true)">
                             {{ __('Release') }}
                         </flux:button>
                     </div>
@@ -2174,7 +2173,8 @@ new #[Title('Shipment Details')] class extends Component {
                 {{-- Claimed by another agent --}}
                 <flux:callout variant="danger" icon="lock-closed" class="mt-4">
                     <div class="flex items-center justify-between gap-4 w-full">
-                        <flux:text>{{ __('This booking is managed by :agent.', ['agent' => $agentName ?? __('Unknown')]) }}</flux:text>
+                        <flux:text>{{ __('This booking is managed by :agent.', ['agent' => $agentName ?? __('Unknown')]) }}
+                        </flux:text>
                         @if($isAdmin)
                             <flux:button variant="danger" size="sm" icon="arrow-path"
                                 wire:click="$set('showReleaseBookingModal', true)">

@@ -558,7 +558,7 @@
 </flux:modal>
 
 <flux:modal wire:model="showLogisticsModal" class="md:max-w-4xl" variant="flyout">
-    <form wire:submit="saveLogistics" class="space-y-8">
+    <form wire:submit="bookShipment" class="space-y-8">
         <div>
             <flux:heading size="lg">{{ __('Logistics & Booking Details') }}</flux:heading>
             <flux:subheading>{{ __('Manage shipment-level identifiers and individual vehicle metrics.') }}
@@ -672,7 +672,7 @@
             <flux:modal.close>
                 <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
             </flux:modal.close>
-            <flux:button type="button" wire:click="saveLogistics(true)" variant="outline" wire:loading.attr="disabled">
+            <flux:button type="button" wire:click="bookShipment(true)" variant="outline" wire:loading.attr="disabled">
                 {{ __('Save as Draft') }}
             </flux:button>
             <flux:button type="submit" variant="primary" wire:loading.attr="disabled">{{ __('Book') }}

@@ -184,13 +184,13 @@ Thank you!";
 
         $message = '*Welcome to Anka Shipping & Logistics* 🚢
 
-Please choose an option:
+            Please choose an option:
 
-1️⃣ Track Shipment
-2️⃣ View Documents
-3️⃣ Create Pre-Alert
-4️⃣ My Wallet
-5️⃣ Speak to Agent';
+            1️⃣ Track Shipment
+            2️⃣ View Documents
+            3️⃣ Create Pre-Alert
+            4️⃣ My Wallet
+            5️⃣ Speak to Agent';
         $this->waService->sendMessage($conversation->phone_number, $message);
     }
 
@@ -316,8 +316,7 @@ Please choose an option:
         }
 
         $conversation->update(['status' => 'bot']);
-        // Do NOT send the greeting here — the customer has just received their updates.
-        // They can type anything or 'Menu' to get back to the main menu.
+        $this->sendGreeting($conversation);
     }
 
     protected function handleRoutingDirective(WhatsAppConversation $conversation, string $tag): void
