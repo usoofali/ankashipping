@@ -22,8 +22,7 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Spatie\Permission\Models\Role;
 
-new #[Title('Dashboard')] class extends Component
-{
+new #[Title('Dashboard')] class extends Component {
     use WithPagination;
 
     public string $search = '';
@@ -63,10 +62,10 @@ new #[Title('Dashboard')] class extends Component
             'delivered' => Shipment::whereIn('shipment_status', $deliveredStatuses)->count(),
             'undelivered' => Shipment::whereIn('shipment_status', $undeliveredStatuses)->count(),
             'loaded' => Shipment::where('shipment_status', ShipmentStatus::Loaded)->count(),
-            'paid_invoices' => Invoice::whereHas('shipment', fn ($q) => $q->where('payment_status', PaymentStatus::Paid))->count(),
+            'paid_invoices' => Invoice::whereHas('shipment', fn($q) => $q->where('payment_status', PaymentStatus::Paid))->count(),
             'due_invoices' => Invoice::where('status', InvoiceStatus::Completed)
                 ->where('updated_at', '<=', now()->subWeeks(3))
-                ->whereHas('shipment', fn ($q) => $q->where('payment_status', '!=', PaymentStatus::Paid))
+                ->whereHas('shipment', fn($q) => $q->where('payment_status', '!=', PaymentStatus::Paid))
                 ->count(),
             'total_wallet_balance' => Wallet::sum('balance'),
             'topup_requests' => WalletTopUp::count(),
@@ -84,7 +83,7 @@ new #[Title('Dashboard')] class extends Component
     #[Computed]
     public function userSummary(): Collection
     {
-        return Role::withCount('users')->get()->map(fn ($role) => [
+        return Role::withCount('users')->get()->map(fn($role) => [
             'name' => str($role->name)->replace('_', ' ')->title(),
             'count' => $role->users_count,
         ]);
@@ -97,7 +96,7 @@ new #[Title('Dashboard')] class extends Component
             ->with(['shipper.user', 'vehicles.driver', 'invoice', 'originPort.state', 'originPort.country'])
             ->when($this->search !== '', function ($query): void {
                 $query->where(function ($searchQuery): void {
-                    $term = '%'.trim($this->search).'%';
+                    $term = '%' . trim($this->search) . '%';
                     $searchQuery->where('reference_no', 'like', $term)
                         ->orWhereHas('vehicles', function ($vehicleQuery) use ($term): void {
                             $vehicleQuery->where('make', 'like', $term)
@@ -143,7 +142,7 @@ new #[Title('Dashboard')] class extends Component
             ->whereNotNull('created_at')
             ->latest('created_at')
             ->get(['created_at'])
-            ->map(fn (Shipment $shipment): ?string => $shipment->created_at?->format('Y'))
+            ->map(fn(Shipment $shipment): ?string => $shipment->created_at?->format('Y'))
             ->filter()
             ->unique()
             ->values();
@@ -279,20 +278,21 @@ new #[Title('Dashboard')] class extends Component
                 </div>
             </flux:card>
         @endcan
-
-        <flux:card as="a" href="{{ route('shipments.index') }}" wire:navigate
-            class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
-            <div class="flex items-center justify-between">
-                <flux:icon.document-minus class="size-8 text-rose-500" />
-                <flux:badge color="rose" size="sm" variant="subtle">{{ __('No Title') }}</flux:badge>
-            </div>
-            <div>
-                <flux:heading level="3" size="xl" class="font-bold text-rose-600 dark:text-rose-400">
-                    {{ number_format($this->stats['booked_without_title'] ?? 0) }}
-                </flux:heading>
-                <flux:subheading>{{ __('Booked Without Title') }}</flux:subheading>
-            </div>
-        </flux:card>
+        @can('dashboard.view.stats.booking')
+            <flux:card as="a" href="{{ route('shipments.index') }}" wire:navigate
+                class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between">
+                    <flux:icon.document-minus class="size-8 text-rose-500" />
+                    <flux:badge color="rose" size="sm" variant="subtle">{{ __('No Title') }}</flux:badge>
+                </div>
+                <div>
+                    <flux:heading level="3" size="xl" class="font-bold text-rose-600 dark:text-rose-400">
+                        {{ number_format($this->stats['booked_without_title'] ?? 0) }}
+                    </flux:heading>
+                    <flux:subheading>{{ __('Booked Without Title') }}</flux:subheading>
+                </div>
+            </flux:card>
+        @endcan
 
         @can('dashboard.view.stats.loaded')
             <flux:card as="a" href="{{ route('shipments.index', ['filterShipmentStatus' => 'LOADED']) }}" wire:navigate
