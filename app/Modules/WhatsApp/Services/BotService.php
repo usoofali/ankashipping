@@ -283,6 +283,7 @@ Thank you!";
             case 'staff_awaiting_other_scope':
             case 'staff_awaiting_vehicle_condition':
             case 'staff_awaiting_document_media':
+            case 'staff_awaiting_bulk_bl_pdf':
                 $this->staffService->handleStep($conversation, $state, $text, $mediaId);
                 break;
         }

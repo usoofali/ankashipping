@@ -92,7 +92,8 @@ class StaffOperationsService
     {
         $message = "🛠 *Operational Directives*\n\nYou can perform actions by typing a hashtag followed by the reference:\n\n".
             "📄 *Documents:*\n".
-            "• `#bl [REF]` - Bill of Lading\n".
+            "• `#bl [REF]` - Bill of Lading (single shipment)\n".
+            "• `#bl batch` - Auto-process multi-page BOL (extracts VINs automatically)\n".
             "• `#title [REF]` - Title Documents\n".
             "• `#dock [REF]` - Stamped Dock Receipt\n".
             "• `#photos [REF]` - Vehicle Photos/Videos\n".
@@ -139,6 +140,13 @@ class StaffOperationsService
     protected function handleDocumentDirective(WhatsAppConversation $conversation, string $tag, string $content): void
     {
         $ref = strtoupper($content);
+
+        if ($tag === 'bl' && ($ref === '' || $ref === 'BATCH')) {
+            $this->startBulkBlFlow($conversation);
+
+            return;
+        }
+
         if (empty($ref)) {
             $this->waService->sendMessage($conversation->phone_number, "❌ Please provide a Reference or VIN. (Example: `#{$tag} ANK0001`)");
 
@@ -541,6 +549,76 @@ class StaffOperationsService
 
             return;
         }
+
+        if ($state->current_step === 'staff_awaiting_bulk_bl_pdf') {
+            $this->handleBulkBlUpload($conversation, $state, $mediaId);
+
+            return;
+        }
+    }
+
+    protected function startBulkBlFlow(WhatsAppConversation $conversation): void
+    {
+        $user = $conversation->contact?->user;
+        if (! $user?->can('workflow.attach_bl')) {
+            $this->waService->sendMessage($conversation->phone_number, '❌ Access Denied: You do not have permission to attach Bill of Lading.');
+
+            return;
+        }
+
+        $conversation->menuState()->updateOrCreate([], [
+            'current_step' => 'staff_awaiting_bulk_bl_pdf',
+            'data_payload' => [],
+        ]);
+
+        $this->waService->sendMessage(
+            $conversation->phone_number,
+            "📄 *Batch Bill of Lading Processing*\n\nPlease upload the multi-page BOL PDF now.\n\nThe system will automatically:\n• Split the document by page\n• Extract each VIN\n• Attach each page to the correct shipment\n• Update status to LOADED\n\n_Only shipments in DELIVERED status will be processed._\n\n_(Type 'Menu' to cancel)_"
+        );
+    }
+
+    protected function handleBulkBlUpload(WhatsAppConversation $conversation, WhatsAppMenuState $state, ?string $mediaId): void
+    {
+        if (! $mediaId) {
+            $this->waService->sendMessage($conversation->phone_number, '⚠️ Please upload a PDF file.');
+
+            return;
+        }
+
+        $user = $conversation->contact?->user;
+        if (! $user) {
+            $this->waService->sendMessage($conversation->phone_number, '❌ Your account is not linked to a system user.');
+            $state->delete();
+
+            return;
+        }
+
+        $localPath = $this->waService->downloadMedia($mediaId);
+        if (! $localPath) {
+            $this->waService->sendMessage($conversation->phone_number, '❌ Failed to download the PDF. Please try again.');
+
+            return;
+        }
+
+        $this->waService->sendMessage($conversation->phone_number, '⏳ *Processing...* Please wait while I scan the document.');
+
+        try {
+            $bulkBolService = app(BulkBolService::class);
+            $results = $bulkBolService->process($localPath, $conversation, $user);
+            $summary = $bulkBolService->formatSummary($results);
+            $this->waService->sendMessage($conversation->phone_number, $summary);
+        } catch (\Throwable $e) {
+            Log::channel('whatsapp')->error('Bulk BOL processing failed', ['error' => $e->getMessage()]);
+            $this->waService->sendMessage($conversation->phone_number, '❌ An error occurred while processing the document. Please contact support.');
+        } finally {
+            if (Storage::disk('public')->exists($localPath)) {
+                Storage::disk('public')->delete($localPath);
+            } elseif (file_exists($localPath)) {
+                @unlink($localPath);
+            }
+        }
+
+        $state->delete();
     }
 
     protected function handleVehicleSelection(WhatsAppConversation $conversation, WhatsAppMenuState $state, string $text): void
