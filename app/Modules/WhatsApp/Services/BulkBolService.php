@@ -18,6 +18,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use setasign\Fpdi\Fpdi;
+use Smalot\PdfParser\Parser;
 
 class BulkBolService
 {
@@ -36,55 +38,42 @@ class BulkBolService
             'failed' => [],
         ];
 
-        // Ensure pdftotext is available
-        if (! trim((string) shell_exec('which pdftotext 2>/dev/null'))) {
-            throw new \Exception('pdftotext is not installed on the system.');
-        }
-
-        if (! trim((string) shell_exec('which gs 2>/dev/null'))) {
-            throw new \Exception('Ghostscript (gs) is not installed on the system.');
-        }
-
-        // Get total pages by counting form-feed characters (\f) which pdftotext outputs between pages
-        $allText = shell_exec('pdftotext -layout '.escapeshellarg($pdfPath).' - 2>/dev/null');
-        if ($allText === null) {
-            throw new \Exception('Failed to extract text from PDF.');
-        }
-
-        $pagesCount = substr_count($allText, "\f");
-        if ($pagesCount === 0 && strlen(trim($allText)) > 0) {
-            $pagesCount = 1;
-        }
-
-        $results['total_pages'] = $pagesCount;
-
-        $tempDir = storage_path('app/temp/bulk-bol/'.uniqid());
-        File::makeDirectory($tempDir, 0755, true);
-
         try {
-            // Split all pages at once using Ghostscript
-            $gsCmd = sprintf(
-                'gs -sDEVICE=pdfwrite -dNOPAUSE -dBATCH -dSAFER -o %s/page_%%d.pdf %s 2>/dev/null',
-                escapeshellarg($tempDir),
-                escapeshellarg($pdfPath)
-            );
-            shell_exec($gsCmd);
+            $parser = new Parser;
+            $pdf = $parser->parseFile($pdfPath);
+            $pages = $pdf->getPages();
+            $pagesCount = count($pages);
 
-            for ($i = 1; $i <= $pagesCount; $i++) {
-                $pagePdfPath = "{$tempDir}/page_{$i}.pdf";
+            $results['total_pages'] = $pagesCount;
 
-                // Extract text for this specific page
-                $pageText = shell_exec("pdftotext -layout -f {$i} -l {$i} ".escapeshellarg($pdfPath).' - 2>/dev/null');
+            $tempDir = storage_path('app/temp/bulk-bol/'.uniqid());
+            File::makeDirectory($tempDir, 0755, true);
+
+            foreach ($pages as $index => $page) {
+                $pageNum = $index + 1;
+                $pageText = $page->getText();
 
                 $vin = $this->extractVin((string) $pageText);
 
                 if (! $vin) {
-                    $results['no_vin'][] = $i;
+                    $results['no_vin'][] = $pageNum;
 
                     continue;
                 }
 
-                $pageResult = $this->processPage($i, $vin, $pagePdfPath, $user);
+                // If we found a VIN, split this specific page using FPDI
+                $pagePdfPath = "{$tempDir}/page_{$pageNum}.pdf";
+
+                $fpdi = new Fpdi;
+                $pageCountFpdi = $fpdi->setSourceFile($pdfPath);
+                $templateId = $fpdi->importPage($pageNum);
+                $size = $fpdi->getTemplateSize($templateId);
+
+                $fpdi->AddPage($size['orientation'], [$size['width'], $size['height']]);
+                $fpdi->useTemplate($templateId);
+                $fpdi->Output('F', $pagePdfPath);
+
+                $pageResult = $this->processPage($pageNum, $vin, $pagePdfPath, $user);
 
                 if ($pageResult['status'] === 'matched') {
                     $results['matched'][] = $pageResult;
@@ -97,7 +86,9 @@ class BulkBolService
                 }
             }
         } finally {
-            File::deleteDirectory($tempDir);
+            if (isset($tempDir) && File::exists($tempDir)) {
+                File::deleteDirectory($tempDir);
+            }
         }
 
         return $results;
@@ -107,13 +98,15 @@ class BulkBolService
     {
         $lines = explode("\n", $pageText);
         foreach ($lines as $i => $line) {
-            if (str_contains($line, 'CHASSIS NUMBER')) {
+            if (str_contains($line, 'CHASSIS NUMBER') || str_contains($line, 'CHASSISNUMBER')) {
                 // Look ahead for the VIN, skipping the HS Code line
                 for ($j = $i + 1; $j < count($lines); $j++) {
                     $trimmed = trim($lines[$j]);
-                    if ($trimmed !== '' && ! str_starts_with($trimmed, 'HS Code')) {
+                    if ($trimmed !== '' && ! str_starts_with($trimmed, 'HS Code') && ! str_starts_with($trimmed, 'HSCode')) {
                         // VIN should be the first token on the line
                         $token = strtoupper(explode(' ', $trimmed)[0]);
+                        $token = preg_replace('/[^A-Z0-9]/', '', $token); // Clean up hidden chars
+
                         // Basic VIN format validation (17 chars, no I, O, Q)
                         if (preg_match('/^[A-HJ-NPR-Z0-9]{17}$/', $token)) {
                             return $token;
