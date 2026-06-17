@@ -148,14 +148,14 @@ class BulkBolService
                 }
 
                 // Copy file to public storage
-                $fileName = "BOL_{$vin}.pdf";
+                $fileName = "BL_{$vin}.pdf";
                 $targetPath = "{$targetDir}/{$fileName}";
                 File::copy($pagePdfPath, storage_path("app/public/{$targetPath}"));
 
                 // Create document record
                 $document = new ShipmentDocument([
                     'document_type' => ShipmentDocumentType::BillOfLading,
-                    'notes' => 'Attached via WhatsApp bulk BOL batch',
+                    'notes' => 'Attached via WhatsApp bulk BL batch',
                     'is_verified' => true,
                     'verified_at' => now(),
                     'verified_by' => $user->id,
@@ -227,7 +227,7 @@ class BulkBolService
                 'ref' => $shipment->reference_no,
             ];
         } catch (\Throwable $e) {
-            Log::error('Failed to attach bulk BOL page', [
+            Log::error('Failed to attach bulk BL page', [
                 'shipment_id' => $shipment->id,
                 'vin' => $vin,
                 'error' => $e->getMessage(),
@@ -250,7 +250,7 @@ class BulkBolService
         $noVinCount = count($results['no_vin']);
         $failedCount = count($results['failed']);
 
-        $summary = "✅ *BOL Batch Processing Complete*\n\n";
+        $summary = "✅ *BL Batch Processing Complete*\n\n";
         $summary .= "📄 *Pages Processed:* {$results['total_pages']}\n";
         $summary .= "✅ *Matched & Attached:* {$matchedCount}\n";
 

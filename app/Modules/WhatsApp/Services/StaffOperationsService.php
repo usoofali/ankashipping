@@ -94,7 +94,7 @@ class StaffOperationsService
         $message = "🛠 *Operational Directives*\n\nYou can perform actions by typing a hashtag followed by the reference:\n\n".
             "📄 *Documents:*\n".
             "• `#bl [REF]` - Bill of Lading (single shipment)\n".
-            "• `#bl batch` - Auto-process multiple BOL\n".
+            "• `#bl batch` - Auto-process multiple BL\n".
             "• `#title [REF]` - Title Documents\n".
             "• `#dock [REF]` - Stamped Dock Receipt\n".
             "• `#photos [REF]` - Vehicle Photos/Videos\n".
@@ -574,7 +574,7 @@ class StaffOperationsService
 
         $this->waService->sendMessage(
             $conversation->phone_number,
-            "📄 *Batch Bill of Lading Processing*\n\nPlease upload the multi-page BOL PDF now.\n\nThe system will automatically:\n• Split the document by page\n• Extract each VIN\n• Attach each page to the correct shipment\n• Update status to LOADED\n\n_Only shipments in DELIVERED status will be processed._\n\n_(Type 'Menu' to cancel)_"
+            "📄 *Batch Bill of Lading Processing*\n\nPlease upload the multi-page BL PDF now.\n\nThe system will automatically:\n• Split the document by page\n• Extract each VIN\n• Attach each page to the correct shipment\n• Update status to LOADED\n\n_Only shipments in DELIVERED status will be processed._\n\n_(Type 'Menu' to cancel)_"
         );
     }
 
@@ -610,7 +610,7 @@ class StaffOperationsService
             $summary = $bulkBolService->formatSummary($results);
             $this->waService->sendMessage($conversation->phone_number, $summary);
         } catch (\Throwable $e) {
-            Log::channel('whatsapp')->error('Bulk BOL processing failed', ['error' => $e->getMessage()]);
+            Log::channel('whatsapp')->error('Bulk BL processing failed', ['error' => $e->getMessage()]);
             $this->waService->sendMessage($conversation->phone_number, '❌ An error occurred while processing the document. Please contact support.');
         } finally {
             if (Storage::disk('public')->exists($localPath)) {
