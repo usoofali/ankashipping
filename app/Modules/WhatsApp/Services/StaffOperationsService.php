@@ -574,7 +574,7 @@ class StaffOperationsService
 
         $this->waService->sendMessage(
             $conversation->phone_number,
-            "📄 *Batch Bill of Lading Processing*\n\nPlease upload the multi-page BL PDF now.\n\nThe system will automatically:\n• Split the document by page\n• Extract each VIN\n• Attach each page to the correct shipment\n• Update status to LOADED\n\n_Only shipments in DELIVERED status will be processed._\n\n_(Type 'Menu' to cancel)_"
+            "📄 *Batch Bill of Lading Processing*\n\nPlease upload the multi-page BL PDF now.\n\nNote:\n• Only Sallaum Lines\n\n_Only shipments in DELIVERED status will be processed._\n\n_(Type 'Menu' to cancel)_"
         );
     }
 
