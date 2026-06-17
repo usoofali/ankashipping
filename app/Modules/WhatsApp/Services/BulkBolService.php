@@ -37,11 +37,11 @@ class BulkBolService
         ];
 
         // Ensure pdftotext is available
-        if (! trim(shell_exec('which pdftotext 2>/dev/null'))) {
+        if (! trim((string) shell_exec('which pdftotext 2>/dev/null'))) {
             throw new \Exception('pdftotext is not installed on the system.');
         }
 
-        if (! trim(shell_exec('which gs 2>/dev/null'))) {
+        if (! trim((string) shell_exec('which gs 2>/dev/null'))) {
             throw new \Exception('Ghostscript (gs) is not installed on the system.');
         }
 
