@@ -604,8 +604,9 @@ class StaffOperationsService
         $this->waService->sendMessage($conversation->phone_number, '⏳ *Processing...* Please wait while I scan the document.');
 
         try {
+            $absolutePath = Storage::disk('public')->path($localPath);
             $bulkBolService = app(BulkBolService::class);
-            $results = $bulkBolService->process($localPath, $conversation, $user);
+            $results = $bulkBolService->process($absolutePath, $conversation, $user);
             $summary = $bulkBolService->formatSummary($results);
             $this->waService->sendMessage($conversation->phone_number, $summary);
         } catch (\Throwable $e) {
