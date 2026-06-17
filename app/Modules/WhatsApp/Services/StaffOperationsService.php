@@ -31,6 +31,7 @@ use App\ShippingWorkflow\ShippingWorkflow;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Role;
@@ -93,7 +94,7 @@ class StaffOperationsService
         $message = "🛠 *Operational Directives*\n\nYou can perform actions by typing a hashtag followed by the reference:\n\n".
             "📄 *Documents:*\n".
             "• `#bl [REF]` - Bill of Lading (single shipment)\n".
-            "• `#bl batch` - Auto-process multi-page BOL (extracts VINs automatically)\n".
+            "• `#bl batch` - Auto-process multiple BOL\n".
             "• `#title [REF]` - Title Documents\n".
             "• `#dock [REF]` - Stamped Dock Receipt\n".
             "• `#photos [REF]` - Vehicle Photos/Videos\n".

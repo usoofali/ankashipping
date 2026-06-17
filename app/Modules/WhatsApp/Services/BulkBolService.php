@@ -62,18 +62,16 @@ class BulkBolService
         File::makeDirectory($tempDir, 0755, true);
 
         try {
+            // Split all pages at once using Ghostscript
+            $gsCmd = sprintf(
+                'gs -sDEVICE=pdfwrite -dNOPAUSE -dBATCH -dSAFER -o %s/page_%%d.pdf %s 2>/dev/null',
+                escapeshellarg($tempDir),
+                escapeshellarg($pdfPath)
+            );
+            shell_exec($gsCmd);
+
             for ($i = 1; $i <= $pagesCount; $i++) {
                 $pagePdfPath = "{$tempDir}/page_{$i}.pdf";
-
-                // Split the PDF page using Ghostscript
-                $gsCmd = sprintf(
-                    'gs -sDEVICE=pdfwrite -dNOPAUSE -dBATCH -dSAFER -dFirstPage=%d -dLastPage=%d -sOutputFile=%s %s 2>/dev/null',
-                    $i,
-                    $i,
-                    escapeshellarg($pagePdfPath),
-                    escapeshellarg($pdfPath)
-                );
-                shell_exec($gsCmd);
 
                 // Extract text for this specific page
                 $pageText = shell_exec("pdftotext -layout -f {$i} -l {$i} ".escapeshellarg($pdfPath).' - 2>/dev/null');
@@ -241,7 +239,7 @@ class BulkBolService
                 'vin' => $vin,
                 'error' => $e->getMessage(),
             ]);
-            
+
             return [
                 'status' => 'failed',
                 'vin' => $vin,
@@ -274,7 +272,7 @@ class BulkBolService
         if ($noVinCount > 0) {
             $summary .= "🔍 *Pages with No VIN Detected:* {$noVinCount}\n";
         }
-        
+
         if ($failedCount > 0) {
             $summary .= "🚨 *Failed to Process (System Error):* {$failedCount}\n";
         }
@@ -308,7 +306,7 @@ class BulkBolService
         if ($noVinCount > 0) {
             $summary .= '*No VIN Detected on Pages:* '.implode(', ', $results['no_vin'])."\n";
         }
-        
+
         if ($failedCount > 0) {
             $summary .= "*Failed Processing:*\n";
             foreach ($results['failed'] as $failed) {
