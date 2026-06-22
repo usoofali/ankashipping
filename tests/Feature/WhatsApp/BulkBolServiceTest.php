@@ -21,6 +21,19 @@ it('extracts VIN correctly from text', function () {
     expect($vin)->toBe('1HGCR2F3XDA135424');
 });
 
+it('extracts VIN correctly from smushed single-line format', function () {
+    $service = app(BulkBolService::class);
+
+    $method = new ReflectionMethod(BulkBolService::class, 'extractVin');
+    $method->setAccessible(true);
+
+    // This is the format emitted by newer PDF generators where everything is on one line
+    $text = 'Marks & Nos.QuantityPkgs. & GoodsWeight Kg. STW)Measurement CBMCHASSIS NUMBER(S)USED UNPACKED VEHICLE(S)HS Code: 870390010055SWF4JB4GU141664Mercedes-Benz C-class C 300 Model Year:2016';
+    $vin = $method->invoke($service, $text);
+
+    expect($vin)->toBe('55SWF4JB4GU141664');
+});
+
 it('returns null if VIN is missing or invalid format', function () {
     $service = app(BulkBolService::class);
 
@@ -32,6 +45,7 @@ it('returns null if VIN is missing or invalid format', function () {
 
     expect($vin)->toBeNull();
 });
+
 
 it('processes a matched page correctly', function () {
     Notification::fake();
@@ -112,6 +126,7 @@ it('formats summary correctly', function () {
             ['ref' => 'ANK0003', 'vin' => '1HGCR2F3XDA135427', 'error' => 'Disk full'],
         ],
         'no_vin' => [2],
+        'secured' => false,
     ];
 
     $summary = $service->formatSummary($results);
@@ -128,4 +143,25 @@ it('formats summary correctly', function () {
         ->toContain('*No VIN Detected on Pages:* 2')
         ->toContain('*Failed Processing:*')
         ->toContain('ANK0003 (1HGCR2F3XDA135427)');
+});
+
+it('formats summary with secured PDF message', function () {
+    $service = app(BulkBolService::class);
+
+    $results = [
+        'total_pages' => 0,
+        'matched' => [],
+        'unmatched' => [],
+        'wrong_status' => [],
+        'no_vin' => [],
+        'failed' => [],
+        'secured' => true,
+    ];
+
+    $summary = $service->formatSummary($results);
+
+    expect($summary)
+        ->toContain('🔒 *Secured PDF Detected*')
+        ->toContain('password-protected')
+        ->toContain('ilovepdf.com');
 });

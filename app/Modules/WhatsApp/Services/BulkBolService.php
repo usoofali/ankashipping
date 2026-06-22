@@ -36,7 +36,11 @@ class BulkBolService
             'wrong_status' => [],
             'no_vin' => [],
             'failed' => [],
+            'secured' => false,
         ];
+
+        $tempDir = storage_path('app/temp/bulk-bol/'.uniqid());
+        File::makeDirectory($tempDir, 0755, true);
 
         try {
             $parser = new Parser;
@@ -45,9 +49,6 @@ class BulkBolService
             $pagesCount = count($pages);
 
             $results['total_pages'] = $pagesCount;
-
-            $tempDir = storage_path('app/temp/bulk-bol/'.uniqid());
-            File::makeDirectory($tempDir, 0755, true);
 
             foreach ($pages as $index => $page) {
                 $pageNum = $index + 1;
@@ -65,7 +66,7 @@ class BulkBolService
                 $pagePdfPath = "{$tempDir}/page_{$pageNum}.pdf";
 
                 $fpdi = new Fpdi;
-                $pageCountFpdi = $fpdi->setSourceFile($pdfPath);
+                $fpdi->setSourceFile($pdfPath);
                 $templateId = $fpdi->importPage($pageNum);
                 $size = $fpdi->getTemplateSize($templateId);
 
@@ -85,8 +86,16 @@ class BulkBolService
                     $results['failed'][] = $pageResult;
                 }
             }
+        } catch (\Exception $e) {
+            if (str_contains($e->getMessage(), 'Secured pdf file')) {
+                $results['secured'] = true;
+
+                return $results;
+            }
+
+            throw $e;
         } finally {
-            if (isset($tempDir) && File::exists($tempDir)) {
+            if (File::exists($tempDir)) {
                 File::deleteDirectory($tempDir);
             }
         }
@@ -96,6 +105,14 @@ class BulkBolService
 
     protected function extractVin(string $pageText): ?string
     {
+        // Primary: match the VIN immediately after the HS Code number.
+        // This handles both the new "smushed" single-line format and the old spaced format,
+        // since the HS Code always directly precedes the VIN in both cases.
+        if (preg_match('/(?:HS\s*Code\s*:|HSCode:)\s*\d{6,10}\s*([A-HJ-NPR-Z0-9]{17})/i', $pageText, $matches)) {
+            return $matches[1];
+        }
+
+        // Fallback: line-by-line look-ahead for older PDFs that may not have an HS Code
         $lines = explode("\n", $pageText);
         foreach ($lines as $i => $line) {
             if (str_contains($line, 'CHASSIS NUMBER') || str_contains($line, 'CHASSISNUMBER')) {
@@ -244,6 +261,16 @@ class BulkBolService
 
     public function formatSummary(array $results): string
     {
+        if ($results['secured'] ?? false) {
+            return implode("\n", [
+                '🔒 *Secured PDF Detected*',
+                '',
+                'The PDF you uploaded is password-protected or secured against reading by automated tools.',
+                '',
+                'Please ask the shipping line for an *unlocked* version of the BL PDF, or use a free online tool (e.g. https://www.ilovepdf.com/unlock_pdf or https://www.smallpdf.com/unlock-pdf) to remove the password, then re-upload the file.',
+            ]);
+        }
+
         $matchedCount = count($results['matched']);
         $unmatchedCount = count($results['unmatched']);
         $wrongStatusCount = count($results['wrong_status']);
