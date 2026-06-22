@@ -276,7 +276,7 @@ new #[Title('Shipments')] class extends Component {
                 <flux:table.column>{{ __('Ref / VIN / Created') }}</flux:table.column>
                 <flux:table.column>{{ __('Vehicle') }}</flux:table.column>
                 <flux:table.column>{{ __('Shipper') }}</flux:table.column>
-                <flux:table.column>{{ __('Origin Port') }}</flux:table.column>
+                <flux:table.column>{{ __('Origin/Destination Port') }}</flux:table.column>
                 <flux:table.column>{{ __('Invoice Total') }}</flux:table.column>
                 <flux:table.column>{{ __('Payment Status') }}</flux:table.column>
                 <flux:table.column>{{ __('Shipment Status') }}</flux:table.column>
@@ -327,15 +327,30 @@ new #[Title('Shipments')] class extends Component {
                         </flux:table.cell>
                         <flux:table.cell>{{ $shipment->shipper?->user?->name ?? '—' }}</flux:table.cell>
                         <flux:table.cell>
-                            @if($shipment->originPort)
-                                {{ $shipment->originPort->name }}
-                                <span class="text-xs text-zinc-500">
-                                    ({{ $shipment->originPort->state?->code ?? '—' }} -
-                                    {{ $shipment->originPort->country?->iso2 ?? '—' }})
-                                </span>
-                            @else
-                                —
-                            @endif
+                            <div class="flex flex-col">
+                                @if($shipment->originPort)
+                                    <div>
+                                        {{ $shipment->originPort->name }}
+                                        <span class="text-xs text-zinc-500">
+                                            ({{ $shipment->originPort->state?->code ?? '—' }} -
+                                            {{ $shipment->originPort->country?->iso2 ?? '—' }})
+                                        </span>
+                                    </div>
+                                @else
+                                    —
+                                @endif
+                                @if($shipment->destinationPort)
+                                    <div>
+                                        {{ $shipment->destinationPort->name }}
+                                        <span class="text-xs text-zinc-500">
+                                            ({{ $shipment->destinationPort->state?->code ?? '—' }} -
+                                            {{ $shipment->destinationPort->country?->iso2 ?? '—' }})
+                                        </span>
+                                    </div>
+                                @else
+                                    —
+                                @endif
+                            </div>
                         </flux:table.cell>
                         <flux:table.cell class="font-mono">
                             @if(auth()->user()->hasRole('shipper') && $shipment->invoice_status !== \App\Enums\InvoiceStatus::Completed)
