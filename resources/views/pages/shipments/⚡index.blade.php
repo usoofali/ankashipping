@@ -38,9 +38,18 @@ new #[Title('Shipments')] class extends Component {
     #[Url]
     public string $filterShipmentStatus = '';
 
+    #[Url]
+    public string $filterShippingMode = '';
+
+    #[Url]
+    public string $filterInvoiceState = '';
+
+    #[Url]
+    public bool $filterBookedWithoutTitle = false;
+
     public function updated(string $property): void
     {
-        if (in_array($property, ['search', 'filterMonth', 'filterYear', 'filterShipper', 'filterShipmentStatus'], true)) {
+        if (in_array($property, ['search', 'filterMonth', 'filterYear', 'filterShipper', 'filterShipmentStatus', 'filterBookedWithoutTitle', 'filterShippingMode', 'filterInvoiceState'], true)) {
             $this->resetPage();
         }
     }
@@ -82,7 +91,34 @@ new #[Title('Shipments')] class extends Component {
                 $query->where('shipper_id', (int) $this->filterShipper);
             })
             ->when($this->filterShipmentStatus !== '', function ($query): void {
-                $query->where('shipment_status', $this->filterShipmentStatus);
+                if ($this->filterShipmentStatus === 'UNDELIVERED') {
+                    $query->whereIn('shipment_status', [
+                        ShipmentStatus::Open,
+                        ShipmentStatus::Pending,
+                        ShipmentStatus::Dispatched,
+                        ShipmentStatus::Booking,
+                        ShipmentStatus::Inland,
+                    ]);
+                } else {
+                    $query->where('shipment_status', $this->filterShipmentStatus);
+                }
+            })
+            ->when($this->filterShippingMode !== '', function ($query): void {
+                $query->where('shipping_mode', $this->filterShippingMode);
+            })
+            ->when($this->filterInvoiceState === 'paid', function ($query): void {
+                $query->where('payment_status', \App\Enums\PaymentStatus::Paid)
+                    ->has('invoice');
+            })
+            ->when($this->filterInvoiceState === 'due', function ($query): void {
+                $query->where('payment_status', '!=', \App\Enums\PaymentStatus::Paid)
+                    ->whereHas('invoice', function ($q) {
+                        $q->where('status', \App\Enums\InvoiceStatus::Completed)
+                            ->where('updated_at', '<=', now()->subWeeks(3));
+                    });
+            })
+            ->when($this->filterBookedWithoutTitle, function ($query): void {
+                $query->where('booked_without_title', true);
             })
             ->latest()
             ->paginate(25);
@@ -226,6 +262,7 @@ new #[Title('Shipments')] class extends Component {
 
         <flux:select wire:model.live="filterShipmentStatus" label="{{ __('Shipment Status') }}" icon="car-front">
             <flux:select.option value="">{{ __('All Statuses') }}</flux:select.option>
+            <flux:select.option value="UNDELIVERED">{{ __('Undelivered') }}</flux:select.option>
             @foreach(ShipmentStatus::cases() as $status)
                 <flux:select.option value="{{ $status->value }}">{{ $status->name }}</flux:select.option>
             @endforeach

@@ -53,7 +53,7 @@ new #[Title('Dashboard')] class extends Component {
     #[Computed]
     public function stats(): array
     {
-        $deliveredStatuses = [ShipmentStatus::Delivered, ShipmentStatus::Loaded, ShipmentStatus::Completed];
+        $deliveredStatuses = [ShipmentStatus::Delivered];
         $undeliveredStatuses = [ShipmentStatus::Open, ShipmentStatus::Pending, ShipmentStatus::Dispatched, ShipmentStatus::Booking, ShipmentStatus::Inland];
 
         return [
@@ -68,7 +68,7 @@ new #[Title('Dashboard')] class extends Component {
                 ->whereHas('shipment', fn($q) => $q->where('payment_status', '!=', PaymentStatus::Paid))
                 ->count(),
             'total_wallet_balance' => Wallet::sum('balance'),
-            'topup_requests' => WalletTopUp::count(),
+            'topup_requests' => WalletTopUp::where('status', 'pending')->count(),
             'total_roro' => Shipment::where('shipping_mode', ShippingMode::Roro)->count(),
             'total_container' => Shipment::where('shipping_mode', ShippingMode::Container)->count(),
             'booking' => Shipment::where('shipment_status', ShipmentStatus::Booking)->count(),
@@ -171,6 +171,7 @@ new #[Title('Dashboard')] class extends Component {
     public function walletFundings(): LengthAwarePaginator
     {
         return WalletTopUp::query()
+            ->where('status', 'pending')
             ->with(['shipper.user'])
             ->latest()
             ->paginate(10, pageName: 'wallet_fundings_page');
@@ -244,11 +245,11 @@ new #[Title('Dashboard')] class extends Component {
         @endcan
 
         @can('dashboard.view.stats.undelivered')
-            <flux:card as="a" href="{{ route('shipments.index', ['filterShipmentStatus' => 'PENDING']) }}" wire:navigate
+            <flux:card as="a" href="{{ route('shipments.index', ['filterShipmentStatus' => 'UNDELIVERED']) }}" wire:navigate
                 class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
                 <div class="flex items-center justify-between">
                     <flux:icon.clock class="size-8 text-rose-500" />
-                    <flux:badge color="rose" size="sm" variant="subtle">{{ __('Inland') }}</flux:badge>
+                    <flux:badge color="rose" size="sm" variant="subtle">{{ __('Undelivered') }}</flux:badge>
                 </div>
                 <div>
                     <flux:heading level="3" size="xl" class="font-bold text-rose-600 dark:text-rose-400">
@@ -279,7 +280,7 @@ new #[Title('Dashboard')] class extends Component {
             </flux:card>
         @endcan
         @can('dashboard.view.stats.booking')
-            <flux:card as="a" href="{{ route('shipments.index') }}" wire:navigate
+            <flux:card as="a" href="{{ route('shipments.index', ['filterBookedWithoutTitle' => true]) }}" wire:navigate
                 class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
                 <div class="flex items-center justify-between">
                     <flux:icon.document-minus class="size-8 text-rose-500" />
@@ -310,7 +311,7 @@ new #[Title('Dashboard')] class extends Component {
         @endcan
 
         @can('dashboard.view.stats.roro')
-            <flux:card as="a" href="{{ route('shipments.index') }}" wire:navigate
+            <flux:card as="a" href="{{ route('shipments.index', ['filterShippingMode' => ShippingMode::Roro->value]) }}" wire:navigate
                 class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
                 <div class="flex items-center justify-between">
                     <flux:icon.truck class="size-8 text-slate-500" />
@@ -325,7 +326,7 @@ new #[Title('Dashboard')] class extends Component {
         @endcan
 
         @can('dashboard.view.stats.container')
-            <flux:card as="a" href="{{ route('shipments.index') }}" wire:navigate
+            <flux:card as="a" href="{{ route('shipments.index', ['filterShippingMode' => ShippingMode::Container->value]) }}" wire:navigate
                 class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
                 <div class="flex items-center justify-between">
                     <flux:icon.container class="size-8 text-blue-600" />
@@ -340,7 +341,7 @@ new #[Title('Dashboard')] class extends Component {
         @endcan
 
         @can('dashboard.view.stats.paid_invoices')
-            <flux:card as="a" href="{{ route('shipments.index') }}" wire:navigate
+            <flux:card as="a" href="{{ route('shipments.index', ['filterInvoiceState' => 'paid']) }}" wire:navigate
                 class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
                 <div class="flex items-center justify-between">
                     <flux:icon.banknotes class="size-8 text-teal-500" />
@@ -355,7 +356,7 @@ new #[Title('Dashboard')] class extends Component {
         @endcan
 
         @can('dashboard.view.stats.due_invoices')
-            <flux:card as="a" href="{{ route('shipments.index') }}" wire:navigate
+            <flux:card as="a" href="{{ route('shipments.index', ['filterInvoiceState' => 'due']) }}" wire:navigate
                 class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
                 <div class="flex items-center justify-between">
                     <flux:icon.exclamation-circle class="size-8 text-orange-500" />
