@@ -546,6 +546,15 @@
                         </td>
                     </tr>
                 @endforeach
+                @if($shipment->destinationPort->name == 'Cotonou')
+                    <tr>
+                        <td></td>
+                        <td><br /><span class="sub1"> {{ __('IN TRANSIT TO NIGERIA') }}</span></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                @endif
+
             </tbody>
         </table>
 
