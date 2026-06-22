@@ -520,6 +520,9 @@
                             @if(!$shipment->isContainer())
                                 <br /><span class="sub1"> {{ $vehicle->vehicle_is->label() }}</span>
                             @endif
+                            @if($shipment->destinationPort->name == 'Cotonou' && $shipment->shipping_mode->value == 'roro')
+                                <br /><span class="sub1"> {{ __('IN TRANSIT TO NIGERIA') }}</span>
+                            @endif
                         </td>
                         @php
                             $w = (float) $vehicle->weight;
@@ -546,7 +549,7 @@
                         </td>
                     </tr>
                 @endforeach
-                @if($shipment->destinationPort->name == 'Cotonou')
+                @if($shipment->destinationPort->name == 'Cotonou' && $shipment->shipping_mode->value == 'container')
                     <tr>
                         <td></td>
                         <td><br /><span class="sub1"> {{ __('IN TRANSIT TO NIGERIA') }}</span></td>
