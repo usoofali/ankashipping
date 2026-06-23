@@ -267,7 +267,7 @@ class BulkBolService
                 '',
                 'The PDF you uploaded is password-protected or secured against reading by automated tools.',
                 '',
-                'Please use iLovePDF, a free online tool at (https://www.ilovepdf.com/repair-pdf) to remove the password, then re-upload the file.',
+                'Please contact support to remove the password, then re-upload the file.',
             ]);
         }
 
