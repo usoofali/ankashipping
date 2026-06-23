@@ -267,7 +267,7 @@ class BulkBolService
                 '',
                 'The PDF you uploaded is password-protected or secured against reading by automated tools.',
                 '',
-                'Please ask the shipping line for an *unlocked* version of the BL PDF, or use a free online tool (e.g. https://www.ilovepdf.com/unlock_pdf or https://www.smallpdf.com/unlock-pdf) to remove the password, then re-upload the file.',
+                'Please use iLovePDF, a free online tool at (https://www.ilovepdf.com/repair-pdf) to remove the password, then re-upload the file.',
             ]);
         }
 
