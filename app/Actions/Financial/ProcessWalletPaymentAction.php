@@ -95,7 +95,7 @@ class ProcessWalletPaymentAction
 
             // 6. Send Notifications
             $shipperUser = $shipper->user;
-            $staffUsers = User::permission('shipments.pay')->get();
+            $staffUsers = User::permission('shipments.pay')->withoutRole('shipper')->get();
             $allToNotify = collect([$shipperUser])->concat($staffUsers)->filter()->unique('id');
 
             foreach ($allToNotify as $user) {

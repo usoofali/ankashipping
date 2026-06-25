@@ -152,6 +152,13 @@ new #[Title('Shipment Details')] class extends Component {
 
     public function mount(Shipment $shipment): void
     {
+        $user = auth()->user();
+
+        if ($user->hasRole('shipper') && $shipment->shipper_id !== $user->shipper?->id) {
+            $this->redirect(url()->previous(), navigate: true);
+            return;
+        }
+
         $this->shipment = $shipment->load([
             'shipper',
             'shipper.user',
