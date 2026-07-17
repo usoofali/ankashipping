@@ -712,10 +712,7 @@ new #[Title('Shipment Details')] class extends Component {
             ]);
         });
 
-        $recipientIds = collect();
-        if ($this->shipment->shipper?->user_id !== null) {
-            $recipientIds->push($this->shipment->shipper->user_id);
-        }
+        $recipientIds = $this->staffAndAdminNotificationRecipientIds();
 
         $recipients = User::query()->whereIn('id', $recipientIds->unique()->values())->get();
 
@@ -2367,13 +2364,13 @@ new #[Title('Shipment Details')] class extends Component {
 
         @if($shipment->shipment_status === \App\Enums\ShipmentStatus::TelexRequested)
             <flux:callout variant="warning" icon="exclamation-circle" class="mt-4">
-                <div class="flex items-center justify-between gap-4 w-full">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 w-full">
                     <div>
                         <flux:heading size="sm">{{ __('Telex Release Requested — Action Required') }}</flux:heading>
                         <flux:subheading size="xs">{{ __('Shipper has requested a Telex Release for this shipment. Please record the official carrier release text once received via email.') }}</flux:subheading>
                     </div>
                     @if($this->workflow()->canSubmitTelexRelease($shipment, auth()->user()))
-                        <flux:button variant="primary" size="sm" icon="document-text" wire:click="openSubmitTelexModal">
+                        <flux:button variant="primary" size="sm" icon="document-text" wire:click="openSubmitTelexModal" class="w-full sm:w-auto shrink-0">
                             {{ __('Submit Telex Release') }}
                         </flux:button>
                     @endif
@@ -2384,13 +2381,13 @@ new #[Title('Shipment Details')] class extends Component {
         @if(filled($shipment->telex_release_text))
             <flux:callout variant="success" icon="check-badge" class="mt-4">
                 <div class="space-y-3 w-full">
-                    <div class="flex items-center justify-between gap-4 w-full">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 w-full">
                         <div>
                             <flux:heading size="sm">{{ __('Official Telex Release Notice') }}</flux:heading>
                             <flux:subheading size="xs">{{ __('Cargo is released and ready for pickup against proper identification without presentation of Original Bills of Lading.') }} @if($shipment->telex_released_at) • {{ $shipment->telex_released_at->format('M d, Y H:i') }} @endif</flux:subheading>
                         </div>
                         @if($this->workflow()->canSubmitTelexRelease($shipment, auth()->user()))
-                            <flux:button variant="ghost" size="sm" icon="pencil-square" wire:click="openSubmitTelexModal">
+                            <flux:button variant="ghost" size="sm" icon="pencil-square" wire:click="openSubmitTelexModal" class="w-full sm:w-auto shrink-0">
                                 {{ __('Update Text') }}
                             </flux:button>
                         @endif
