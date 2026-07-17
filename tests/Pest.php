@@ -1,5 +1,13 @@
 <?php
 
+// Ensure any cached configuration from `php artisan optimize` or `php artisan config:cache`
+// is cleared before running tests. Otherwise, cached config overrides `phpunit.xml` settings
+// (`DB_CONNECTION=sqlite`, `DB_DATABASE=:memory:`) and can cause `RefreshDatabase` to truncate
+// the local development database.
+if (file_exists(__DIR__.'/../bootstrap/cache/config.php')) {
+    @unlink(__DIR__.'/../bootstrap/cache/config.php');
+}
+
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\ShippingWorkflow;
 
 use App\Enums\InvoiceStatus;
+use App\Enums\PaymentStatus;
 use App\Enums\ShipmentDocumentType;
 use App\Enums\ShipmentStatus;
 use App\Enums\ShippingMode;
@@ -53,6 +54,7 @@ class ShippingWorkflow
                     ShipmentStatus::Inland,
                     ShipmentStatus::Delivered,
                     ShipmentStatus::Loaded,
+                    ShipmentStatus::TelexRequested,
                 ], true);
             }
 
@@ -76,6 +78,7 @@ class ShippingWorkflow
                 ShipmentStatus::Inland,
                 ShipmentStatus::Delivered,
                 ShipmentStatus::Loaded,
+                ShipmentStatus::TelexRequested,
             ], true);
         }
 
@@ -113,6 +116,7 @@ class ShippingWorkflow
             ShipmentStatus::Inland,
             ShipmentStatus::Delivered,
             ShipmentStatus::Loaded,
+            ShipmentStatus::TelexRequested,
         ], true);
     }
 
@@ -125,13 +129,60 @@ class ShippingWorkflow
         return $shipment->shipment_status === ShipmentStatus::Delivered;
     }
 
+    public function canRequestTelex(Shipment $shipment, ?User $user = null): bool
+    {
+        if ($shipment->shipment_status === ShipmentStatus::Cancelled) {
+            return false;
+        }
+
+        if ($shipment->payment_status !== PaymentStatus::Paid) {
+            return false;
+        }
+
+        if (! in_array($shipment->shipment_status, [ShipmentStatus::Loaded, ShipmentStatus::TelexRequested, ShipmentStatus::Completed], true)) {
+            return false;
+        }
+
+        if ($user !== null && $user->hasRole('shipper')) {
+            if (! $user->can('workflow.request_telex')) {
+                return false;
+            }
+
+            if ($shipment->shipper_id !== $user->shipper?->id) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public function canSubmitTelexRelease(Shipment $shipment, ?User $user = null): bool
+    {
+        if ($shipment->shipment_status === ShipmentStatus::Cancelled) {
+            return false;
+        }
+
+        if ($user !== null && ! $user->can('workflow.submit_telex')) {
+            return false;
+        }
+
+        return in_array($shipment->shipment_status, [
+            ShipmentStatus::Loaded,
+            ShipmentStatus::TelexRequested,
+            ShipmentStatus::Completed,
+        ], true);
+    }
+
     public function canCompleteShipment(Shipment $shipment): bool
     {
         if ($shipment->shipment_status === ShipmentStatus::Cancelled) {
             return false;
         }
 
-        return $shipment->shipment_status === ShipmentStatus::Loaded;
+        return in_array($shipment->shipment_status, [
+            ShipmentStatus::Loaded,
+            ShipmentStatus::TelexRequested,
+        ], true);
     }
 
     public function canMarkDelivered(Shipment $shipment): bool
@@ -234,8 +285,8 @@ class ShippingWorkflow
 
     public function canCompleteInvoice(Shipment $shipment, User $user): bool
     {
-        // System-wide guard: shipment must be LOADED even for super_admin
-        if ($shipment->shipment_status !== ShipmentStatus::Loaded) {
+        // System-wide guard: shipment must be LOADED or TELEX_REQUESTED even for super_admin
+        if (! in_array($shipment->shipment_status, [ShipmentStatus::Loaded, ShipmentStatus::TelexRequested], true)) {
             return false;
         }
 
@@ -270,7 +321,7 @@ class ShippingWorkflow
 
     public function hasLogisticsInfo(Shipment $shipment): bool
     {
-        if($shipment->booked_without_title) {
+        if ($shipment->booked_without_title) {
             return true;
         }
         $required = [
@@ -309,6 +360,7 @@ class ShippingWorkflow
             ShipmentStatus::Inland,
             ShipmentStatus::Delivered,
             ShipmentStatus::Loaded,
+            ShipmentStatus::TelexRequested,
             ShipmentStatus::Completed,
         ], true) && $this->hasLogisticsInfo($shipment);
     }

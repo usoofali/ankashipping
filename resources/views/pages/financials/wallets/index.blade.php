@@ -38,12 +38,15 @@ new #[Title('Wallets Management')] class extends Component {
     #[Computed]
     public function wallets()
     {
-        return Wallet::with('shipper')
-            ->when($this->search, function ($query) {
-                $query->whereHas('shipper', function ($q) {
-                    $q->where('company_name', 'like', "%{$this->search}%")
-                        ->orWhere('name', 'like', "%{$this->search}%")
-                        ->orWhere('email', 'like', "%{$this->search}%");
+        return Wallet::with('shipper.user')
+            ->when($this->search !== '', function ($query) {
+                $term = '%'.trim($this->search).'%';
+                $query->whereHas('shipper', function ($q) use ($term) {
+                    $q->where('company_name', 'like', $term)
+                        ->orWhereHas('user', function ($userQuery) use ($term) {
+                            $userQuery->where('name', 'like', $term)
+                                ->orWhere('email', 'like', $term);
+                        });
                 });
             })
             ->orderByDesc('balance')

@@ -8,6 +8,7 @@ enum ShipmentDocumentType: string
 {
     case StampDockReceipt = 'stamped-dock-receipt';
     case BillOfLading = 'bill-of-lading';
+    case TelexRelease = 'telex-release';
     case Other = 'other';
 
     public function label(): string
@@ -15,6 +16,7 @@ enum ShipmentDocumentType: string
         return match ($this) {
             self::StampDockReceipt => __('Stamped dock receipt'),
             self::BillOfLading => __('Bill of lading'),
+            self::TelexRelease => __('Telex release'),
             self::Other => __('Other'),
         };
     }
@@ -35,6 +37,7 @@ enum ShipmentDocumentType: string
         return match ($this) {
             self::StampDockReceipt => ShipmentStatus::Delivered,
             self::BillOfLading => ShipmentStatus::Loaded,
+            self::TelexRelease => ShipmentStatus::Completed,
             default => null,
         };
     }

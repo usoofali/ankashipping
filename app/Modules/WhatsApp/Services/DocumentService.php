@@ -39,7 +39,7 @@ class DocumentService
             ->first();
 
         if (! $shipment) {
-            $vehicle = Vehicle::where('vin', $query)->first();
+            $vehicle = Vehicle::findByVin($query);
             if ($vehicle && $vehicle->shipment_id) {
                 $shipment = Shipment::with(['invoice', 'vehicles.vehicleDocuments.files', 'documents.files'])
                     ->find($vehicle->shipment_id);

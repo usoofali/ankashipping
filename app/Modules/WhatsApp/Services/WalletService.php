@@ -260,7 +260,7 @@ class WalletService
             ->where('shipper_id', $shipper->id)
             ->where(function ($q) use ($input) {
                 $q->where('reference_no', $input)
-                    ->orWhereHas('vehicles', fn ($v) => $v->where('vin', 'like', "%{$input}%"));
+                    ->orWhereHas('vehicles', fn ($v) => $v->whereVin($input));
             })
             ->first();
 

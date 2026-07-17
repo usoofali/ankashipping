@@ -139,7 +139,7 @@ class BulkBolService
 
     protected function processPage(int $pageNum, string $vin, string $pagePdfPath, User $user): array
     {
-        $vehicle = Vehicle::where('vin', $vin)->with('shipment.shipper')->first();
+        $vehicle = Vehicle::whereVin($vin)->with('shipment.shipper')->first();
 
         if (! $vehicle || ! $vehicle->shipment) {
             return ['status' => 'unmatched', 'vin' => $vin];

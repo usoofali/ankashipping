@@ -85,7 +85,7 @@ class DriverService
 
         $shipment = Shipment::where('reference_no', $query)->first();
         if (! $shipment) {
-            $vehicle = Vehicle::where('vin', $query)->first();
+            $vehicle = Vehicle::findByVin($query);
             if ($vehicle && $vehicle->shipment_id) {
                 $shipment = Shipment::find($vehicle->shipment_id);
             }

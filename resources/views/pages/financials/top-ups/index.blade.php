@@ -37,7 +37,12 @@ new #[Title('Wallet Funding Approvals')] class extends Component
     #[Computed]
     public function topUps()
     {
+        $user = Auth::user();
+
         return WalletTopUp::with(['shipper', 'approver'])
+            ->when(! ($user?->hasRole('super_admin') || $user?->staff()->exists()), function ($query) use ($user): void {
+                $query->where('shipper_id', $user?->shipper?->id);
+            })
             ->when($this->statusFilter, fn ($q) => $q->where('status', $this->statusFilter))
             ->latest()
             ->paginate(15);

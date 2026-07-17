@@ -25,7 +25,7 @@ class ShipmentService
 
         // 2. Search by VIN
         if (! $shipment) {
-            $vehicle = Vehicle::where('vin', $query)->first();
+            $vehicle = Vehicle::findByVin($query);
             if ($vehicle && $vehicle->shipment_id) {
                 $shipment = $vehicle->shipment;
             }

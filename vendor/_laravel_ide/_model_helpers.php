@@ -9385,6 +9385,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle query()
+     * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle whereVin(string $vin) {@see App\Models\Vehicle::scopeWhereVin()}
      * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle select(mixed $columns)
      * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle selectSub(\Closure|\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<mixed>|string $query, string $as)
      * @method static \Illuminate\Database\Eloquent\Builder<Vehicle>|Vehicle selectExpression(\Illuminate\Contracts\Database\Query\Expression|string $expression, string $as)

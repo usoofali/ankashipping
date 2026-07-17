@@ -23,7 +23,8 @@ class BotService
         protected PreAlertService $preAlertService,
         protected WalletService $walletService,
         protected DriverService $driverService,
-        protected StaffOperationsService $staffService
+        protected StaffOperationsService $staffService,
+        protected TelexRequestService $telexRequestService
     ) {}
 
     public function handle(WhatsAppConversation $conversation, array $messageData): void
@@ -152,6 +153,9 @@ Thank you!";
                 $this->startWalletFlow($conversation);
                 break;
             case '5':
+                $this->telexRequestService->startTelexRequestFlow($conversation);
+                break;
+            case '6':
                 $this->escalateToAgent($conversation);
                 break;
             default:
@@ -190,7 +194,8 @@ Thank you!";
     2️⃣ View Documents
     3️⃣ Create Pre-Alert
     4️⃣ My Wallet
-    5️⃣ Speak to Agent';
+    5️⃣ Request Telex Release
+    6️⃣ Speak to Agent';
         $this->waService->sendMessage($conversation->phone_number, $message);
     }
 
@@ -238,7 +243,7 @@ Thank you!";
             return;
         }
 
-        if (strlen($text) === 1 && in_array($text, ['1', '2', '3', '4', '5']) && Str::contains($state->current_step, 'awaiting_vin')) {
+        if (strlen($text) === 1 && in_array($text, ['1', '2', '3', '4', '5', '6']) && Str::contains($state->current_step, 'awaiting_vin')) {
             $state->delete();
             $this->handleMainMenu($conversation, $text);
 
@@ -254,6 +259,9 @@ Thank you!";
                 break;
             case 'documents_awaiting_selection':
                 $this->documentService->handleSelection($conversation, $state, $text);
+                break;
+            case 'telex_awaiting_vin':
+                $this->telexRequestService->handleStep($conversation, $state, $text);
                 break;
             case 'prealert_awaiting_shipping_mode':
             case 'prealert_awaiting_vin':

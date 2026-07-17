@@ -70,6 +70,8 @@ final class Shipment extends Model
         'towing',
         'booking_agent_id',
         'booked_without_title',
+        'telex_release_text',
+        'telex_released_at',
     ];
 
     protected function casts(): array
@@ -84,6 +86,7 @@ final class Shipment extends Model
             'sealed_at' => 'datetime',
             'completed_at' => 'datetime',
             'seal_closed_at' => 'datetime',
+            'telex_released_at' => 'datetime',
             'cut_off_date' => 'date',
             'departure_date' => 'date',
             'arrival_date' => 'date',

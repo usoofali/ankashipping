@@ -56,6 +56,9 @@ new #[Title('Shipment Details')] class extends Component {
 
     public bool $showReleaseBookingModal = false;
 
+    public bool $showSubmitTelexModal = false;
+    public string $telexReleaseText = '';
+
     public function workflow(): \App\ShippingWorkflow\ShippingWorkflow
     {
         return app(\App\ShippingWorkflow\ShippingWorkflow::class);
@@ -998,6 +1001,19 @@ new #[Title('Shipment Details')] class extends Component {
             }
         }
 
+        if ($documentType === ShipmentDocumentType::TelexRelease) {
+            if (!auth()->user()->can('workflow.submit_telex')) {
+                $this->notification()->error(__('Access Denied'), __('Insufficient permission for Telex Release.'));
+
+                return;
+            }
+            if (!$this->workflow()->canSubmitTelexRelease($this->shipment, auth()->user())) {
+                $this->notification()->error(__('Invalid Action'), __('Telex Release cannot be attached for this shipment status.'));
+
+                return;
+            }
+        }
+
         $fromShipmentStatus = $this->shipment->shipment_status;
         $document = null;
         $fileCount = 0;
@@ -1012,6 +1028,13 @@ new #[Title('Shipment Details')] class extends Component {
                 $this->shipment->update([
                     'shipment_status' => \App\Enums\ShipmentStatus::Loaded,
                     'booked_without_title' => false,
+                ]);
+            }
+
+            if ($documentType === ShipmentDocumentType::TelexRelease) {
+                $this->shipment->update([
+                    'shipment_status' => \App\Enums\ShipmentStatus::Completed,
+                    'telex_released_at' => now(),
                 ]);
             }
 
@@ -1079,6 +1102,8 @@ new #[Title('Shipment Details')] class extends Component {
             if ($recipients->isNotEmpty()) {
                 Notification::send($recipients, new StampedDockReceiptNotification($this->shipment, $document));
             }
+        } elseif ($documentType === ShipmentDocumentType::TelexRelease) {
+            app(\App\Modules\WhatsApp\Services\TelexRequestService::class)->sendTelexNotificationToParticipants($this->shipment);
         } else {
             // Notify only staff for other document types (like BL)
             $recipients = User::query()->whereIn('id', $recipientIds->unique()->values())->get();
@@ -1352,6 +1377,66 @@ new #[Title('Shipment Details')] class extends Component {
         $this->reloadShipmentPageData();
         $this->showForceFillConfirmModal = false;
         $this->notification()->success(__('Container status updated to BOOKING.'));
+    }
+
+    public function requestTelexRelease(): void
+    {
+        if (!$this->workflow()->canRequestTelex($this->shipment, Auth::user())) {
+            $this->notification()->error(__('Error'), __('You cannot request a Telex release for this shipment right now. Please ensure the invoice is paid.'));
+
+            return;
+        }
+
+        if (filled($this->shipment->telex_release_text)) {
+            $this->notification()->success(__('Available'), __('Telex release is already available. Please check the Telex Release details banner on this page.'));
+
+            return;
+        }
+
+        app(\App\Modules\WhatsApp\Services\TelexRequestService::class)->requestTelexRelease(
+            $this->shipment,
+            Auth::user(),
+            'web_portal'
+        );
+
+        $this->reloadShipmentPageData();
+        $this->notification()->success(__('Success'), __('Telex Release request submitted successfully. Operations team has been notified.'));
+    }
+
+    public function openSubmitTelexModal(): void
+    {
+        if (!$this->workflow()->canSubmitTelexRelease($this->shipment, Auth::user())) {
+            $this->notification()->error(__('Access Denied'), __('You do not have permission to submit a Telex Release for this shipment.'));
+
+            return;
+        }
+
+        $this->telexReleaseText = (string) $this->shipment->telex_release_text;
+        $this->showSubmitTelexModal = true;
+    }
+
+    public function submitTelexRelease(): void
+    {
+        if (!$this->workflow()->canSubmitTelexRelease($this->shipment, Auth::user())) {
+            $this->notification()->error(__('Access Denied'), __('You do not have permission to submit a Telex Release.'));
+
+            return;
+        }
+
+        $this->validate([
+            'telexReleaseText' => ['required', 'string', 'min:5'],
+        ]);
+
+        app(\App\Modules\WhatsApp\Services\TelexRequestService::class)->fulfillTelexRelease(
+            $this->shipment,
+            $this->telexReleaseText,
+            Auth::user(),
+            'web_portal'
+        );
+
+        $this->showSubmitTelexModal = false;
+        $this->reloadShipmentPageData();
+        $this->notification()->success(__('Success'), __('Telex Release recorded and participants notified via WhatsApp and Email.'));
     }
 
     public function editLogistics(): void
@@ -2180,6 +2265,23 @@ new #[Title('Shipment Details')] class extends Component {
                             {{ __('View Documents') }}
                         </flux:menu.item>
 
+                        @if(in_array($shipment->shipment_status, [\App\Enums\ShipmentStatus::Loaded, \App\Enums\ShipmentStatus::TelexRequested, \App\Enums\ShipmentStatus::Completed], true) && auth()->user()->can('workflow.request_telex'))
+                            @if($shipment->payment_status === \App\Enums\PaymentStatus::Paid)
+                                <flux:menu.item icon="paper-airplane" wire:click="requestTelexRelease">
+                                    {{ __('Request Telex Release') }}
+                                </flux:menu.item>
+                            @else
+                                <flux:menu.item icon="paper-airplane" wire:click="requestTelexRelease" class="opacity-60">
+                                    {{ __('Request Telex (Payment Required)') }}
+                                </flux:menu.item>
+                            @endif
+                        @endif
+
+                        @if($this->workflow()->canSubmitTelexRelease($shipment, auth()->user()))
+                            <flux:menu.item icon="document-text" wire:click="openSubmitTelexModal">
+                                {{ __('Submit Telex Release') }}
+                            </flux:menu.item>
+                        @endif
 
                         <flux:menu.separator />
 
@@ -2261,6 +2363,43 @@ new #[Title('Shipment Details')] class extends Component {
                     </div>
                 </flux:callout>
             @endif
+        @endif
+
+        @if($shipment->shipment_status === \App\Enums\ShipmentStatus::TelexRequested)
+            <flux:callout variant="warning" icon="exclamation-circle" class="mt-4">
+                <div class="flex items-center justify-between gap-4 w-full">
+                    <div>
+                        <flux:heading size="sm">{{ __('Telex Release Requested — Action Required') }}</flux:heading>
+                        <flux:subheading size="xs">{{ __('Shipper has requested a Telex Release for this shipment. Please record the official carrier release text once received via email.') }}</flux:subheading>
+                    </div>
+                    @if($this->workflow()->canSubmitTelexRelease($shipment, auth()->user()))
+                        <flux:button variant="primary" size="sm" icon="document-text" wire:click="openSubmitTelexModal">
+                            {{ __('Submit Telex Release') }}
+                        </flux:button>
+                    @endif
+                </div>
+            </flux:callout>
+        @endif
+
+        @if(filled($shipment->telex_release_text))
+            <flux:callout variant="success" icon="check-badge" class="mt-4">
+                <div class="space-y-3 w-full">
+                    <div class="flex items-center justify-between gap-4 w-full">
+                        <div>
+                            <flux:heading size="sm">{{ __('Official Telex Release Notice') }}</flux:heading>
+                            <flux:subheading size="xs">{{ __('Cargo is released and ready for pickup against proper identification without presentation of Original Bills of Lading.') }} @if($shipment->telex_released_at) • {{ $shipment->telex_released_at->format('M d, Y H:i') }} @endif</flux:subheading>
+                        </div>
+                        @if($this->workflow()->canSubmitTelexRelease($shipment, auth()->user()))
+                            <flux:button variant="ghost" size="sm" icon="pencil-square" wire:click="openSubmitTelexModal">
+                                {{ __('Update Text') }}
+                            </flux:button>
+                        @endif
+                    </div>
+                    <div class="p-3 bg-white/60 dark:bg-zinc-900/60 rounded-lg border border-emerald-200 dark:border-emerald-800/60 font-mono text-xs whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">
+{{ $shipment->telex_release_text }}
+                    </div>
+                </div>
+            </flux:callout>
         @endif
 
         {{-- At-a-glance row --}}
@@ -2679,4 +2818,36 @@ new #[Title('Shipment Details')] class extends Component {
             </div>
         </flux:modal>
     @endif
+
+    {{-- Submit Telex Release Modal --}}
+    <flux:modal name="submit-telex" wire:model="showSubmitTelexModal" variant="filled" class="md:w-[600px]">
+        <div class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('Submit Official Telex Release') }}</flux:heading>
+                <flux:subheading>{{ __('Paste the exact official release text received via email from Sallaum Lines / the ocean carrier.') }}</flux:subheading>
+            </div>
+
+            <flux:textarea
+                wire:model="telexReleaseText"
+                label="{{ __('Carrier Release Text') }}"
+                placeholder="THIS IS AN AUTOMATED MESSAGE... *** TELEX RELEASE ***..."
+                rows="10"
+                class="font-mono text-xs"
+            />
+
+            <flux:callout variant="info" icon="information-circle">
+                {{ __('Submitting this release text will automatically mark the shipment as COMPLETED and send instant WhatsApp & Email notifications to the Shipper and Consignee.') }}
+            </flux:callout>
+
+            <div class="flex gap-2">
+                <flux:spacer />
+                <flux:button variant="ghost" wire:click="$set('showSubmitTelexModal', false)">
+                    {{ __('Cancel') }}
+                </flux:button>
+                <flux:button variant="primary" icon="check" wire:click="submitTelexRelease">
+                    {{ __('Save & Notify') }}
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </x-crud.page-shell>

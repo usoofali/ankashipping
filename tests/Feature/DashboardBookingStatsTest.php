@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Enums\InvoiceStatus;
+use App\Enums\PaymentStatus;
 use App\Enums\ShipmentStatus;
+use App\Models\Invoice;
 use App\Models\Shipment;
 use App\Models\Staff;
 use App\Models\User;
@@ -128,4 +131,59 @@ test('staff dashboard hides whatsapp card if user lacks permission', function ()
 
     $component = Volt::test('pages::dashboard.staff');
     $component->assertDontSee('Unread Messages');
+});
+
+test('staff dashboard search overrides month, year, and other filters', function (): void {
+    $user = User::factory()->create();
+    $user->assignRole('super_admin');
+    Staff::factory()->create(['user_id' => $user->id]);
+
+    // Create a shipment from a previous month/year with unique reference_no
+    $shipment = Shipment::factory()->create([
+        'reference_no' => 'REF-OVERRIDE-123',
+        'created_at' => now()->subMonths(3)->subYears(1),
+        'shipment_status' => ShipmentStatus::Delivered,
+    ]);
+
+    $this->actingAs($user);
+
+    $component = Volt::test('pages::dashboard.staff');
+
+    // Initially, because mount() sets filterMonth and filterYear to current month/year, the old shipment should not be in results
+    expect($component->instance()->shipments->items())->toHaveCount(0);
+
+    // When search is set to the shipment reference, it should override month/year/status filters and return the shipment
+    $component->set('search', 'REF-OVERRIDE-123');
+    expect($component->instance()->shipments->items())->toHaveCount(1);
+    expect($component->instance()->shipments->items()[0]->id)->toBe($shipment->id);
+});
+
+test('staff dashboard stats include telex requested count and invoice amounts', function (): void {
+    $user = User::factory()->create();
+    $user->assignRole('super_admin');
+    Staff::factory()->create(['user_id' => $user->id]);
+
+    Shipment::factory()->create([
+        'shipment_status' => ShipmentStatus::TelexRequested,
+    ]);
+
+    $shipmentPaid = Shipment::factory()->create([
+        'payment_status' => PaymentStatus::Paid,
+    ]);
+    Invoice::factory()->create([
+        'shipment_id' => $shipmentPaid->id,
+        'total_amount' => 500.50,
+        'status' => InvoiceStatus::Completed,
+    ]);
+
+    $this->actingAs($user);
+
+    $component = Volt::test('pages::dashboard.staff');
+    $stats = $component->instance()->stats();
+
+    expect($stats['telex_requested'])->toBeGreaterThanOrEqual(1);
+    expect((float) $stats['paid_invoices_amount'])->toBeGreaterThanOrEqual(500.50);
+
+    $component->assertSee('Telex Requested');
+    $component->assertSee('Received: $500.50');
 });

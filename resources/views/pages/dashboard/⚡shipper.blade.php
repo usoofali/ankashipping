@@ -61,6 +61,7 @@ new #[Title('My Dashboard')] class extends Component
             'delivered' => Shipment::where('shipper_id', $shipperId)->whereIn('shipment_status', $deliveredStatuses)->count(),
             'undelivered' => Shipment::where('shipper_id', $shipperId)->whereIn('shipment_status', $undeliveredStatuses)->count(),
             'loaded' => Shipment::where('shipper_id', $shipperId)->where('shipment_status', ShipmentStatus::Loaded)->count(),
+            'telex_requested' => Shipment::where('shipper_id', $shipperId)->where('shipment_status', ShipmentStatus::TelexRequested)->count(),
             'paid_invoices' => Invoice::whereHas('shipment', fn ($q) => $q->where('shipper_id', $shipperId)->where('payment_status', PaymentStatus::Paid))->count(),
             'due_invoices' => Invoice::where('status', InvoiceStatus::Completed)
                 ->where('updated_at', '<=', now()->subWeeks(3))
@@ -92,12 +93,13 @@ new #[Title('My Dashboard')] class extends Component
                                 ->orWhere('vin', 'like', $term);
                         });
                 });
-            })
-            ->when($this->filterMonth !== '', function ($query): void {
-                $query->whereMonth('created_at', (int) $this->filterMonth);
-            })
-            ->when($this->filterYear !== '', function ($query): void {
-                $query->whereYear('created_at', (int) $this->filterYear);
+            }, function ($query): void {
+                $query->when($this->filterMonth !== '', function ($monthQuery): void {
+                    $monthQuery->whereMonth('created_at', (int) $this->filterMonth);
+                })
+                ->when($this->filterYear !== '', function ($yearQuery): void {
+                    $yearQuery->whereYear('created_at', (int) $this->filterYear);
+                });
             })
             ->latest()
             ->paginate(25);
@@ -208,6 +210,19 @@ new #[Title('My Dashboard')] class extends Component
                 <flux:heading level="3" size="xl" class="font-bold">{{ number_format($this->stats['loaded']) }}
                 </flux:heading>
                 <flux:subheading>{{ __('Loaded') }}</flux:subheading>
+            </div>
+        </flux:card>
+
+        <flux:card as="a" href="{{ route('shipments.index', ['filterShipmentStatus' => ShipmentStatus::TelexRequested->value]) }}" wire:navigate class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between">
+                <flux:icon.document-text class="size-8 text-violet-500" />
+                <flux:badge color="violet" size="sm" variant="subtle">{{ __('Telex') }}</flux:badge>
+            </div>
+            <div>
+                <flux:heading level="3" size="xl" class="font-bold text-violet-600 dark:text-violet-400">
+                    {{ number_format($this->stats['telex_requested'] ?? 0) }}
+                </flux:heading>
+                <flux:subheading>{{ __('Telex Requested') }}</flux:subheading>
             </div>
         </flux:card>
 

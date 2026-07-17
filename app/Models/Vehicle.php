@@ -8,6 +8,7 @@ use App\Enums\ShipmentStatus;
 use App\Enums\VehicleIs;
 use App\Enums\VehicleStatus;
 use Database\Factories\VehicleFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -236,6 +237,40 @@ final class Vehicle extends Model
     {
         return Attribute::get(function () {
             return $this->measurement_ft3 * (1728 / 166);
+        });
+    }
+
+    /**
+     * Find a vehicle by exact VIN or by partial suffix (last N characters of VIN, when query is at least 6 characters).
+     */
+    public static function findByVin(string $query): ?self
+    {
+        $query = trim($query);
+        if ($query === '') {
+            return null;
+        }
+
+        $vehicle = self::query()->where('vin', $query)->first();
+        if (! $vehicle && strlen($query) >= 6) {
+            $vehicle = self::query()->where('vin', 'like', '%'.$query)->first();
+        }
+
+        return $vehicle;
+    }
+
+    /**
+     * Scope query to match exact VIN or partial suffix (last N characters of VIN, when query is at least 6 characters).
+     *
+     * @param  Builder<self>  $query
+     */
+    public function scopeWhereVin($query, string $vin): void
+    {
+        $vin = trim($vin);
+        $query->where(function ($q) use ($vin): void {
+            $q->where('vin', $vin);
+            if (strlen($vin) >= 6) {
+                $q->orWhere('vin', 'like', '%'.$vin);
+            }
         });
     }
 }

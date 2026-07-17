@@ -41,7 +41,7 @@ class AppServiceProvider extends ServiceProvider
         Date::use(CarbonImmutable::class);
 
         DB::prohibitDestructiveCommands(
-            app()->isProduction(),
+            app()->isProduction() || (app()->environment('testing') && config('database.default') !== 'sqlite' && config('database.default') !== 'testing'),
         );
 
         Password::defaults(fn (): Password => Password::min(8));

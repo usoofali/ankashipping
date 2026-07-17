@@ -158,7 +158,7 @@ class StaffOperationsService
         $vehicle = null;
 
         if (! $shipment) {
-            $vehicle = Vehicle::where('vin', $ref)->first();
+            $vehicle = Vehicle::findByVin($ref);
             if ($vehicle) {
                 $shipment = $vehicle->shipment;
             }

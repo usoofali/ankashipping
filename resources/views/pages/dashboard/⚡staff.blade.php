@@ -62,11 +62,17 @@ new #[Title('Dashboard')] class extends Component {
             'delivered' => Shipment::whereIn('shipment_status', $deliveredStatuses)->count(),
             'undelivered' => Shipment::whereIn('shipment_status', $undeliveredStatuses)->count(),
             'loaded' => Shipment::where('shipment_status', ShipmentStatus::Loaded)->count(),
+            'telex_requested' => Shipment::where('shipment_status', ShipmentStatus::TelexRequested)->count(),
             'paid_invoices' => Invoice::whereHas('shipment', fn($q) => $q->where('payment_status', PaymentStatus::Paid))->count(),
+            'paid_invoices_amount' => Invoice::whereHas('shipment', fn($q) => $q->where('payment_status', PaymentStatus::Paid))->sum('total_amount'),
             'due_invoices' => Invoice::where('status', InvoiceStatus::Completed)
                 ->where('updated_at', '<=', now()->subWeeks(3))
                 ->whereHas('shipment', fn($q) => $q->where('payment_status', '!=', PaymentStatus::Paid))
                 ->count(),
+            'due_invoices_amount' => Invoice::where('status', InvoiceStatus::Completed)
+                ->where('updated_at', '<=', now()->subWeeks(3))
+                ->whereHas('shipment', fn($q) => $q->where('payment_status', '!=', PaymentStatus::Paid))
+                ->sum('total_amount'),
             'total_wallet_balance' => Wallet::sum('balance'),
             'topup_requests' => WalletTopUp::where('status', 'pending')->count(),
             'total_roro' => Shipment::where('shipping_mode', ShippingMode::Roro)->count(),
@@ -311,6 +317,22 @@ new #[Title('Dashboard')] class extends Component {
             </flux:card>
         @endcan
 
+        @can('dashboard.view.stats.telex_requested')
+            <flux:card as="a" href="{{ route('shipments.index', ['filterShipmentStatus' => ShipmentStatus::TelexRequested->value]) }}" wire:navigate
+                class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between">
+                    <flux:icon.document-text class="size-8 text-violet-500" />
+                    <flux:badge color="violet" size="sm" variant="subtle">{{ __('Telex') }}</flux:badge>
+                </div>
+                <div>
+                    <flux:heading level="3" size="xl" class="font-bold text-violet-600 dark:text-violet-400">
+                        {{ number_format($this->stats['telex_requested']) }}
+                    </flux:heading>
+                    <flux:subheading>{{ __('Telex Requested') }}</flux:subheading>
+                </div>
+            </flux:card>
+        @endcan
+
         @can('dashboard.view.stats.roro')
             <flux:card as="a" href="{{ route('shipments.index', ['filterShippingMode' => ShippingMode::Roro->value]) }}" wire:navigate
                 class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
@@ -351,7 +373,12 @@ new #[Title('Dashboard')] class extends Component {
                 <div>
                     <flux:heading level="3" size="xl" class="font-bold">{{ number_format($this->stats['paid_invoices']) }}
                     </flux:heading>
-                    <flux:subheading>{{ __('Invoices Paid') }}</flux:subheading>
+                    <flux:subheading>
+                        {{ __('Invoices Paid') }}
+                        <span class="text-xs font-semibold text-teal-600 dark:text-teal-400 block mt-0.5 truncate">
+                            {{ __('Received: $:amount', ['amount' => number_format((float) ($this->stats['paid_invoices_amount'] ?? 0), 2)]) }}
+                        </span>
+                    </flux:subheading>
                 </div>
             </flux:card>
         @endcan
@@ -367,7 +394,12 @@ new #[Title('Dashboard')] class extends Component {
                     <flux:heading level="3" size="xl" class="font-bold text-orange-600 dark:text-orange-400">
                         {{ number_format($this->stats['due_invoices']) }}
                     </flux:heading>
-                    <flux:subheading>{{ __('Invoices Due') }}</flux:subheading>
+                    <flux:subheading>
+                        {{ __('Invoices Due') }}
+                        <span class="text-xs font-semibold text-orange-600 dark:text-orange-400 block mt-0.5 truncate">
+                            {{ __('Due: $:amount', ['amount' => number_format((float) ($this->stats['due_invoices_amount'] ?? 0), 2)]) }}
+                        </span>
+                    </flux:subheading>
                 </div>
             </flux:card>
         @endcan
