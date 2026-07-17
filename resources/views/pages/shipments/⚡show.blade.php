@@ -2265,7 +2265,7 @@ new #[Title('Shipment Details')] class extends Component {
                             {{ __('View Documents') }}
                         </flux:menu.item>
 
-                        @if(in_array($shipment->shipment_status, [\App\Enums\ShipmentStatus::Loaded, \App\Enums\ShipmentStatus::TelexRequested, \App\Enums\ShipmentStatus::Completed], true) && auth()->user()->can('workflow.request_telex'))
+                        @if($shipment->shipment_status === \App\Enums\ShipmentStatus::Loaded && blank($shipment->telex_release_text) && auth()->user()->can('workflow.request_telex'))
                             @if($shipment->payment_status === \App\Enums\PaymentStatus::Paid)
                                 <flux:menu.item icon="paper-airplane" wire:click="requestTelexRelease">
                                     {{ __('Request Telex Release') }}
@@ -2277,7 +2277,7 @@ new #[Title('Shipment Details')] class extends Component {
                             @endif
                         @endif
 
-                        @if($this->workflow()->canSubmitTelexRelease($shipment, auth()->user()))
+                        @if($this->workflow()->canSubmitTelexRelease($shipment, auth()->user()) && blank($shipment->telex_release_text))
                             <flux:menu.item icon="document-text" wire:click="openSubmitTelexModal">
                                 {{ __('Submit Telex Release') }}
                             </flux:menu.item>
@@ -2383,19 +2383,28 @@ new #[Title('Shipment Details')] class extends Component {
 
         @if(filled($shipment->telex_release_text))
             <flux:callout variant="success" icon="check-badge" class="mt-4">
-                <div class="space-y-3 w-full">
+                <div class="space-y-3 w-full" x-data="{ copied: false }">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 w-full">
                         <div>
                             <flux:heading size="sm">{{ __('Official Telex Release Notice') }}</flux:heading>
                             <flux:subheading size="xs">{{ __('Cargo is released and ready for pickup against proper identification without presentation of Original Bills of Lading.') }} @if($shipment->telex_released_at) • {{ $shipment->telex_released_at->format('M d, Y H:i') }} @endif</flux:subheading>
                         </div>
-                        @if($this->workflow()->canSubmitTelexRelease($shipment, auth()->user()))
-                            <flux:button variant="ghost" size="sm" icon="pencil-square" wire:click="openSubmitTelexModal" class="w-full sm:w-auto shrink-0">
-                                {{ __('Update Text') }}
+                        <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0 self-start sm:self-auto w-full sm:w-auto">
+                            <flux:button variant="outline" size="sm" icon="clipboard-document"
+                                x-on:click="window.navigator.clipboard.writeText({{ Js::from($shipment->telex_release_text) }}); copied = true; setTimeout(() => copied = false, 2000); $dispatch('ui-toast', { type: 'success', message: '{{ __('Copied') }}' })"
+                                class="w-full sm:w-auto shrink-0">
+                                <span x-show="!copied">{{ __('Copy Text') }}</span>
+                                <span x-show="copied" x-cloak class="text-emerald-600 dark:text-emerald-400 font-medium">{{ __('Copied!') }}</span>
                             </flux:button>
-                        @endif
+
+                            @if($this->workflow()->canSubmitTelexRelease($shipment, auth()->user()))
+                                <flux:button variant="ghost" size="sm" icon="pencil-square" wire:click="openSubmitTelexModal" class="w-full sm:w-auto shrink-0">
+                                    {{ __('Update Text') }}
+                                </flux:button>
+                            @endif
+                        </div>
                     </div>
-                    <div class="p-3 bg-white/60 dark:bg-zinc-900/60 rounded-lg border border-emerald-200 dark:border-emerald-800/60 font-mono text-xs whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">
+                    <div class="p-3 bg-white/60 dark:bg-zinc-900/60 rounded-lg border border-emerald-200 dark:border-emerald-800/60 font-mono text-xs whitespace-pre-wrap text-zinc-800 dark:text-zinc-200 overflow-x-auto">
 {{ $shipment->telex_release_text }}
                     </div>
                 </div>

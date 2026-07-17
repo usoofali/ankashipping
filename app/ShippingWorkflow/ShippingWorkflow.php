@@ -139,7 +139,7 @@ class ShippingWorkflow
             return false;
         }
 
-        if (! in_array($shipment->shipment_status, [ShipmentStatus::Loaded, ShipmentStatus::TelexRequested, ShipmentStatus::Completed], true)) {
+        if ($shipment->shipment_status !== ShipmentStatus::Loaded || filled($shipment->telex_release_text)) {
             return false;
         }
 

@@ -5786,6 +5786,8 @@ namespace App\Models {
      * @property \Illuminate\Support\Carbon|null $seal_closed_at
      * @property \Illuminate\Support\Carbon|null $completed_at
      * @property \Illuminate\Support\Carbon|null $sealed_at
+     * @property \Illuminate\Support\Carbon|null $telex_released_at
+     * @property string|null $telex_release_text
      * @property boolean $booked_without_title
      * @property \App\Enums\ShipmentStatus $shipment_status
      * @property mixed $capacity
@@ -5837,6 +5839,8 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereCapacity($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereShipmentStatus($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereBookedWithoutTitle($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereTelexReleaseText($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereTelexReleasedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereSealedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereCompletedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereSealClosedAt($value)
