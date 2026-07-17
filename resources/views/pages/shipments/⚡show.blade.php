@@ -713,6 +713,9 @@ new #[Title('Shipment Details')] class extends Component {
         });
 
         $recipientIds = $this->staffAndAdminNotificationRecipientIds();
+        if ($this->shipment->shipper?->user_id !== null) {
+            $recipientIds->push($this->shipment->shipper->user_id);
+        }
 
         $recipients = User::query()->whereIn('id', $recipientIds->unique()->values())->get();
 

@@ -26,7 +26,7 @@ beforeEach(function (): void {
     Role::findByName('super_admin')->givePermissionTo('invoices.manage');
 });
 
-test('invoice status change to completed or cleared sends notifications only to staff and admins and not to the shipper', function (): void {
+test('invoice status change to completed sends database notification to admin and mail notification to shipper', function (): void {
     Notification::fake();
 
     $admin = User::factory()->create();
@@ -49,10 +49,15 @@ test('invoice status change to completed or cleared sends notifications only to 
 
     $this->actingAs($admin);
 
-    $component = Volt::test('pages::shipments.show', ['shipment' => $shipment])
+    Volt::test('pages::shipments.show', ['shipment' => $shipment])
         ->set('pendingInvoiceStatus', InvoiceStatus::Completed->value)
         ->call('confirmInvoiceStatusChange');
 
-    Notification::assertSentTo($admin, InvoiceStatusChangedNotification::class);
-    Notification::assertNotSentTo($shipperUser, InvoiceStatusChangedNotification::class);
+    Notification::assertSentTo($admin, InvoiceStatusChangedNotification::class, function ($notification, $channels) {
+        return $channels === ['database'];
+    });
+
+    Notification::assertSentTo($shipperUser, InvoiceStatusChangedNotification::class, function ($notification, $channels) {
+        return in_array('mail', $channels, true);
+    });
 });

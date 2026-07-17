@@ -42,7 +42,10 @@ final class InvoiceStatusChangedNotification extends Notification implements Sho
     {
         $channels = ['database'];
 
-        if ($this->toStatus === InvoiceStatus::Completed) {
+        $isShipper = (int) $notifiable->id === (int) $this->shipment->shipper?->user_id
+            || (method_exists($notifiable, 'hasRole') && $notifiable->hasRole('shipper'));
+
+        if ($isShipper && $this->toStatus === InvoiceStatus::Completed) {
             $channels[] = 'mail';
             $channels = $this->viaWithWhatsApp($channels, $notifiable, (int) $this->shipment->shipper_id);
         }
