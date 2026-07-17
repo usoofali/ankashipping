@@ -111,18 +111,19 @@ new #[Title('Dashboard')] class extends Component {
                             $userQuery->where('name', 'like', $term);
                         });
                 });
-            })
-            ->when($this->filterMonth !== '', function ($query): void {
-                $query->whereMonth('created_at', (int) $this->filterMonth);
-            })
-            ->when($this->filterYear !== '', function ($query): void {
-                $query->whereYear('created_at', (int) $this->filterYear);
-            })
-            ->when($this->filterShipper !== '', function ($query): void {
-                $query->where('shipper_id', (int) $this->filterShipper);
-            })
-            ->when($this->filterShipmentStatus !== '', function ($query): void {
-                $query->where('shipment_status', $this->filterShipmentStatus);
+            }, function ($query): void {
+                $query->when($this->filterMonth !== '', function ($monthQuery): void {
+                    $monthQuery->whereMonth('created_at', (int) $this->filterMonth);
+                })
+                ->when($this->filterYear !== '', function ($yearQuery): void {
+                    $yearQuery->whereYear('created_at', (int) $this->filterYear);
+                })
+                ->when($this->filterShipper !== '', function ($shipperQuery): void {
+                    $shipperQuery->where('shipper_id', (int) $this->filterShipper);
+                })
+                ->when($this->filterShipmentStatus !== '', function ($statusQuery): void {
+                    $statusQuery->where('shipment_status', $this->filterShipmentStatus);
+                });
             })
             ->latest()
             ->paginate(25);
