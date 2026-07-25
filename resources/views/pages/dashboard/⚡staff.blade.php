@@ -121,15 +121,15 @@ new #[Title('Dashboard')] class extends Component {
                 $query->when($this->filterMonth !== '', function ($monthQuery): void {
                     $monthQuery->whereMonth('created_at', (int) $this->filterMonth);
                 })
-                ->when($this->filterYear !== '', function ($yearQuery): void {
-                    $yearQuery->whereYear('created_at', (int) $this->filterYear);
-                })
-                ->when($this->filterShipper !== '', function ($shipperQuery): void {
-                    $shipperQuery->where('shipper_id', (int) $this->filterShipper);
-                })
-                ->when($this->filterShipmentStatus !== '', function ($statusQuery): void {
-                    $statusQuery->where('shipment_status', $this->filterShipmentStatus);
-                });
+                    ->when($this->filterYear !== '', function ($yearQuery): void {
+                        $yearQuery->whereYear('created_at', (int) $this->filterYear);
+                    })
+                    ->when($this->filterShipper !== '', function ($shipperQuery): void {
+                        $shipperQuery->where('shipper_id', (int) $this->filterShipper);
+                    })
+                    ->when($this->filterShipmentStatus !== '', function ($statusQuery): void {
+                        $statusQuery->where('shipment_status', $this->filterShipmentStatus);
+                    });
             })
             ->latest()
             ->paginate(25);
@@ -183,9 +183,115 @@ new #[Title('Dashboard')] class extends Component {
             ->latest()
             ->paginate(10, pageName: 'wallet_fundings_page');
     }
+
+    #[Computed]
+    public function searchResults(): Collection
+    {
+        $term = trim($this->search);
+
+        if (mb_strlen($term) < 1) {
+            return collect();
+        }
+
+        $likeTerm = '%' . $term . '%';
+
+        return Shipment::query()
+            ->with(['shipper.user', 'vehicles'])
+            ->where(function ($query) use ($likeTerm): void {
+                $query->where('reference_no', 'like', $likeTerm)
+                    ->orWhereHas('vehicles', function ($vehicleQuery) use ($likeTerm): void {
+                        $vehicleQuery->where('make', 'like', $likeTerm)
+                            ->orWhere('model', 'like', $likeTerm)
+                            ->orWhere('year', 'like', $likeTerm)
+                            ->orWhere('vin', 'like', $likeTerm);
+                    })
+                    ->orWhereHas('shipper', function ($shipperQuery) use ($likeTerm): void {
+                        $shipperQuery->where('company_name', 'like', $likeTerm);
+                    })
+                    ->orWhereHas('shipper.user', function ($userQuery) use ($likeTerm): void {
+                        $userQuery->where('name', 'like', $likeTerm);
+                    });
+            })
+            ->latest()
+            ->take(8)
+            ->get();
+    }
 }; ?>
 
 <x-crud.page-shell>
+    {{-- Dashboard Header with Title & Responsive Global Search --}}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-start mb-2">
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">
+                {{ __('Dashboard') }}
+            </h1>
+            <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+                {{ __('Anka Shipment & Logistics') }}
+            </p>
+        </div>
+
+        <div class="hidden md:block"></div>
+
+        {{-- Global Search Input & Live Dropdown --}}
+        <div class="relative w-full" x-data="{ open: true }" @click.outside="open = false">
+            <flux:input wire:model.live.debounce.300ms="search" @focus="open = true" @keydown.escape="open = false"
+                icon="magnifying-glass" placeholder="{{ __('Search VIN, Ref #, Vehicle, Shipper...') }}" clearable />
+
+            @if (trim($search) !== '')
+                <div x-show="open" x-transition:enter="transition ease-out duration-100"
+                    x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                    class="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-zinc-800 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-700 max-h-96 overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-700/60"
+                    style="display: none;">
+                    <div
+                        class="px-3 py-2 text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider bg-zinc-50 dark:bg-zinc-800/80 sticky top-0">
+                        {{ __('Matching Shipments (:count)', ['count' => $this->searchResults->count()]) }}
+                    </div>
+
+                    @forelse ($this->searchResults as $shipment)
+                        <a href="{{ route('shipments.show', $shipment) }}" wire:navigate @click="open = false"
+                            class="flex items-center justify-between gap-3 p-3 hover:bg-indigo-50/70 dark:hover:bg-zinc-700/60 transition-colors group">
+                            <div class="flex flex-col min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="font-bold text-sm text-indigo-600 dark:text-indigo-400 group-hover:underline truncate">
+                                        {{ $shipment->reference_no }}
+                                    </span>
+                                    <flux:badge size="sm"
+                                        :color="$shipment->shipment_status === ShipmentStatus::Completed ? 'emerald' : ($shipment->shipment_status === ShipmentStatus::Cancelled ? 'rose' : 'zinc')"
+                                        variant="subtle">
+                                        {{ $shipment->shipmentStatusDisplay() }}
+                                    </flux:badge>
+                                </div>
+                                <div class="text-xs text-zinc-600 dark:text-zinc-300 mt-0.5 truncate">
+                                    @if($shipment->isContainer())
+                                        <span
+                                            class="font-medium">{{ __(':count Vehicles Container', ['count' => $shipment->vehicles->count()]) }}</span>
+                                    @else
+                                        @php $v = $shipment->vehicles->first(); @endphp
+                                        <span class="font-medium">{{ $v?->year }} {{ $v?->make }} {{ $v?->model }}</span>
+                                        @if($v?->vin)
+                                            <span class="text-zinc-400 font-mono ml-1">...{{ substr($v->vin, -8) }}</span>
+                                        @endif
+                                    @endif
+                                </div>
+                                @if($shipment->shipper)
+                                    <div class="text-xs text-zinc-400 dark:text-zinc-500 truncate">
+                                        {{ $shipment->shipper->user?->name ?: $shipment->shipper->company_name }}
+                                    </div>
+                                @endif
+                            </div>
+                            <flux:icon.chevron-right
+                                class="size-4 text-zinc-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 flex-shrink-0" />
+                        </a>
+                    @empty
+                        <div class="p-4 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                            {{ __('No shipments found matching ":term"', ['term' => $search]) }}
+                        </div>
+                    @endforelse
+                </div>
+            @endif
+        </div>
+    </div>
     {{-- Summary Stats Section --}}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-5">
         @can('dashboard.view.stats.total_shipments')
@@ -318,8 +424,9 @@ new #[Title('Dashboard')] class extends Component {
         @endcan
 
         @can('dashboard.view.stats.telex_requested')
-            <flux:card as="a" href="{{ route('shipments.index', ['filterShipmentStatus' => ShipmentStatus::TelexRequested->value]) }}" wire:navigate
-                class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
+            <flux:card as="a"
+                href="{{ route('shipments.index', ['filterShipmentStatus' => ShipmentStatus::TelexRequested->value]) }}"
+                wire:navigate class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
                 <div class="flex items-center justify-between">
                     <flux:icon.document-text class="size-8 text-violet-500" />
                     <flux:badge color="violet" size="sm" variant="subtle">{{ __('Telex') }}</flux:badge>
@@ -334,8 +441,8 @@ new #[Title('Dashboard')] class extends Component {
         @endcan
 
         @can('dashboard.view.stats.roro')
-            <flux:card as="a" href="{{ route('shipments.index', ['filterShippingMode' => ShippingMode::Roro->value]) }}" wire:navigate
-                class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
+            <flux:card as="a" href="{{ route('shipments.index', ['filterShippingMode' => ShippingMode::Roro->value]) }}"
+                wire:navigate class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
                 <div class="flex items-center justify-between">
                     <flux:icon.truck class="size-8 text-slate-500" />
                     <flux:badge color="slate" size="sm" variant="subtle">{{ __('Roro') }}</flux:badge>
@@ -349,8 +456,9 @@ new #[Title('Dashboard')] class extends Component {
         @endcan
 
         @can('dashboard.view.stats.container')
-            <flux:card as="a" href="{{ route('shipments.index', ['filterShippingMode' => ShippingMode::Container->value]) }}" wire:navigate
-                class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
+            <flux:card as="a"
+                href="{{ route('shipments.index', ['filterShippingMode' => ShippingMode::Container->value]) }}"
+                wire:navigate class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
                 <div class="flex items-center justify-between">
                     <flux:icon.container class="size-8 text-blue-600" />
                     <flux:badge color="blue" size="sm" variant="subtle">{{ __('Container') }}</flux:badge>
@@ -498,9 +606,7 @@ new #[Title('Dashboard')] class extends Component {
 
                 @if ($activeTab === 'shipments')
                     <div class="space-y-6">
-                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
-                            <flux:input wire:model.live.debounce.300ms="search" size="sm" icon="magnifying-glass"
-                                placeholder="{{ __('Search...') }}" />
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
                             <flux:select wire:model.live="filterMonth" size="sm">
                                 <flux:select.option value="">{{ __('All Months') }}</flux:select.option>
                                 @foreach(range(1, 12) as $month)

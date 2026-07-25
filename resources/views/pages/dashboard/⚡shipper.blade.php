@@ -18,8 +18,7 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-new #[Title('My Dashboard')] class extends Component
-{
+new #[Title('My Dashboard')] class extends Component {
     use WithPagination;
 
     public string $search = '';
@@ -48,7 +47,7 @@ new #[Title('My Dashboard')] class extends Component
     {
         $shipperId = auth()->user()->shipper?->id;
 
-        if (! $shipperId) {
+        if (!$shipperId) {
             return [];
         }
 
@@ -62,10 +61,10 @@ new #[Title('My Dashboard')] class extends Component
             'undelivered' => Shipment::where('shipper_id', $shipperId)->whereIn('shipment_status', $undeliveredStatuses)->count(),
             'loaded' => Shipment::where('shipper_id', $shipperId)->where('shipment_status', ShipmentStatus::Loaded)->count(),
             'telex_requested' => Shipment::where('shipper_id', $shipperId)->where('shipment_status', ShipmentStatus::TelexRequested)->count(),
-            'paid_invoices' => Invoice::whereHas('shipment', fn ($q) => $q->where('shipper_id', $shipperId)->where('payment_status', PaymentStatus::Paid))->count(),
+            'paid_invoices' => Invoice::whereHas('shipment', fn($q) => $q->where('shipper_id', $shipperId)->where('payment_status', PaymentStatus::Paid))->count(),
             'due_invoices' => Invoice::where('status', InvoiceStatus::Completed)
                 ->where('updated_at', '<=', now()->subWeeks(3))
-                ->whereHas('shipment', fn ($q) => $q->where('shipper_id', $shipperId)->where('payment_status', '!=', PaymentStatus::Paid))
+                ->whereHas('shipment', fn($q) => $q->where('shipper_id', $shipperId)->where('payment_status', '!=', PaymentStatus::Paid))
                 ->count(),
             'wallet_balance' => auth()->user()->shipper?->wallet?->balance ?? 0,
             'topup_requests' => WalletTopUp::where('shipper_id', $shipperId)->count(),
@@ -84,7 +83,7 @@ new #[Title('My Dashboard')] class extends Component
             ->with(['vehicles.driver', 'invoice', 'originPort.state', 'originPort.country'])
             ->when($this->search !== '', function ($query): void {
                 $query->where(function ($searchQuery): void {
-                    $term = '%'.trim($this->search).'%';
+                    $term = '%' . trim($this->search) . '%';
                     $searchQuery->where('reference_no', 'like', $term)
                         ->orWhereHas('vehicles', function ($vehicleQuery) use ($term): void {
                             $vehicleQuery->where('make', 'like', $term)
@@ -97,9 +96,9 @@ new #[Title('My Dashboard')] class extends Component
                 $query->when($this->filterMonth !== '', function ($monthQuery): void {
                     $monthQuery->whereMonth('created_at', (int) $this->filterMonth);
                 })
-                ->when($this->filterYear !== '', function ($yearQuery): void {
-                    $yearQuery->whereYear('created_at', (int) $this->filterYear);
-                });
+                    ->when($this->filterYear !== '', function ($yearQuery): void {
+                        $yearQuery->whereYear('created_at', (int) $this->filterYear);
+                    });
             })
             ->latest()
             ->paginate(25);
@@ -112,7 +111,7 @@ new #[Title('My Dashboard')] class extends Component
             ->whereNotNull('created_at')
             ->latest('created_at')
             ->get(['created_at'])
-            ->map(fn (Shipment $shipment): ?string => $shipment->created_at?->format('Y'))
+            ->map(fn(Shipment $shipment): ?string => $shipment->created_at?->format('Y'))
             ->filter()
             ->unique()
             ->values();
@@ -146,12 +145,114 @@ new #[Title('My Dashboard')] class extends Component
             ->latest()
             ->paginate(10, pageName: 'wallet_fundings_page');
     }
+
+    #[Computed]
+    public function searchResults(): Collection
+    {
+        $shipperId = auth()->user()->shipper?->id;
+        if (!$shipperId) {
+            return collect();
+        }
+
+        $term = trim($this->search);
+
+        if (mb_strlen($term) < 1) {
+            return collect();
+        }
+
+        $likeTerm = '%' . $term . '%';
+
+        return Shipment::query()
+            ->where('shipper_id', $shipperId)
+            ->with(['vehicles'])
+            ->where(function ($query) use ($likeTerm): void {
+                $query->where('reference_no', 'like', $likeTerm)
+                    ->orWhereHas('vehicles', function ($vehicleQuery) use ($likeTerm): void {
+                        $vehicleQuery->where('make', 'like', $likeTerm)
+                            ->orWhere('model', 'like', $likeTerm)
+                            ->orWhere('year', 'like', $likeTerm)
+                            ->orWhere('vin', 'like', $likeTerm);
+                    });
+            })
+            ->latest()
+            ->take(8)
+            ->get();
+    }
 }; ?>
 
 <x-crud.page-shell>
+    {{-- Dashboard Header with Title & Responsive Global Search --}}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-start mb-2">
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">
+                {{ __('Dashboard') }}
+            </h1>
+            <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+                {{ __('Anka Shipment & Logistics') }}
+            </p>
+        </div>
+
+        <div class="hidden md:block"></div>
+
+        {{-- Global Search Input & Live Dropdown --}}
+        <div class="relative w-full" x-data="{ open: true }" @click.outside="open = false">
+            <flux:input wire:model.live.debounce.300ms="search" @focus="open = true" @keydown.escape="open = false"
+                icon="magnifying-glass" placeholder="{{ __('Search VIN, Ref #, Vehicle...') }}" clearable />
+
+            @if (trim($search) !== '')
+                <div x-show="open" x-transition:enter="transition ease-out duration-100"
+                    x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                    class="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-zinc-800 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-700 max-h-96 overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-700/60"
+                    style="display: none;">
+                    <div
+                        class="px-3 py-2 text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider bg-zinc-50 dark:bg-zinc-800/80 sticky top-0">
+                        {{ __('Matching Shipments (:count)', ['count' => $this->searchResults->count()]) }}
+                    </div>
+
+                    @forelse ($this->searchResults as $shipment)
+                        <a href="{{ route('shipments.show', $shipment) }}" wire:navigate @click="open = false"
+                            class="flex items-center justify-between gap-3 p-3 hover:bg-indigo-50/70 dark:hover:bg-zinc-700/60 transition-colors group">
+                            <div class="flex flex-col min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="font-bold text-sm text-indigo-600 dark:text-indigo-400 group-hover:underline truncate">
+                                        {{ $shipment->reference_no }}
+                                    </span>
+                                    <flux:badge size="sm"
+                                        :color="$shipment->shipment_status === ShipmentStatus::Completed ? 'emerald' : ($shipment->shipment_status === ShipmentStatus::Cancelled ? 'rose' : 'zinc')"
+                                        variant="subtle">
+                                        {{ $shipment->shipmentStatusDisplay() }}
+                                    </flux:badge>
+                                </div>
+                                <div class="text-xs text-zinc-600 dark:text-zinc-300 mt-0.5 truncate">
+                                    @if($shipment->isContainer())
+                                        <span
+                                            class="font-medium">{{ __(':count Vehicles Container', ['count' => $shipment->vehicles->count()]) }}</span>
+                                    @else
+                                        @php $v = $shipment->vehicles->first(); @endphp
+                                        <span class="font-medium">{{ $v?->year }} {{ $v?->make }} {{ $v?->model }}</span>
+                                        @if($v?->vin)
+                                            <span class="text-zinc-400 font-mono ml-1">...{{ substr($v->vin, -8) }}</span>
+                                        @endif
+                                    @endif
+                                </div>
+                            </div>
+                            <flux:icon.chevron-right
+                                class="size-4 text-zinc-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 flex-shrink-0" />
+                        </a>
+                    @empty
+                        <div class="p-4 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                            {{ __('No shipments found matching ":term"', ['term' => $search]) }}
+                        </div>
+                    @endforelse
+                </div>
+            @endif
+        </div>
+    </div>
     {{-- Summary Stats Section --}}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-5">
-        <flux:card as="a" href="{{ route('shipments.index') }}" wire:navigate class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
+        <flux:card as="a" href="{{ route('shipments.index') }}" wire:navigate
+            class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
             <div class="flex items-center justify-between">
                 <flux:icon.car-front class="size-8 text-blue-500" />
                 <flux:badge color="blue" size="sm" variant="subtle">{{ __('Total') }}</flux:badge>
@@ -163,7 +264,8 @@ new #[Title('My Dashboard')] class extends Component
             </div>
         </flux:card>
 
-        <flux:card as="a" href="{{ route('prealerts.index') }}" wire:navigate class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
+        <flux:card as="a" href="{{ route('prealerts.index') }}" wire:navigate
+            class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
             <div class="flex items-center justify-between">
                 <flux:icon.bell class="size-8 text-amber-500" />
                 <flux:badge color="amber" size="sm" variant="subtle">{{ __('Alerts') }}</flux:badge>
@@ -175,7 +277,8 @@ new #[Title('My Dashboard')] class extends Component
             </div>
         </flux:card>
 
-        <flux:card as="a" href="{{ route('shipments.index', ['filterShipmentStatus' => 'DELIVERED']) }}" wire:navigate class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
+        <flux:card as="a" href="{{ route('shipments.index', ['filterShipmentStatus' => 'DELIVERED']) }}" wire:navigate
+            class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
             <div class="flex items-center justify-between">
                 <flux:icon.check-circle class="size-8 text-emerald-500" />
                 <flux:badge color="emerald" size="sm" variant="subtle">{{ __('Complete') }}</flux:badge>
@@ -188,7 +291,8 @@ new #[Title('My Dashboard')] class extends Component
             </div>
         </flux:card>
 
-        <flux:card as="a" href="{{ route('shipments.index', ['filterShipmentStatus' => 'PENDING']) }}" wire:navigate class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
+        <flux:card as="a" href="{{ route('shipments.index', ['filterShipmentStatus' => 'PENDING']) }}" wire:navigate
+            class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
             <div class="flex items-center justify-between">
                 <flux:icon.clock class="size-8 text-rose-500" />
                 <flux:badge color="rose" size="sm" variant="subtle">{{ __('Active') }}</flux:badge>
@@ -201,7 +305,8 @@ new #[Title('My Dashboard')] class extends Component
             </div>
         </flux:card>
 
-        <flux:card as="a" href="{{ route('shipments.index', ['filterShipmentStatus' => 'LOADED']) }}" wire:navigate class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
+        <flux:card as="a" href="{{ route('shipments.index', ['filterShipmentStatus' => 'LOADED']) }}" wire:navigate
+            class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
             <div class="flex items-center justify-between">
                 <flux:icon.container class="size-8 text-indigo-500" />
                 <flux:badge color="indigo" size="sm" variant="subtle">{{ __('Loaded') }}</flux:badge>
@@ -213,7 +318,9 @@ new #[Title('My Dashboard')] class extends Component
             </div>
         </flux:card>
 
-        <flux:card as="a" href="{{ route('shipments.index', ['filterShipmentStatus' => ShipmentStatus::TelexRequested->value]) }}" wire:navigate class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
+        <flux:card as="a"
+            href="{{ route('shipments.index', ['filterShipmentStatus' => ShipmentStatus::TelexRequested->value]) }}"
+            wire:navigate class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
             <div class="flex items-center justify-between">
                 <flux:icon.document-text class="size-8 text-violet-500" />
                 <flux:badge color="violet" size="sm" variant="subtle">{{ __('Telex') }}</flux:badge>
@@ -226,7 +333,8 @@ new #[Title('My Dashboard')] class extends Component
             </div>
         </flux:card>
 
-        <flux:card as="a" href="{{ route('shipments.index') }}" wire:navigate class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
+        <flux:card as="a" href="{{ route('shipments.index') }}" wire:navigate
+            class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
             <div class="flex items-center justify-between">
                 <flux:icon.truck class="size-8 text-slate-500" />
                 <flux:badge color="slate" size="sm" variant="subtle">{{ __('Roro') }}</flux:badge>
@@ -238,7 +346,8 @@ new #[Title('My Dashboard')] class extends Component
             </div>
         </flux:card>
 
-        <flux:card as="a" href="{{ route('shipments.index') }}" wire:navigate class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
+        <flux:card as="a" href="{{ route('shipments.index') }}" wire:navigate
+            class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
             <div class="flex items-center justify-between">
                 <flux:icon.container class="size-8 text-blue-600" />
                 <flux:badge color="blue" size="sm" variant="subtle">{{ __('Container') }}</flux:badge>
@@ -250,7 +359,8 @@ new #[Title('My Dashboard')] class extends Component
             </div>
         </flux:card>
 
-        <flux:card as="a" href="{{ route('shipments.index') }}" wire:navigate class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
+        <flux:card as="a" href="{{ route('shipments.index') }}" wire:navigate
+            class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
             <div class="flex items-center justify-between">
                 <flux:icon.banknotes class="size-8 text-teal-500" />
                 <flux:badge color="teal" size="sm" variant="subtle">{{ __('Paid') }}</flux:badge>
@@ -262,7 +372,8 @@ new #[Title('My Dashboard')] class extends Component
             </div>
         </flux:card>
 
-        <flux:card as="a" href="{{ route('shipments.index') }}" wire:navigate class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
+        <flux:card as="a" href="{{ route('shipments.index') }}" wire:navigate
+            class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
             <div class="flex items-center justify-between">
                 <flux:icon.exclamation-circle class="size-8 text-orange-500" />
                 <flux:badge color="orange" size="sm" variant="subtle">{{ __('Due') }}</flux:badge>
@@ -275,7 +386,8 @@ new #[Title('My Dashboard')] class extends Component
             </div>
         </flux:card>
 
-        <flux:card as="a" href="{{ route('shipper.wallet.index') }}" wire:navigate class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
+        <flux:card as="a" href="{{ route('shipper.wallet.index') }}" wire:navigate
+            class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
             <div class="flex items-center justify-between">
                 <flux:icon.wallet class="size-8 text-purple-500" />
                 <flux:badge color="purple" size="sm" variant="subtle">{{ __('Balance') }}</flux:badge>
@@ -287,7 +399,8 @@ new #[Title('My Dashboard')] class extends Component
             </div>
         </flux:card>
 
-        <flux:card as="a" href="{{ route('shipper.wallet.index') }}" wire:navigate class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
+        <flux:card as="a" href="{{ route('shipper.wallet.index') }}" wire:navigate
+            class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
             <div class="flex items-center justify-between">
                 <flux:icon.arrow-up-circle class="size-8 text-cyan-500" />
                 <flux:badge color="cyan" size="sm" variant="subtle">{{ __('Requests') }}</flux:badge>
@@ -344,9 +457,7 @@ new #[Title('My Dashboard')] class extends Component
 
             @if ($activeTab === 'shipments')
                 <div class="space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
-                        <flux:input wire:model.live.debounce.300ms="search" size="sm" icon="magnifying-glass"
-                            placeholder="{{ __('Search...') }}" />
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
                         <flux:select wire:model.live="filterMonth" size="sm">
                             <flux:select.option value="">{{ __('All Months') }}</flux:select.option>
                             @foreach(range(1, 12) as $month)
@@ -360,7 +471,6 @@ new #[Title('My Dashboard')] class extends Component
                                 <flux:select.option value="{{ $year }}">{{ $year }}</flux:select.option>
                             @endforeach
                         </flux:select>
-                        <div class="col-span-2"></div>
                     </div>
 
                     <div class="overflow-hidden border-t border-zinc-200 dark:border-zinc-800">
@@ -390,10 +500,12 @@ new #[Title('My Dashboard')] class extends Component
                                         <flux:table.cell>
                                             <div class="flex flex-col text-sm">
                                                 @if($shipment->isContainer())
-                                                    <span class="font-semibold">{{ __(':count Vehicles', ['count' => $shipment->vehicles->count()]) }}</span>
+                                                    <span
+                                                        class="font-semibold">{{ __(':count Vehicles', ['count' => $shipment->vehicles->count()]) }}</span>
                                                 @else
                                                     @php $v = $shipment->vehicles->first(); @endphp
-                                                    <span class="font-medium">{{ $v?->year }} {{ $v?->make }} {{ $v?->model }}</span>
+                                                    <span class="font-medium">{{ $v?->year }} {{ $v?->make }}
+                                                        {{ $v?->model }}</span>
                                                 @endif
                                             </div>
                                         </flux:table.cell>
@@ -402,7 +514,8 @@ new #[Title('My Dashboard')] class extends Component
                                         </flux:table.cell>
                                         <flux:table.cell class="font-mono text-sm">
                                             @if(auth()->user()->hasRole('shipper') && $shipment->invoice_status !== \App\Enums\InvoiceStatus::Completed)
-                                                <span class="text-zinc-400" title="{{ __('Invoice total available when completed') }}">$0.00</span>
+                                                <span class="text-zinc-400"
+                                                    title="{{ __('Invoice total available when completed') }}">$0.00</span>
                                             @else
                                                 ${{ number_format((float) ($shipment->invoice?->total_amount ?? 0), 2) }}
                                             @endif
@@ -440,7 +553,8 @@ new #[Title('My Dashboard')] class extends Component
                                         <flux:table.cell>
                                             <div class="flex flex-col text-sm">
                                                 @php $v = $prealert->vehicles->first(); @endphp
-                                                <span class="font-medium">{{ $v?->year }} {{ $v?->make }} {{ $v?->model }}</span>
+                                                <span class="font-medium">{{ $v?->year }} {{ $v?->make }}
+                                                    {{ $v?->model }}</span>
                                                 <span class="text-xs text-zinc-500 font-mono">{{ $v?->vin }}</span>
                                             </div>
                                         </flux:table.cell>
