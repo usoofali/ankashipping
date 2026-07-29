@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Actions\Financial;
 
 use App\Enums\PaymentStatus;
-use App\Enums\ShipmentStatus;
 use App\Enums\TransactionType;
 use App\Models\ActivityLog;
 use App\Models\Shipment;
@@ -65,10 +64,9 @@ class ProcessWalletPaymentAction
                 'reference' => $shipment->reference_no,
             ]);
 
-            // 3. Update Shipment & Payment Status
+            // 3. Update Payment Status
             $shipment->update([
                 'payment_status' => PaymentStatus::Paid,
-                'shipment_status' => ShipmentStatus::Completed,
             ]);
 
             // 4. Record Activity
@@ -88,8 +86,8 @@ class ProcessWalletPaymentAction
             $payerName = $actor?->name ?? 'the Shipper (via WhatsApp)';
             ShipmentTracking::query()->create([
                 'shipment_id' => $shipment->id,
-                'status' => ShipmentStatus::Completed,
-                'note' => __('Paid via wallet by :user. Shipment completed.', ['user' => $payerName]),
+                'status' => $shipment->fresh()->shipment_status,
+                'note' => __('Paid via wallet by :user.', ['user' => $payerName]),
                 'recorded_at' => now(),
             ]);
 
