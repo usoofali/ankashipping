@@ -57,7 +57,7 @@ final class StampedDockReceiptNotification extends Notification implements Shoul
         }
 
         return [
-            'body' => "🚚 *Delivered:* Your shipment *{$this->shipment->reference_no}* has been delivered to the warehouse. Stamped receipt attached.",
+            'body' => "🚚 *Delivered:* Your shipment *{$this->shipment->reference_no}* has been delivered. Stamped receipt attached.",
             'files' => $files,
             'related_entity' => $this->shipment,
         ];
