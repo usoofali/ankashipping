@@ -10045,6 +10045,7 @@ namespace App\Models {
      * @property string $path
      * @property mixed $vehicle_document_id
      * @property int $id
+     * @property-read mixed $storage_path
      * @property-read \App\Models\VehicleDocument $vehicleDocument
      * @property-read \App\Models\User $uploader
      * @method static \Illuminate\Database\Eloquent\Builder<VehicleDocumentFile>|VehicleDocumentFile whereId($value)

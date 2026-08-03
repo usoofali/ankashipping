@@ -116,7 +116,7 @@ final class VehiclePictureController extends Controller
 
         foreach ($vehicle->vehicleDocuments as $doc) {
             foreach ($doc->files as $file) {
-                if ($file->isImage() && $file->storage_path) {
+                if ($file->isImage() && ($file->path || $file->storage_path)) {
                     $urls[] = route('vehicles.documents.files.download.signed', [
                         'vehicle' => $vehicle->id,
                         'file' => $file->id,
