@@ -32,7 +32,7 @@ class PrealertFactory extends Factory
             'destination_port_id' => Port::factory(),
             'shipping_mode' => fake()->randomElement(ShippingMode::cases()),
             'notes' => fake()->sentence(),
-            'status' => fake()->randomElement(PrealertStatus::cases()),
+            'status' => PrealertStatus::Pending,
         ];
     }
 }

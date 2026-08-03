@@ -19,6 +19,7 @@ use App\Modules\WhatsApp\Models\WhatsAppConversation;
 use App\Modules\WhatsApp\Models\WhatsAppMenuState;
 use App\Notifications\PrealertCreatedNotification;
 use App\Services\VinLookupService;
+use App\Support\GatepassPinNormalizer;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
@@ -97,15 +98,26 @@ class PreAlertService
                 break;
 
             case 'prealert_awaiting_gatepass':
+                $cleanPin = GatepassPinNormalizer::normalize($text);
+
+                if (! GatepassPinNormalizer::isValidFormat($cleanPin)) {
+                    $this->waService->sendMessage(
+                        $conversation->phone_number,
+                        "⚠️ *Invalid Gate Pass PIN Format.*\n\nPlease send *only* the PIN code without extra text or labels.\n\n👉 *Example:* ACA6 or 123456"
+                    );
+
+                    return;
+                }
+
                 $id = $payload['current_vehicle_id'];
-                $payload['vehicle_data'][$id]['gatepass_pin'] = $text;
+                $payload['vehicle_data'][$id]['gatepass_pin'] = $cleanPin;
 
                 $state->update([
                     'current_step' => 'prealert_awaiting_auction_receipt',
                     'data_payload' => $payload,
                 ]);
 
-                $this->waService->sendMessage($conversation->phone_number, "✅ *PIN saved.*\n\nNow, please upload the *Auction Receipt* (Image or PDF) for this vehicle:");
+                $this->waService->sendMessage($conversation->phone_number, "✅ *PIN saved ({$cleanPin}).*\n\nNow, please upload the *Auction Receipt* (Image or PDF) for this vehicle:");
                 break;
 
             case 'prealert_awaiting_auction_receipt':

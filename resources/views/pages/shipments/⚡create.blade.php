@@ -74,8 +74,11 @@ new #[Title('Create Shipment')] class extends Component {
     public ?Vehicle $selectedVehicle = null;
     public ?Shipper $selectedShipper = null;
 
-    public function mount(): void
+    public function mount(?int $prealert = null): void
     {
+        if ($prealert !== null) {
+            $this->prealert = $prealert;
+        }
         $defaults = DefaultShipmentSetting::current();
         $system = SystemSetting::current();
 
@@ -351,6 +354,9 @@ new #[Title('Create Shipment')] class extends Component {
                 ]);
             });
         } catch (\Exception $e) {
+            if (app()->environment('testing')) {
+                throw $e;
+            }
             $this->notification()->error(
                 title: __('Error'),
                 description: $e->getMessage()

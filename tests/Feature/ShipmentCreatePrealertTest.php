@@ -14,12 +14,14 @@ use App\Models\Prealert;
 use App\Models\Shipper;
 use App\Models\User;
 use App\Models\Vehicle;
+use Illuminate\Support\Facades\Notification;
 use Livewire\Volt\Volt;
 use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
     // Create roles and permissions
     Role::findOrCreate('super_admin');
+    Notification::fake();
 });
 
 test('prealert_id is nullified on vehicles when shipment is created from prealert', function () {

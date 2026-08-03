@@ -35,7 +35,7 @@ final class CreatePrealert
             'rejection_reason' => ['nullable', 'string'],
         ])->validate();
 
-        $validated['status'] ??= PrealertStatus::Draft->value;
+        $validated['status'] ??= PrealertStatus::Pending->value;
 
         return Prealert::query()->create($validated);
     }
