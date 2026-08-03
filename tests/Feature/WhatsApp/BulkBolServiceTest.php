@@ -8,6 +8,7 @@ use App\Models\Vehicle;
 use App\Modules\WhatsApp\Services\BulkBolService;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Notification;
+use Smalot\PdfParser\Parser;
 
 it('extracts VIN correctly from text', function () {
     $service = app(BulkBolService::class);
@@ -46,6 +47,43 @@ it('returns null if VIN is missing or invalid format', function () {
     expect($vin)->toBeNull();
 });
 
+it('extracts VIN correctly from Grimaldi BL format', function () {
+    $service = app(BulkBolService::class);
+
+    $method = new ReflectionMethod(BulkBolService::class, 'extractVin');
+    $method->setAccessible(true);
+
+    $text = "CHASSIS NOS :                1 USED UNPACKED VEHICLE (S)                    1,124.908 KGS     10.226 CBM\nJM1DE1LY2D0162342              MAZDA 2\nModel Year 2013";
+    $vin = $method->invoke($service, $text);
+
+    expect($vin)->toBe('JM1DE1LY2D0162342');
+});
+
+it('extracts VIN correctly from Grimaldi_BL.pdf sample file', function () {
+    $pdfFile = base_path('Grimaldi_BL.pdf');
+    if (! file_exists($pdfFile)) {
+        return;
+    }
+
+    $service = app(BulkBolService::class);
+    $method = new ReflectionMethod(BulkBolService::class, 'extractVin');
+    $method->setAccessible(true);
+
+    $parser = new Parser;
+    $pdf = $parser->parseFile($pdfFile);
+
+    $expectedVins = [
+        '5NPDH4AE9DH393579',
+        '2T1BU4EE5CC789992',
+        '4T1BF1FK0CU562088',
+        'JM1DE1LY2D0162342',
+    ];
+
+    foreach ($pdf->getPages() as $index => $page) {
+        $vin = $method->invoke($service, $page->getText());
+        expect($vin)->toBe($expectedVins[$index]);
+    }
+});
 
 it('processes a matched page correctly', function () {
     Notification::fake();
@@ -114,7 +152,7 @@ it('formats summary correctly', function () {
     $results = [
         'total_pages' => 3,
         'matched' => [
-            ['ref' => 'ANK0001','vin' => '1HGCR2F3XDA135424'],
+            ['ref' => 'ANK0001', 'vin' => '1HGCR2F3XDA135424'],
         ],
         'unmatched' => [
             ['vin' => '1HGCR2F3XDA135425'],

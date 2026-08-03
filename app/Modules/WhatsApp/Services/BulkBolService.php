@@ -14,6 +14,7 @@ use App\Models\Vehicle;
 use App\Modules\WhatsApp\Models\WhatsAppConversation;
 use App\Notifications\ShipmentDocumentAttachedNotification;
 use App\ShippingWorkflow\ShippingWorkflow;
+use App\Support\VinNormalizer;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
@@ -105,31 +106,43 @@ class BulkBolService
 
     protected function extractVin(string $pageText): ?string
     {
-        // Primary: match the VIN immediately after the HS Code number.
-        // This handles both the new "smushed" single-line format and the old spaced format,
-        // since the HS Code always directly precedes the VIN in both cases.
-        if (preg_match('/(?:HS\s*Code\s*:|HSCode:)\s*\d{6,10}\s*([A-HJ-NPR-Z0-9]{17})/i', $pageText, $matches)) {
-            return $matches[1];
+        // 1. Match VIN directly after HS Code (handles smushed "HSCode:87039001004T1BF1..." and spaced formats)
+        if (preg_match('/(?:HS\s*Code\s*:?|HSCode:?)\s*\d{6,10}\s*([A-HJ-NPR-Z0-9]{17})/i', $pageText, $matches)) {
+            $candidate = strtoupper(preg_replace('/[^A-Z0-9]/', '', $matches[1]));
+            if (VinNormalizer::isValidFormat($candidate)) {
+                return $candidate;
+            }
         }
 
-        // Fallback: line-by-line look-ahead for older PDFs that may not have an HS Code
+        // 2. Chassis / VIN section look-ahead (Grimaldi, Sallaum, Hoegh, K-Line, etc.)
         $lines = explode("\n", $pageText);
         foreach ($lines as $i => $line) {
-            if (str_contains($line, 'CHASSIS NUMBER') || str_contains($line, 'CHASSISNUMBER')) {
-                // Look ahead for the VIN, skipping the HS Code line
-                for ($j = $i + 1; $j < count($lines); $j++) {
+            $upperLine = strtoupper($line);
+            if (str_contains($upperLine, 'CHASSIS') || str_contains($upperLine, 'VIN')) {
+                for ($j = $i; $j < min(count($lines), $i + 6); $j++) {
                     $trimmed = trim($lines[$j]);
-                    if ($trimmed !== '' && ! str_starts_with($trimmed, 'HS Code') && ! str_starts_with($trimmed, 'HSCode')) {
-                        // VIN should be the first token on the line
-                        $token = strtoupper(explode(' ', $trimmed)[0]);
-                        $token = preg_replace('/[^A-Z0-9]/', '', $token); // Clean up hidden chars
-
-                        // Basic VIN format validation (17 chars, no I, O, Q)
-                        if (preg_match('/^[A-HJ-NPR-Z0-9]{17}$/', $token)) {
-                            return $token;
-                        }
-                        break; // Found a non-empty line but it wasn't a valid VIN
+                    if ($trimmed === '') {
+                        continue;
                     }
+
+                    if (preg_match_all('/[A-HJ-NPR-Z0-9]{17}/i', $trimmed, $vinMatches)) {
+                        foreach ($vinMatches[0] as $candidate) {
+                            $candidate = strtoupper(preg_replace('/[^A-Z0-9]/', '', $candidate));
+                            if (VinNormalizer::isValidFormat($candidate)) {
+                                return $candidate;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. Fallback: Standalone 17-char VIN search anywhere on page
+        if (preg_match_all('/[A-HJ-NPR-Z0-9]{17}/i', $pageText, $allMatches)) {
+            foreach ($allMatches[0] as $candidate) {
+                $candidate = strtoupper(preg_replace('/[^A-Z0-9]/', '', $candidate));
+                if (VinNormalizer::isValidFormat($candidate)) {
+                    return $candidate;
                 }
             }
         }
