@@ -598,7 +598,7 @@ class StaffOperationsService
         if (! $localPath) {
             $this->waService->sendMessage(
                 $conversation->phone_number,
-                "❌ *Download Failed:* Could not download the file from WhatsApp.\n\n👉 Please upload another PDF file or type 'Menu' to cancel."
+                "❌ *WhatsApp Media Download Error*\n\nWhatsApp servers were unable to process or serve this file (Meta Error 131052). This occurs when a PDF file has corrupted headers or non-standard formatting.\n\n🛠 *Solution:* Please repair/normalize the file using https://www.ilovepdf.com/repair-pdf and upload the repaired PDF, or type *Menu* to cancel."
             );
 
             return;
