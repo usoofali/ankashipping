@@ -598,7 +598,7 @@ class StaffOperationsService
         if (! $localPath) {
             $this->waService->sendMessage(
                 $conversation->phone_number,
-                "❌ *WhatsApp Media Download Error*\n\nWhatsApp servers were unable to process or serve this file (Meta Error 131052). This occurs when a PDF file has corrupted headers or non-standard formatting.\n\n🛠 *Solution:* Please repair/normalize the file using https://www.ilovepdf.com/repair-pdf and upload the repaired PDF, or type *Menu* to cancel."
+                "❌ *WhatsApp Media Download Error*\n\nWhatsApp servers were unable to process or serve this file (Meta Error 131052). This occurs when a PDF file has corrupted headers or non-standard formatting.\n\n🛠 *Solution:* Please repair/normalize the file using an online PDF repair tool (such as iLovePDF Repair) and upload the repaired PDF, or type *Menu* to cancel."
             );
 
             return;

@@ -200,5 +200,5 @@ it('formats summary with secured PDF message', function () {
 
     expect($summary)
         ->toContain('🔒 *Unreadable or Compressed PDF Detected*')
-        ->toContain('ilovepdf.com');
+        ->toContain('iLovePDF Repair');
 });
