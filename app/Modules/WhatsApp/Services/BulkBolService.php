@@ -88,13 +88,13 @@ class BulkBolService
                 }
             }
         } catch (\Exception $e) {
-            if (str_contains($e->getMessage(), 'Secured pdf file')) {
+            if (str_contains(strtolower($e->getMessage()), 'secured pdf file') || str_contains(strtolower($e->getMessage()), 'encrypted')) {
                 $results['secured'] = true;
 
                 return $results;
             }
 
-            throw $e;
+            throw new \RuntimeException('Corrupted or unreadable PDF file ('.$e->getMessage().')', 0, $e);
         } finally {
             if (File::exists($tempDir)) {
                 File::deleteDirectory($tempDir);

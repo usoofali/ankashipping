@@ -581,7 +581,7 @@ class StaffOperationsService
     protected function handleBulkBlUpload(WhatsAppConversation $conversation, WhatsAppMenuState $state, ?string $mediaId): void
     {
         if (! $mediaId) {
-            $this->waService->sendMessage($conversation->phone_number, '⚠️ Please upload a PDF file.');
+            $this->waService->sendMessage($conversation->phone_number, "⚠️ Please upload a PDF file.\n\n_(Type 'Menu' to cancel)_");
 
             return;
         }
@@ -596,7 +596,10 @@ class StaffOperationsService
 
         $localPath = $this->waService->downloadMedia($mediaId);
         if (! $localPath) {
-            $this->waService->sendMessage($conversation->phone_number, '❌ Failed to download the PDF. Please try again.');
+            $this->waService->sendMessage(
+                $conversation->phone_number,
+                "❌ *Download Failed:* Could not download the file from WhatsApp.\n\n👉 Please upload another PDF file or type 'Menu' to cancel."
+            );
 
             return;
         }
@@ -608,10 +611,17 @@ class StaffOperationsService
             $bulkBolService = app(BulkBolService::class);
             $results = $bulkBolService->process($absolutePath, $conversation, $user);
             $summary = $bulkBolService->formatSummary($results);
+
+            $summary .= "\n\n👉 *Send another BL PDF to process more, or type 'Menu' to finish.*";
             $this->waService->sendMessage($conversation->phone_number, $summary);
         } catch (\Throwable $e) {
-            Log::channel('whatsapp')->error('Bulk BL processing failed', ['error' => $e->getMessage()]);
-            $this->waService->sendMessage($conversation->phone_number, '❌ An error occurred while processing the document. Please contact support.');
+            Log::channel('whatsapp')->error('Bulk BL processing failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            $errorMsg = "❌ *Failed to Process PDF File*\n\n*Reason:* {$e->getMessage()}\n\nThe file might be corrupted, password-protected, or unreadable.\n\n👉 Please upload a valid, uncorrupted PDF file to try again, or type 'Menu' to cancel.";
+            $this->waService->sendMessage($conversation->phone_number, $errorMsg);
         } finally {
             if (Storage::disk('public')->exists($localPath)) {
                 Storage::disk('public')->delete($localPath);
@@ -619,8 +629,6 @@ class StaffOperationsService
                 @unlink($localPath);
             }
         }
-
-        $state->delete();
     }
 
     protected function handleVehicleSelection(WhatsAppConversation $conversation, WhatsAppMenuState $state, string $text): void

@@ -64,10 +64,16 @@ class WhatsAppService
         $response = Http::withToken($this->token)->get($url);
 
         if ($response->failed()) {
+            Log::channel('whatsapp')->error('Failed to get media URL from Meta', [
+                'media_id' => $mediaId,
+                'response' => $response->json(),
+            ]);
+
             return null;
         }
 
         $mediaUrl = $response->json('url');
+        $mimeType = $response->json('mime_type');
 
         if (! $mediaUrl) {
             return null;
@@ -76,10 +82,15 @@ class WhatsAppService
         $fileResponse = Http::withToken($this->token)->get($mediaUrl);
 
         if ($fileResponse->failed()) {
+            Log::channel('whatsapp')->error('Failed to download media binary from Meta CDN', [
+                'media_id' => $mediaId,
+                'status' => $fileResponse->status(),
+            ]);
+
             return null;
         }
 
-        $extension = $this->getExtension($fileResponse->header('Content-Type'));
+        $extension = $this->getExtension($mimeType ?? $fileResponse->header('Content-Type') ?? '');
         $filename = 'whatsapp/'.uniqid().'.'.$extension;
 
         Storage::disk('public')->put($filename, $fileResponse->body());
@@ -113,7 +124,7 @@ class WhatsAppService
             return null;
         }
 
-        $extension = $this->getExtension($mimeType ?? $fileResponse->header('Content-Type'));
+        $extension = $this->getExtension($mimeType ?? $fileResponse->header('Content-Type') ?? '');
         $filename = 'attachment_'.$mediaId.'.'.$extension;
 
         return [
@@ -125,12 +136,22 @@ class WhatsAppService
 
     protected function getExtension(string $mimeType): string
     {
-        return match ($mimeType) {
-            'application/pdf' => 'pdf',
-            'image/jpeg' => 'jpg',
-            'image/png' => 'png',
-            default => 'bin',
-        };
+        $mime = strtolower($mimeType);
+
+        if (str_contains($mime, 'pdf')) {
+            return 'pdf';
+        }
+        if (str_contains($mime, 'jpeg') || str_contains($mime, 'jpg')) {
+            return 'jpg';
+        }
+        if (str_contains($mime, 'png')) {
+            return 'png';
+        }
+        if (str_contains($mime, 'webp')) {
+            return 'webp';
+        }
+
+        return 'bin';
     }
 
     /**
