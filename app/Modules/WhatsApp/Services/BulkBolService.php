@@ -275,12 +275,15 @@ class BulkBolService
     public function formatSummary(array $results): string
     {
         if ($results['secured'] ?? false) {
+            $details = ! empty($results['error_details']) ? "\n_*Details:* {$results['error_details']}_\n" : '';
+
             return implode("\n", [
-                '🔒 *Secured PDF Detected*',
+                '🔒 *Unreadable or Compressed PDF Detected*',
                 '',
-                'The PDF you uploaded is password-protected or secured against reading by automated tools.',
-                '',
-                'Please use a free online tool at https://www.ilovepdf.com/repair-pdf to remove the password and try again.',
+                'The PDF file uploaded uses structural compression, encryption, or non-standard formatting that cannot be parsed directly.',
+                $details,
+                '🛠 *Solution:*',
+                'Please repair/normalize the PDF using the free online tool at https://www.ilovepdf.com/repair-pdf and upload the repaired file.',
             ]);
         }
 
@@ -346,6 +349,10 @@ class BulkBolService
                 $summary .= "• {$failed['ref']} ({$failed['vin']})\n";
             }
             $summary .= "\n";
+        }
+
+        if ($matchedCount === 0) {
+            $summary .= "💡 *Tip:* If the PDF contains valid shipments that were not recognized or parsed, repair the file at https://www.ilovepdf.com/repair-pdf and upload again.\n";
         }
 
         return trim($summary);

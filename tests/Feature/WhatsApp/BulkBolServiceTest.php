@@ -199,7 +199,6 @@ it('formats summary with secured PDF message', function () {
     $summary = $service->formatSummary($results);
 
     expect($summary)
-        ->toContain('🔒 *Secured PDF Detected*')
-        ->toContain('password-protected')
+        ->toContain('🔒 *Unreadable or Compressed PDF Detected*')
         ->toContain('ilovepdf.com');
 });

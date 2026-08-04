@@ -159,13 +159,28 @@ class ProcessIncomingMessage implements ShouldQueue
 
         if ($message) {
             $message->update(['status' => $status]);
+        }
 
-            if ($status === 'failed') {
-                Log::channel('whatsapp')->warning('WhatsApp Message Failed', [
-                    'message_id' => $messageId,
-                    'errors' => $statusData['errors'] ?? [],
-                ]);
+        if ($status === 'failed') {
+            $rawErrors = $statusData['errors'] ?? [];
+            $formattedErrors = [];
+
+            foreach ($rawErrors as $err) {
+                if (is_array($err)) {
+                    $code = $err['code'] ?? 'Unknown';
+                    $title = $err['title'] ?? ($err['message'] ?? 'Delivery failed');
+                    $details = $err['error_data']['details'] ?? ($err['details'] ?? '');
+                    $formattedErrors[] = "Meta Error {$code}: {$title}".($details ? " ({$details})" : '');
+                } else {
+                    $formattedErrors[] = (string) $err;
+                }
             }
+
+            Log::channel('whatsapp')->error('WhatsApp Message Delivery Failed', [
+                'message_id' => $messageId,
+                'recipient_id' => $statusData['recipient_id'] ?? null,
+                'error_details' => $formattedErrors,
+            ]);
         }
     }
 

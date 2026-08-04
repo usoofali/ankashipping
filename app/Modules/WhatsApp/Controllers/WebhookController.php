@@ -37,7 +37,7 @@ class WebhookController extends Controller
     {
         $payload = $request->all();
 
-        Log::channel('whatsapp')->info('Incoming Webhook Payload', $payload);
+        Log::channel('whatsapp')->info('Incoming Webhook Payload: '.json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 
         // Dispatch job to process the message asynchronously
         ProcessIncomingMessage::dispatch($payload);
