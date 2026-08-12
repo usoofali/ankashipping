@@ -5,7 +5,8 @@
     @include('partials.head')
 </head>
 
-<body class="min-h-screen bg-sky-50/50 dark:bg-zinc-800">
+<body class="min-h-screen bg-transparent">
+    @include('partials.background')
     <flux:sidebar sticky collapsible="mobile"
         class="border-e border-zinc-200 bg-sky-100 dark:border-zinc-700 dark:bg-zinc-900">
         <flux:sidebar.header>
@@ -44,7 +45,7 @@
                         </flux:sidebar.item>
                     @endcan
                     @can('vehicles.view')
-                        <flux:sidebar.item icon="car-front" icon-class="text-sky-500" :href="route('vehicles.index')"
+                        <flux:sidebar.item icon="car-front" icon-class="text-blue-500" :href="route('vehicles.index')"
                             :current="request()->routeIs('vehicles.*')" wire:navigate>
                             {{ __('Vehicles') }}
                         </flux:sidebar.item>
@@ -56,13 +57,13 @@
             @canany(['financials.wallets.view', 'wallet_top_ups.view', 'wallets.view'])
                 <flux:sidebar.group :heading="__('Financials')" class="grid" expandable="true" expanded="false">
                     @can('financials.wallets.view')
-                        <flux:sidebar.item icon="wallet" icon-class="text-blue-500" :href="route('financials.wallets.index')"
+                        <flux:sidebar.item icon="wallet" icon-class="text-purple-500" :href="route('financials.wallets.index')"
                             :current="request()->routeIs('financials.wallets.*')" wire:navigate>
                             {{ __('Master Wallets') }}
                         </flux:sidebar.item>
                     @endcan
                     @can('wallet_top_ups.view')
-                        <flux:sidebar.item icon="banknotes" icon-class="text-emerald-500"
+                        <flux:sidebar.item icon="banknotes" icon-class="text-teal-500"
                             :href="route('financials.top-ups.index')" :current="request()->routeIs('financials.top-ups.*')"
                             wire:navigate>
                             {{ __('Top-Ups Approvals') }}
@@ -160,7 +161,7 @@
             @canany(['default_shipment_settings.view', 'payment_methods.view', 'charge_items.view'])
                 <flux:sidebar.group :heading="__('Configuration')" class="grid" expandable expanded="false">
                     @can('default_shipment_settings.view')
-                        <flux:sidebar.item icon="cog" icon-class="text-zinc-500"
+                        <flux:sidebar.item icon="cog" icon-class="text-teal-500"
                             :href="route('default-shipment-settings.index')"
                             :current="request()->routeIs('default-shipment-settings.*')" wire:navigate>
                             {{ __('Default Options') }}

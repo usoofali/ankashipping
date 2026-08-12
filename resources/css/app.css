@@ -177,6 +177,54 @@ select:focus[data-flux-control] {
     @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
 }
 
-/* \[:where(&)\]:size-4 {
-    @apply size-4;
-} */
+.bg-dot-pattern {
+    background-size: 40px 40px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='10' r='1.5' fill='rgba(2, 132, 199, 0.12)'/%3E%3Ccircle cx='0' cy='30' r='1.5' fill='rgba(2, 132, 199, 0.12)'/%3E%3Ccircle cx='40' cy='30' r='1.5' fill='rgba(2, 132, 199, 0.12)'/%3E%3C/svg%3E");
+    animation: drift 25s linear infinite;
+}
+
+.dark .bg-dot-pattern {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='10' r='1.5' fill='rgba(34, 211, 238, 0.08)'/%3E%3Ccircle cx='0' cy='30' r='1.5' fill='rgba(34, 211, 238, 0.08)'/%3E%3Ccircle cx='40' cy='30' r='1.5' fill='rgba(34, 211, 238, 0.08)'/%3E%3C/svg%3E");
+}
+
+@keyframes drift {
+    from {
+        background-position: 0 0;
+    }
+    to {
+        background-position: 40px 40px;
+    }
+}
+
+.animate-float-slow {
+    animation: float-slow 25s ease-in-out infinite;
+}
+
+.animate-float-reverse {
+    animation: float-reverse 30s ease-in-out infinite;
+}
+
+@keyframes float-slow {
+    0%, 100% {
+        transform: translate(0, 0) scale(1);
+    }
+    33% {
+        transform: translate(30px, -50px) scale(1.05);
+    }
+    66% {
+        transform: translate(-20px, 20px) scale(0.95);
+    }
+}
+
+@keyframes float-reverse {
+    0%, 100% {
+        transform: translate(0, 0) scale(1);
+    }
+    33% {
+        transform: translate(-40px, 30px) scale(0.95);
+    }
+    66% {
+        transform: translate(30px, -40px) scale(1.05);
+    }
+}
+
