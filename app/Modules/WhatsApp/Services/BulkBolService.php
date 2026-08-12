@@ -283,7 +283,7 @@ class BulkBolService
                 'The PDF file uploaded uses structural compression, encryption, or non-standard formatting that cannot be parsed directly.',
                 $details,
                 '🛠 *Solution:*',
-                'Please repair/normalize the PDF using a free online PDF repair tool (such as iLovePDF Repair https://www.ilovepdf.com/repair_pdf) and upload the repaired file.',
+                'Please repair/normalize the PDF using a free online PDF repair tool (such as iLovePDF Repair https://www.ilovepdf.com/repair-pdf) and upload the repaired file.',
             ]);
         }
 
@@ -352,7 +352,7 @@ class BulkBolService
         }
 
         if ($matchedCount === 0) {
-            $summary .= "💡 *Tip:* If the PDF contains valid shipments that were not recognized or parsed, repair the file using a PDF repair tool (such as iLovePDF Repair) and upload again.\n";
+            $summary .= "💡 *Tip:* If the PDF contains valid shipments that were not recognized or parsed, repair the file using a PDF repair tool (such as iLovePDF Repair at https://www.ilovepdf.com/repair-pdf) and upload again.\n";
         }
 
         return trim($summary);
