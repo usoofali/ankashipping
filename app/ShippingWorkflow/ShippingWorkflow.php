@@ -241,7 +241,7 @@ class ShippingWorkflow
 
     public function canViewInvoice(Shipment $shipment, User $user): bool
     {
-        if ($user->hasRole('super_admin')) {
+        if ($user->hasRole('super_admin') || $user->can('workflow.complete')) {
             return true;
         }
 
@@ -262,7 +262,7 @@ class ShippingWorkflow
         }
 
         // Staff and Admins can download if invoice is generated
-        if ($user->hasRole('super_admin') || call_user_func([$user, 'staff'])->exists()) {
+        if ($user->hasRole('super_admin') || $user->can('workflow.complete') || call_user_func([$user, 'staff'])->exists()) {
             return $shipment->invoice !== null;
         }
 
@@ -274,7 +274,7 @@ class ShippingWorkflow
 
     public function canClearInvoice(Shipment $shipment, User $user): bool
     {
-        if ($user->hasRole('super_admin')) {
+        if ($user->hasRole('super_admin') || $user->can('workflow.complete')) {
             return true;
         }
 
@@ -290,7 +290,7 @@ class ShippingWorkflow
             return false;
         }
 
-        if ($user->hasRole('super_admin')) {
+        if ($user->hasRole('super_admin') || $user->can('workflow.complete')) {
             return true;
         }
 
@@ -301,7 +301,7 @@ class ShippingWorkflow
 
     public function canEditInvoice(Shipment $shipment, User $user): bool
     {
-        if ($user->hasRole('super_admin')) {
+        if ($user->hasRole('super_admin') || $user->can('workflow.complete')) {
             return true;
         }
 
