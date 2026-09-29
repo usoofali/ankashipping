@@ -39,7 +39,7 @@ new #[Title('Wallet Funding Approvals')] class extends Component
     {
         $user = Auth::user();
 
-        return WalletTopUp::with(['shipper', 'approver'])
+        return WalletTopUp::with(['shipper.user', 'approver'])
             ->when(! ($user?->hasRole('super_admin') || $user?->staff()->exists()), function ($query) use ($user): void {
                 $query->where('shipper_id', $user?->shipper?->id);
             })
@@ -167,8 +167,13 @@ new #[Title('Wallet Funding Approvals')] class extends Component
                             </flux:table.cell>
                             <flux:table.cell>
                                 <div class="font-medium text-zinc-900 dark:text-zinc-100">
-                                    {{ $topUp->shipper->company_name ?? 'Shipper #' . $topUp->shipper_id }}
+                                    {{ $topUp->shipper?->display_name ?? 'Shipper #' . $topUp->shipper_id }}
                                 </div>
+                                @if ($topUp->shipper?->user?->email)
+                                    <div class="text-xs text-zinc-500 dark:text-zinc-400">
+                                        {{ $topUp->shipper->user->email }}
+                                    </div>
+                                @endif
                             </flux:table.cell>
                             <flux:table.cell class="font-bold text-emerald-600 dark:text-emerald-400">
                                 ${{ number_format($topUp->amount, 2) }}

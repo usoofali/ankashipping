@@ -22,6 +22,7 @@ use App\Models\Vehicle;
 use App\Modules\WhatsApp\Models\WhatsAppCategory;
 use App\Modules\WhatsApp\Models\WhatsAppConversation;
 use App\Modules\WhatsApp\Models\WhatsAppMenuState;
+use App\Modules\WhatsApp\Models\WhatsAppMessage;
 use App\Notifications\InvoiceStatusChangedNotification;
 use App\Notifications\ShipmentDocumentAttachedNotification;
 use App\Notifications\StampedDockReceiptNotification;
@@ -97,6 +98,7 @@ class StaffOperationsService
             "• `#bl batch` - Auto-process multiple BL\n".
             "• `#title [REF]` - Title Documents\n".
             "• `#dock [REF]` - Stamped Dock Receipt\n".
+            "• `#dock send [REF]` - Send Dock Receipt PDF\n".
             "• `#photos [REF]` - Vehicle Photos/Videos\n".
             "• `#other [REF]` - General Docs\n\n".
             "💰 *Finances:*\n".
@@ -120,6 +122,13 @@ class StaffOperationsService
 
         // Route to category if hashtag matches
         $this->handleRoutingDirective($conversation, $tag);
+
+        if ($tag === 'docksend' || ($tag === 'dock' && str_starts_with(strtolower($content), 'send'))) {
+            $ref = $tag === 'docksend' ? $content : trim(substr($content, 4));
+            $this->handleSendDockReceiptDirective($conversation, $ref);
+
+            return;
+        }
 
         switch ($tag) {
             case 'bl':
@@ -895,5 +904,76 @@ class StaffOperationsService
             ->merge(User::query()->whereHas('roles', fn ($q) => $q->where('name', 'super_admin'))->pluck('id'))
             ->unique()
             ->values();
+    }
+
+    public function handleSendDockReceiptDirective(WhatsAppConversation $conversation, string $ref): void
+    {
+        $ref = strtoupper(trim($ref));
+
+        if (empty($ref)) {
+            $this->waService->sendMessage($conversation->phone_number, '❌ Please provide a Reference or VIN. (Example: `#dock send ANK0001`)');
+
+            return;
+        }
+
+        $shipment = Shipment::where('reference_no', $ref)
+            ->orWhere('booking_number', $ref)
+            ->first();
+
+        if (! $shipment) {
+            $vehicle = Vehicle::findByVin($ref);
+            if ($vehicle && $vehicle->shipment_id) {
+                $shipment = $vehicle->shipment;
+            }
+        }
+
+        if (! $shipment) {
+            $this->waService->sendMessage($conversation->phone_number, "❌ Could not find shipment with reference/VIN: *{$ref}*");
+
+            return;
+        }
+
+        $user = $conversation->contact?->user;
+        if ($user && ! $user->can('workflow.download_dock_receipt') && ! $user->hasRole('super_admin')) {
+            $this->waService->sendMessage($conversation->phone_number, '❌ Access Denied: You do not have permission to download/send Dock Receipts.');
+
+            return;
+        }
+
+        $docService = app(WhatsAppDocumentService::class);
+        $payload = $docService->getDockReceiptPayload($shipment);
+
+        $response = $this->waService->sendDocument(
+            $conversation->phone_number,
+            $payload['url'],
+            $payload['name']
+        );
+
+        WhatsAppMessage::create([
+            'conversation_id' => $conversation->id,
+            'category_id' => $conversation->category_id,
+            'sender_type' => 'agent',
+            'message_type' => 'document',
+            'message_text' => "Dock Receipt — {$shipment->reference_no}",
+            'media_url' => $payload['url'],
+            'whatsapp_message_id' => $response['messages'][0]['id'] ?? null,
+            'related_entity_type' => Shipment::class,
+            'related_entity_id' => $shipment->id,
+            'status' => 'sent',
+        ]);
+
+        if ($user) {
+            ActivityLog::create([
+                'shipment_id' => $shipment->id,
+                'user_id' => $user->id,
+                'action' => 'whatsapp.send_dock_receipt',
+                'properties' => [
+                    'recipient_phone' => $conversation->phone_number,
+                    'reference_no' => $shipment->reference_no,
+                ],
+            ]);
+        }
+
+        $this->waService->sendMessage($conversation->phone_number, "✅ Dock Receipt for *{$shipment->reference_no}* sent successfully.");
     }
 }

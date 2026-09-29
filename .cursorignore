@@ -1,0 +1,31 @@
+# Dependencies
+vendor/
+node_modules/
+
+# Storage and logs
+storage/
+*.log
+npm-debug.log
+yarn-error.log
+
+# Build artifacts and caches
+.phpunit.cache/
+.phpunit.result.cache
+public/build/
+public/hot
+public/storage/
+
+# Large binary files and database dumps
+*.pdf
+*.sql
+*.zip
+*.tar.gz
+
+# Lock files
+composer.lock
+package-lock.json
+
+# Temporary / test outputs
+build_error.txt
+test_output.txt
+ngrok.log

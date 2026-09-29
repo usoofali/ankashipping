@@ -7,7 +7,11 @@
 
 # {{ __('Hello :name!', ['name' => $notifiable->name]) }}
 
+@if (! empty($shipper->company_name))
 {{ __('Your shipper account for :company is ready.', ['company' => $shipper->company_name]) }}
+@else
+{{ __('Your shipper account is ready.') }}
+@endif
 
 {{ __('Welcome to :companyName.', ['companyName' => $companyName]) }}
 

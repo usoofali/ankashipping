@@ -126,7 +126,7 @@ new #[Title('Shippers')] class extends Component {
                 'discount_amount' => $this->discount_amount,
             ],
             [
-                'company_name' => ['required', 'string', 'max:255'],
+                'company_name' => ['nullable', 'string', 'max:255'],
                 'phone' => ['required', 'string', 'max:50', 'unique:shippers,phone,' . $this->shipperEditingId],
                 'address' => ['required', 'string', 'max:500'],
                 'country_id' => ['required', 'integer', 'exists:countries,id'],
@@ -204,9 +204,7 @@ new #[Title('Shippers')] class extends Component {
         $this->authorize('delete', $shipper);
 
         $this->shipperPendingDeleteId = $shipper->id;
-        $this->shipperPendingDeleteLabel = filled($shipper->company_name)
-            ? (string) $shipper->company_name
-            : (string) ($shipper->user?->name ?? __('Shipper #:id', ['id' => $shipper->id]));
+        $this->shipperPendingDeleteLabel = $shipper->display_name;
         $this->showDeleteModal = true;
     }
 
@@ -300,8 +298,8 @@ new #[Title('Shippers')] class extends Component {
                 continue;
             }
 
-            if ($companyName === '' || $phone === '' || $address === '' || $countryIso2 === '' || $stateCode === '' || $cityName === '') {
-                $failedRows[] = array_merge($row, ['_error_reason' => 'Missing required fields (company name, phone, address, country, state, city)']);
+            if ($phone === '' || $address === '' || $countryIso2 === '' || $stateCode === '' || $cityName === '') {
+                $failedRows[] = array_merge($row, ['_error_reason' => 'Missing required fields (phone, address, country, state, city)']);
                 $errors++;
 
                 continue;
@@ -850,7 +848,7 @@ new #[Title('Shippers')] class extends Component {
 
                         <flux:card class="space-y-6 border-zinc-100 dark:border-zinc-800">
                             <div class="grid gap-6 sm:grid-cols-2">
-                                <flux:input wire:model="company_name" :label="__('Display Name')" type="text" required
+                                <flux:input wire:model="company_name" :label="__('Display / Company Name (optional)')" type="text"
                                     autocomplete="organization" icon="building-office-2"
                                     placeholder="{{ __('Enter company name') }}" />
                                 <flux:input wire:model="phone" :label="__('Contact Phone')" type="tel" required

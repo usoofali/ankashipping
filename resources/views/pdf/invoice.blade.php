@@ -409,7 +409,7 @@
                     <span class="section-label">BILL TO</span>
                     <div class="bill-to-content">
                         <span
-                            class="bill-to-name">{{ $shipment->shipper?->company_name ?: $shipment->shipper?->user?->name ?: '—' }}</span>
+                            class="bill-to-name">{{ $shipment->shipper?->display_name ?? '—' }}</span>
                         @if($shipment->shipper?->address) {{ $shipment->shipper->address }} <br> @endif
                         @if($shipment->shipper?->city) {{ optional($shipment->shipper->city)->name }}, @endif
                         @if($shipment->shipper?->state) {{ optional($shipment->shipper->state)->name }} @endif

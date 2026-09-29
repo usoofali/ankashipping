@@ -79,16 +79,16 @@ final class PrealertCreatedNotification extends Notification implements ShouldQu
                 ? __('A new prealert for :count vehicles targeting container :ref has been created by :shipper.', [
                     'count' => $this->prealert->vehicles->count(),
                     'ref' => $this->prealert->shipment?->reference_no ?? __('Existing'),
-                    'shipper' => $this->prealert->shipper?->company_name ?? $this->prealert->shipper?->user?->name,
+                    'shipper' => $this->prealert->shipper?->display_name,
                 ])
                 : ($this->prealert->shipping_mode === ShippingMode::Container
                     ? __('A new Container prealert has been created for :count vehicles by :shipper.', [
                         'count' => $this->prealert->vehicles->count(),
-                        'shipper' => $this->prealert->shipper?->company_name ?? $this->prealert->shipper?->user?->name,
+                        'shipper' => $this->prealert->shipper?->display_name,
                     ])
                     : __('A new RoRo prealert has been created for VIN :vin by :shipper.', [
                         'vin' => $this->prealert->vehicles->first()?->vin,
-                        'shipper' => $this->prealert->shipper?->company_name ?? $this->prealert->shipper?->user?->name,
+                        'shipper' => $this->prealert->shipper?->display_name,
                     ])),
             'prealert_id' => $this->prealert->id,
             'vin' => $this->prealert->shipping_mode === ShippingMode::Container ? null : $this->prealert->vehicles->first()?->vin,

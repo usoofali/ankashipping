@@ -355,7 +355,7 @@
                             {{ $shipment->exporter_zipcode }}
                         </span>
                     @elseif($shipment->shipper)
-                        <div class="val">{{ $shipment->shipper->company_name ?? $shipment->shipper->user?->name }}</div>
+                        <div class="val">{{ $shipment->shipper->display_name }}</div>
                         <span class="sub">{{ $shipment->shipper->address }}, {{ $shipment->shipper->city?->name }},
                             {{ $shipment->shipper->state?->code }} {{ $shipment->shipper->zip_code }}</span>
                     @else

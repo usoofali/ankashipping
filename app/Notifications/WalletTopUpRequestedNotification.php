@@ -34,7 +34,7 @@ final class WalletTopUpRequestedNotification extends Notification implements Sho
             'title' => __('New Wallet Top-Up Request'),
             'body' => __('A new funding request of $:amount has been submitted by :shipper.', [
                 'amount' => number_format((float) $this->topUp->amount, 2),
-                'shipper' => $this->topUp->shipper?->company_name ?? $this->topUp->shipper?->user?->name,
+                'shipper' => $this->topUp->shipper?->display_name,
             ]),
             'top_up_id' => $this->topUp->id,
             'amount' => $this->topUp->amount,

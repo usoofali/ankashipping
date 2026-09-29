@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Database\Factories\ShipperFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -35,6 +36,40 @@ final class Shipper extends Model
             'discount_amount' => 'decimal:2',
             'towing' => 'boolean',
         ];
+    }
+
+    /**
+     * Ensure company_name is consistently trimmed string or null (never empty or 'undefined').
+     */
+    protected function companyName(): Attribute
+    {
+        return Attribute::make(
+            set: fn (?string $value) => ($value !== null && ! in_array(strtolower(trim($value)), ['', 'undefined', 'null', 'none', '-'], true))
+                ? trim($value)
+                : null,
+        );
+    }
+
+    /**
+     * Get the shipper display name (company name, user name, or fallback ID).
+     */
+    public function getDisplayNameAttribute(): string
+    {
+        $company = trim((string) ($this->company_name ?? ''));
+
+        if ($company !== '' && ! in_array(strtolower($company), ['undefined', 'null', 'none', '-'], true)) {
+            return $company;
+        }
+
+        return (string) ($this->user?->name ?? __('Shipper #:id', ['id' => $this->id]));
+    }
+
+    /**
+     * Alias for display_name.
+     */
+    public function getNameAttribute(): string
+    {
+        return $this->getDisplayNameAttribute();
     }
 
     public function user(): BelongsTo

@@ -8,7 +8,7 @@
     "src": "node_modules/intl-tel-input/dist/img/flags@2x.webp"
   },
   "resources/css/app.css": {
-    "file": "assets/app-DG1cHM54.css",
+    "file": "assets/app-Dl0XZlgK.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -24,7 +24,7 @@
     "isEntry": true
   },
   "resources/js/whatsapp/app.js": {
-    "file": "assets/app-B3CmG9Dm.js",
+    "file": "assets/app-DegGVl72.js",
     "name": "app",
     "src": "resources/js/whatsapp/app.js",
     "isEntry": true,

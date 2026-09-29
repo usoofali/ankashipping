@@ -27,3 +27,6 @@ Schedule::command('whatsapp:clean-temp --hours=1')->hourly();
 
 // Clean up orphaned WhatsApp receipts (uploaded but not finalized) older than 2 hours, run every hour
 Schedule::command('whatsapp:clean-orphaned-receipts --hours=2')->hourly();
+
+// Weekly database housekeeping: prune ephemeral records older than 60 days every Sunday at 02:00 AM
+Schedule::command('housekeeping:prune --days=60')->weeklyOn(0, '02:00');

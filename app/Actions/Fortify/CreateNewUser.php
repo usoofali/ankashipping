@@ -62,8 +62,8 @@ class CreateNewUser implements CreatesNewUsers
                 'password' => $input['password'],
             ]);
 
-            $companyName = isset($input['company_name']) && $input['company_name'] !== ''
-                ? $input['company_name']
+            $companyName = ! empty($input['company_name']) && ! in_array(strtolower(trim((string) $input['company_name'])), ['', 'undefined', 'null', 'none', '-'], true)
+                ? trim((string) $input['company_name'])
                 : null;
 
             $shipper = Shipper::create([

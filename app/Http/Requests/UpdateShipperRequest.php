@@ -25,7 +25,7 @@ final class UpdateShipperRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'company_name' => ['required', 'string', 'max:255'],
+            'company_name' => ['nullable', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:50'],
             'address' => ['required', 'string', 'max:500'],
             'country_id' => ['required', 'integer', 'exists:countries,id'],

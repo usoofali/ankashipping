@@ -34,12 +34,12 @@ final class ShipperRegisteredInternalNotification extends Notification
         return [
             'title' => __('New shipper registration'),
             'body' => __(':company registered (:email).', [
-                'company' => $this->shipper->company_name,
+                'company' => $this->shipper->display_name,
                 'email' => $this->registeredUser->email,
             ]),
             'shipper_id' => $this->shipper->id,
             'user_id' => $this->registeredUser->id,
-            'company_name' => $this->shipper->company_name,
+            'company_name' => $this->shipper->display_name,
             'url' => route('shippers.show', $this->shipper, absolute: true),
         ];
     }

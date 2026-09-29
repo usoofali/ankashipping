@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Services\HousekeepingService;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
@@ -34,6 +35,30 @@ new #[Title('System Configuration')] class extends Component {
     public string $whatsapp_health = 'unknown';
 
     public array $storage_stats = [];
+
+    public array $housekeeping_stats = [];
+
+    public bool $showHousekeepingModal = false;
+
+    public string $housekeepingTargetAction = '';
+
+    public ?int $housekeepingTargetDays = null;
+
+    public bool $housekeepingDeleteOnlyRead = false;
+
+    public string $housekeepingModalTitle = '';
+
+    public string $housekeepingModalDescription = '';
+
+    public array $housekeepingModalDetails = [];
+
+    public bool $housekeepingIsDangerous = false;
+
+    public bool $showBackupDeleteModal = false;
+
+    public string $backupPendingDeleteName = '';
+
+    public bool $showClearLogsModal = false;
 
     public array $target_folders = [
         'storage',
@@ -201,6 +226,306 @@ new #[Title('System Configuration')] class extends Component {
 
         $this->refreshPermissions();
         $this->calculateStorageStats();
+        $this->calculateHousekeepingStats();
+    }
+
+    public function calculateHousekeepingStats(): void
+    {
+        $this->housekeeping_stats = app(HousekeepingService::class)->getSummaryStats();
+    }
+
+    public function pruneNotifications(?int $days = null, bool $onlyRead = false): void
+    {
+        try {
+            $deleted = app(HousekeepingService::class)->pruneNotifications($days, $onlyRead);
+            $this->refreshStats();
+
+            $description = $days !== null
+                ? __(':count notifications older than :days days pruned.', ['count' => $deleted, 'days' => $days])
+                : ($onlyRead
+                    ? __(':count read notifications pruned.', ['count' => $deleted])
+                    : __(':count notifications permanently purged.', ['count' => $deleted]));
+
+            $this->dialog()->success(
+                title: __('Notifications Housekeeping'),
+                description: $description,
+            );
+        } catch (\Throwable $e) {
+            $this->dialog()->error(
+                title: __('Prune Failed'),
+                description: $e->getMessage(),
+            );
+        }
+    }
+
+    public function pruneEmailLogs(?int $days = null): void
+    {
+        try {
+            $deleted = app(HousekeepingService::class)->pruneEmailLogs($days);
+            $this->refreshStats();
+
+            $description = $days !== null
+                ? __(':count email logs older than :days days pruned.', ['count' => $deleted, 'days' => $days])
+                : __(':count email logs permanently purged.', ['count' => $deleted]);
+
+            $this->dialog()->success(
+                title: __('Email Logs Housekeeping'),
+                description: $description,
+            );
+        } catch (\Throwable $e) {
+            $this->dialog()->error(
+                title: __('Prune Failed'),
+                description: $e->getMessage(),
+            );
+        }
+    }
+
+    public function flushFailedJobs(?int $days = null): void
+    {
+        try {
+            $deleted = app(HousekeepingService::class)->flushFailedJobs($days);
+            $this->refreshStats();
+
+            $description = $days !== null
+                ? __(':count failed jobs older than :days days removed.', ['count' => $deleted, 'days' => $days])
+                : __(':count failed jobs flushed.', ['count' => $deleted]);
+
+            $this->dialog()->success(
+                title: __('Failed Jobs Housekeeping'),
+                description: $description,
+            );
+        } catch (\Throwable $e) {
+            $this->dialog()->error(
+                title: __('Flush Failed'),
+                description: $e->getMessage(),
+            );
+        }
+    }
+
+    public function pruneActivityLogs(?int $days = null): void
+    {
+        try {
+            $deleted = app(HousekeepingService::class)->pruneActivityLogs($days);
+            $this->refreshStats();
+
+            $description = $days !== null
+                ? __(':count activity logs older than :days days pruned.', ['count' => $deleted, 'days' => $days])
+                : __(':count activity logs permanently purged.', ['count' => $deleted]);
+
+            $this->dialog()->success(
+                title: __('Activity Logs Housekeeping'),
+                description: $description,
+            );
+        } catch (\Throwable $e) {
+            $this->dialog()->error(
+                title: __('Prune Failed'),
+                description: $e->getMessage(),
+            );
+        }
+    }
+
+    public function pruneAllHousekeeping(int $days = 30): void
+    {
+        try {
+            $results = app(HousekeepingService::class)->pruneAllOldData($days);
+            $this->refreshStats();
+
+            $total = array_sum($results);
+
+            $this->dialog()->success(
+                title: __('Housekeeping Completed'),
+                description: __('Pruned :total records older than :days days (Notifications: :n, Email Logs: :e, Failed Jobs: :f, Activity Logs: :a).', [
+                    'total' => $total,
+                    'days' => $days,
+                    'n' => $results['notifications'],
+                    'e' => $results['email_logs'],
+                    'f' => $results['failed_jobs'],
+                    'a' => $results['activity_logs'],
+                ]),
+            );
+        } catch (\Throwable $e) {
+            $this->dialog()->error(
+                title: __('Housekeeping Failed'),
+                description: $e->getMessage(),
+            );
+        }
+    }
+
+    public function promptHousekeeping(string $action, ?int $days = null, bool $onlyRead = false): void
+    {
+        $this->housekeepingTargetAction = $action;
+        $this->housekeepingTargetDays = $days;
+        $this->housekeepingDeleteOnlyRead = $onlyRead;
+        $this->refreshStats();
+
+        $details = [];
+        $this->housekeepingIsDangerous = false;
+
+        switch ($action) {
+            case 'notifications':
+                if ($onlyRead) {
+                    $this->housekeepingModalTitle = __('Delete All Read Notifications');
+                    $this->housekeepingModalDescription = __('Permanently delete all database notifications that have already been marked as read.');
+                    $details[] = ['label' => __('Category'), 'value' => __('Database Notifications')];
+                    $details[] = ['label' => __('Scope'), 'value' => __('Only notifications where read_at is timestamped')];
+                    $details[] = ['label' => __('Total in Table'), 'value' => number_format($this->housekeeping_stats['notifications']['total'] ?? 0) . ' ' . __('notifications')];
+                    $details[] = ['label' => __('Unread Alerts'), 'value' => __('Unread notifications will remain intact')];
+                } elseif ($days !== null) {
+                    $this->housekeepingModalTitle = __('Prune Notifications Older than :days Days', ['days' => $days]);
+                    $this->housekeepingModalDescription = __('Delete notifications created more than :days days ago.', ['days' => $days]);
+                    $details[] = ['label' => __('Category'), 'value' => __('Database Notifications')];
+                    $details[] = ['label' => __('Age Threshold'), 'value' => __(':days days (created on or before :date)', [
+                        'days' => $days,
+                        'date' => now()->subDays($days)->toFormattedDateString(),
+                    ])];
+                    if ($days === 30) {
+                        $details[] = ['label' => __('Matching Records'), 'value' => number_format($this->housekeeping_stats['notifications']['older_than_30d'] ?? 0) . ' ' . __('records eligible')];
+                    }
+                    $details[] = ['label' => __('Total in Table'), 'value' => number_format($this->housekeeping_stats['notifications']['total'] ?? 0) . ' ' . __('notifications')];
+                } else {
+                    $this->housekeepingIsDangerous = true;
+                    $this->housekeepingModalTitle = __('Purge ALL Database Notifications');
+                    $this->housekeepingModalDescription = __('Warning: You are about to permanently delete every database notification.');
+                    $details[] = ['label' => __('Category'), 'value' => __('Database Notifications table')];
+                    $details[] = ['label' => __('Scope'), 'value' => __('ALL notifications (unread and read)')];
+                    $details[] = ['label' => __('Total to Delete'), 'value' => number_format($this->housekeeping_stats['notifications']['total'] ?? 0) . ' ' . __('notifications')];
+                }
+                break;
+
+            case 'email_logs':
+                if ($days !== null) {
+                    $this->housekeepingModalTitle = __('Prune Email Logs Older than :days Days', ['days' => $days]);
+                    $this->housekeepingModalDescription = __('Delete outgoing email logs and transmission attempts older than :days days.', ['days' => $days]);
+                    $details[] = ['label' => __('Category'), 'value' => __('Email Logs & Transmission Attempts')];
+                    $details[] = ['label' => __('Age Threshold'), 'value' => __(':days days (created on or before :date)', [
+                        'days' => $days,
+                        'date' => now()->subDays($days)->toFormattedDateString(),
+                    ])];
+                    if ($days === 30) {
+                        $details[] = ['label' => __('Matching Records'), 'value' => number_format($this->housekeeping_stats['email_logs']['older_than_30d'] ?? 0) . ' ' . __('logs eligible')];
+                    }
+                    $details[] = ['label' => __('Total Logs in DB'), 'value' => number_format($this->housekeeping_stats['email_logs']['total'] ?? 0) . ' ' . __('logs')];
+                    $details[] = ['label' => __('Affected Tables'), 'value' => 'email_logs, email_attempts'];
+                } else {
+                    $this->housekeepingIsDangerous = true;
+                    $this->housekeepingModalTitle = __('Purge ALL Email Logs & Attempts');
+                    $this->housekeepingModalDescription = __('Warning: You are about to permanently delete all outgoing email logs and attempt records.');
+                    $details[] = ['label' => __('Category'), 'value' => __('Email Logs & Attempts')];
+                    $details[] = ['label' => __('Scope'), 'value' => __('ALL historical logs and attempts')];
+                    $details[] = ['label' => __('Total to Delete'), 'value' => number_format($this->housekeeping_stats['email_logs']['total'] ?? 0) . ' ' . __('logs')];
+                    $details[] = ['label' => __('Affected Tables'), 'value' => 'email_logs, email_attempts'];
+                }
+                break;
+
+            case 'failed_jobs':
+                if ($days !== null) {
+                    $this->housekeepingModalTitle = __('Flush Failed Jobs Older than :days Days', ['days' => $days]);
+                    $this->housekeepingModalDescription = __('Clear asynchronous queue jobs that failed more than :days days ago.', ['days' => $days]);
+                    $details[] = ['label' => __('Category'), 'value' => __('Failed Background Queue Jobs')];
+                    $details[] = ['label' => __('Age Threshold'), 'value' => __(':days days (failed on or before :date)', [
+                        'days' => $days,
+                        'date' => now()->subDays($days)->toFormattedDateString(),
+                    ])];
+                    if ($days === 30) {
+                        $details[] = ['label' => __('Matching Records'), 'value' => number_format($this->housekeeping_stats['failed_jobs']['older_than_30d'] ?? 0) . ' ' . __('jobs eligible')];
+                    }
+                    $details[] = ['label' => __('Total Failed in DB'), 'value' => number_format($this->housekeeping_stats['failed_jobs']['total'] ?? 0) . ' ' . __('failed jobs')];
+                    $details[] = ['label' => __('Affected Table'), 'value' => 'failed_jobs'];
+                } else {
+                    $this->housekeepingIsDangerous = true;
+                    $this->housekeepingModalTitle = __('Flush ALL Failed Queue Jobs');
+                    $this->housekeepingModalDescription = __('Clear all accumulated failed queue job records from the database.');
+                    $details[] = ['label' => __('Category'), 'value' => __('Failed Queue Jobs')];
+                    $details[] = ['label' => __('Scope'), 'value' => __('ALL failed jobs')];
+                    $details[] = ['label' => __('Total to Delete'), 'value' => number_format($this->housekeeping_stats['failed_jobs']['total'] ?? 0) . ' ' . __('failed jobs')];
+                    $details[] = ['label' => __('Affected Table'), 'value' => 'failed_jobs'];
+                }
+                break;
+
+            case 'activity_logs':
+                if ($days !== null) {
+                    $this->housekeepingModalTitle = __('Prune Activity Logs Older than :days Days', ['days' => $days]);
+                    $this->housekeepingModalDescription = __('Prune historical audit trail logs created more than :days days ago.', ['days' => $days]);
+                    $details[] = ['label' => __('Category'), 'value' => __('Activity Audit Logs')];
+                    $details[] = ['label' => __('Age Threshold'), 'value' => __(':days days (created on or before :date)', [
+                        'days' => $days,
+                        'date' => now()->subDays($days)->toFormattedDateString(),
+                    ])];
+                    if ($days === 30) {
+                        $details[] = ['label' => __('Matching Records'), 'value' => number_format($this->housekeeping_stats['activity_logs']['older_than_30d'] ?? 0) . ' ' . __('logs eligible')];
+                    }
+                    $details[] = ['label' => __('Total Logs in DB'), 'value' => number_format($this->housekeeping_stats['activity_logs']['total'] ?? 0) . ' ' . __('logs')];
+                    $details[] = ['label' => __('Protected Data'), 'value' => __('Active users, shipments, and core business records are untouched')];
+                } else {
+                    $this->housekeepingIsDangerous = true;
+                    $this->housekeepingModalTitle = __('Purge ALL Activity Audit Logs');
+                    $this->housekeepingModalDescription = __('Warning: You are about to permanently delete all historical activity audit logs.');
+                    $details[] = ['label' => __('Category'), 'value' => __('Activity Audit Logs')];
+                    $details[] = ['label' => __('Scope'), 'value' => __('ALL historical activity records')];
+                    $details[] = ['label' => __('Total to Delete'), 'value' => number_format($this->housekeeping_stats['activity_logs']['total'] ?? 0) . ' ' . __('logs')];
+                    $details[] = ['label' => __('Protected Data'), 'value' => __('Active users, shipments, and core business records are untouched')];
+                }
+                break;
+
+            case 'all':
+                $this->housekeepingIsDangerous = true;
+                $this->housekeepingModalTitle = __('Purge All Ephemeral Data Older Than 30 Days');
+                $this->housekeepingModalDescription = __('Prune notifications, email logs, failed queue jobs, and activity audit logs older than 30 days.');
+                $details[] = ['label' => __('Age Threshold'), 'value' => __('Older than 30 days (created/failed on or before :date)', ['date' => now()->subDays(30)->toFormattedDateString()])];
+                $details[] = ['label' => __('Notifications (>30d)'), 'value' => number_format($this->housekeeping_stats['notifications']['older_than_30d'] ?? 0) . ' ' . __('records')];
+                $details[] = ['label' => __('Email Logs (>30d)'), 'value' => number_format($this->housekeeping_stats['email_logs']['older_than_30d'] ?? 0) . ' ' . __('records')];
+                $details[] = ['label' => __('Failed Jobs (>30d)'), 'value' => number_format($this->housekeeping_stats['failed_jobs']['older_than_30d'] ?? 0) . ' ' . __('records')];
+                $details[] = ['label' => __('Activity Logs (>30d)'), 'value' => number_format($this->housekeeping_stats['activity_logs']['older_than_30d'] ?? 0) . ' ' . __('records')];
+                $details[] = ['label' => __('Protected Tables'), 'value' => __('Shipments, invoices, users, shippers, wallets, and newsletters will NOT be touched')];
+                break;
+        }
+
+        $this->housekeepingModalDetails = $details;
+        $this->showHousekeepingModal = true;
+    }
+
+    public function executeHousekeepingDelete(): void
+    {
+        $action = $this->housekeepingTargetAction;
+        $days = $this->housekeepingTargetDays;
+        $onlyRead = $this->housekeepingDeleteOnlyRead;
+
+        $this->showHousekeepingModal = false;
+
+        match ($action) {
+            'notifications' => $this->pruneNotifications($days, $onlyRead),
+            'email_logs' => $this->pruneEmailLogs($days),
+            'failed_jobs' => $this->flushFailedJobs($days),
+            'activity_logs' => $this->pruneActivityLogs($days),
+            'all' => $this->pruneAllHousekeeping($days ?? 30),
+            default => null,
+        };
+    }
+
+    public function confirmDeleteBackup(string $filename): void
+    {
+        $this->backupPendingDeleteName = $filename;
+        $this->showBackupDeleteModal = true;
+    }
+
+    public function executeDeleteBackup(): void
+    {
+        if ($this->backupPendingDeleteName !== '') {
+            $this->deleteBackup($this->backupPendingDeleteName);
+            $this->backupPendingDeleteName = '';
+            $this->showBackupDeleteModal = false;
+        }
+    }
+
+    public function confirmClearLogs(): void
+    {
+        $this->showClearLogsModal = true;
+    }
+
+    public function executeClearLogs(): void
+    {
+        $this->showClearLogsModal = false;
+        $this->clearLogs(true);
     }
 
     public function refreshPermissions(): void
@@ -587,7 +912,7 @@ new #[Title('System Configuration')] class extends Component {
                                     </flux:text>
                                 </div>
                             </div>
-                            <flux:button wire:click="clearLogs" size="sm" variant="subtle" class="w-full lg:w-auto">
+                            <flux:button wire:click="confirmClearLogs" size="sm" variant="subtle" class="w-full lg:w-auto">
                                 {{ __('Truncate All Logs') }}</flux:button>
                         </div>
                     </flux:card>
@@ -656,6 +981,192 @@ new #[Title('System Configuration')] class extends Component {
                 </div>
             </div>
 
+            <!-- Database Housekeeping & Data Retention -->
+            <div class="space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <flux:heading size="sm" weight="semibold" class="uppercase tracking-wider text-zinc-400">
+                            {{ __('Database Housekeeping & Retention') }}
+                        </flux:heading>
+                        <flux:text size="xs" class="text-zinc-500">
+                            {{ __('Safely prune accumulated ephemeral data to optimize database performance and disk usage.') }}
+                        </flux:text>
+                    </div>
+
+                    <flux:button wire:click="promptHousekeeping('all', 30)"
+                        size="xs" variant="primary" icon="trash">
+                        {{ __('Purge All Older than 30 Days') }}
+                    </flux:button>
+                </div>
+
+                <!-- Master Card with 4 Differentiated Sub-Cards in Single Column -->
+                <flux:card class="p-4 sm:p-5 border-zinc-100 dark:border-zinc-800 space-y-4">
+                    <!-- 1. Notifications Sub-Card -->
+                    <div class="p-4 sm:p-4.5 rounded-xl bg-zinc-50/70 dark:bg-zinc-900/60 border border-zinc-200/80 dark:border-zinc-800 space-y-3.5 transition-colors hover:border-zinc-300 dark:hover:border-zinc-700">
+                        <div class="flex items-start sm:items-center gap-3.5">
+                            <div class="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/50 shrink-0">
+                                <flux:icon.bell class="size-5 text-amber-500" />
+                            </div>
+                            <div class="space-y-0.5">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <flux:heading size="sm" class="font-bold">{{ __('Notifications') }}</flux:heading>
+                                    <flux:badge size="xs" color="amber" variant="subtle">
+                                        {{ __(':count total', ['count' => number_format($housekeeping_stats['notifications']['total'] ?? 0)]) }}
+                                    </flux:badge>
+                                    @if(($housekeeping_stats['notifications']['older_than_30d'] ?? 0) > 0)
+                                        <flux:badge size="xs" color="zinc" variant="outline">
+                                            {{ __(':count older than 30d', ['count' => number_format($housekeeping_stats['notifications']['older_than_30d'] ?? 0)]) }}
+                                        </flux:badge>
+                                    @endif
+                                </div>
+                                <flux:text size="xs" class="text-zinc-500">
+                                    {{ __('Database system and user activity alerts.') }}
+                                </flux:text>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons at bottom with demarcation line -->
+                        <div class="pt-3 border-t border-zinc-200/80 dark:border-zinc-800 flex flex-wrap items-center gap-2">
+                            <flux:button wire:click="promptHousekeeping('notifications', 30)"
+                                size="xs" variant="subtle">
+                                {{ __('> 30 Days') }}
+                            </flux:button>
+                            <flux:button wire:click="promptHousekeeping('notifications', 90)"
+                                size="xs" variant="subtle">
+                                {{ __('> 90 Days') }}
+                            </flux:button>
+                            <flux:button wire:click="promptHousekeeping('notifications', null, true)"
+                                size="xs" variant="subtle">
+                                {{ __('All Read') }}
+                            </flux:button>
+                            <flux:button wire:click="promptHousekeeping('notifications', null)"
+                                size="xs" variant="ghost" color="red">
+                                {{ __('Purge All') }}
+                            </flux:button>
+                        </div>
+                    </div>
+
+                    <!-- 2. Email Logs & Attempts Sub-Card -->
+                    <div class="p-4 sm:p-4.5 rounded-xl bg-zinc-50/70 dark:bg-zinc-900/60 border border-zinc-200/80 dark:border-zinc-800 space-y-3.5 transition-colors hover:border-zinc-300 dark:hover:border-zinc-700">
+                        <div class="flex items-start sm:items-center gap-3.5">
+                            <div class="p-2.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 shrink-0">
+                                <flux:icon.envelope class="size-5 text-blue-500" />
+                            </div>
+                            <div class="space-y-0.5">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <flux:heading size="sm" class="font-bold">{{ __('Email Logs & Attempts') }}</flux:heading>
+                                    <flux:badge size="xs" color="blue" variant="subtle">
+                                        {{ __(':count total', ['count' => number_format($housekeeping_stats['email_logs']['total'] ?? 0)]) }}
+                                    </flux:badge>
+                                    @if(($housekeeping_stats['email_logs']['older_than_30d'] ?? 0) > 0)
+                                        <flux:badge size="xs" color="zinc" variant="outline">
+                                            {{ __(':count older than 30d', ['count' => number_format($housekeeping_stats['email_logs']['older_than_30d'] ?? 0)]) }}
+                                        </flux:badge>
+                                    @endif
+                                </div>
+                                <flux:text size="xs" class="text-zinc-500">
+                                    {{ __('Outgoing email bodies, delivery statuses, and SMTP transmission attempts.') }}
+                                </flux:text>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons at bottom with demarcation line -->
+                        <div class="pt-3 border-t border-zinc-200/80 dark:border-zinc-800 flex flex-wrap items-center gap-2">
+                            <flux:button wire:click="promptHousekeeping('email_logs', 30)"
+                                size="xs" variant="subtle">
+                                {{ __('> 30 Days') }}
+                            </flux:button>
+                            <flux:button wire:click="promptHousekeeping('email_logs', 90)"
+                                size="xs" variant="subtle">
+                                {{ __('> 90 Days') }}
+                            </flux:button>
+                            <flux:button wire:click="promptHousekeeping('email_logs', null)"
+                                size="xs" variant="ghost" color="red">
+                                {{ __('Purge All') }}
+                            </flux:button>
+                        </div>
+                    </div>
+
+                    <!-- 3. Failed Queue Jobs Sub-Card -->
+                    <div class="p-4 sm:p-4.5 rounded-xl bg-zinc-50/70 dark:bg-zinc-900/60 border border-zinc-200/80 dark:border-zinc-800 space-y-3.5 transition-colors hover:border-zinc-300 dark:hover:border-zinc-700">
+                        <div class="flex items-start sm:items-center gap-3.5">
+                            <div class="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/50 shrink-0">
+                                <flux:icon.exclamation-circle class="size-5 text-rose-500" />
+                            </div>
+                            <div class="space-y-0.5">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <flux:heading size="sm" class="font-bold">{{ __('Failed Queue Jobs') }}</flux:heading>
+                                    <flux:badge size="xs" :color="($housekeeping_stats['failed_jobs']['total'] ?? 0) > 0 ? 'rose' : 'zinc'" variant="subtle">
+                                        {{ __(':count failed', ['count' => number_format($housekeeping_stats['failed_jobs']['total'] ?? 0)]) }}
+                                    </flux:badge>
+                                    @if(($housekeeping_stats['failed_jobs']['older_than_30d'] ?? 0) > 0)
+                                        <flux:badge size="xs" color="zinc" variant="outline">
+                                            {{ __(':count older than 30d', ['count' => number_format($housekeeping_stats['failed_jobs']['older_than_30d'] ?? 0)]) }}
+                                        </flux:badge>
+                                    @endif
+                                </div>
+                                <flux:text size="xs" class="text-zinc-500">
+                                    {{ __('Unprocessed or errored asynchronous background jobs.') }}
+                                </flux:text>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons at bottom with demarcation line -->
+                        <div class="pt-3 border-t border-zinc-200/80 dark:border-zinc-800 flex flex-wrap items-center gap-2">
+                            <flux:button wire:click="promptHousekeeping('failed_jobs', 30)"
+                                size="xs" variant="subtle">
+                                {{ __('> 30 Days') }}
+                            </flux:button>
+                            <flux:button wire:click="promptHousekeeping('failed_jobs', null)"
+                                size="xs" variant="ghost" color="red">
+                                {{ __('Flush All Failed Jobs') }}
+                            </flux:button>
+                        </div>
+                    </div>
+
+                    <!-- 4. Activity Audit Logs Sub-Card -->
+                    <div class="p-4 sm:p-4.5 rounded-xl bg-zinc-50/70 dark:bg-zinc-900/60 border border-zinc-200/80 dark:border-zinc-800 space-y-3.5 transition-colors hover:border-zinc-300 dark:hover:border-zinc-700">
+                        <div class="flex items-start sm:items-center gap-3.5">
+                            <div class="p-2.5 rounded-lg bg-purple-50 dark:bg-purple-950/40 border border-purple-100 dark:border-purple-900/50 shrink-0">
+                                <flux:icon.clock class="size-5 text-purple-500" />
+                            </div>
+                            <div class="space-y-0.5">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <flux:heading size="sm" class="font-bold">{{ __('Activity Audit Logs') }}</flux:heading>
+                                    <flux:badge size="xs" color="purple" variant="subtle">
+                                        {{ __(':count total', ['count' => number_format($housekeeping_stats['activity_logs']['total'] ?? 0)]) }}
+                                    </flux:badge>
+                                    @if(($housekeeping_stats['activity_logs']['older_than_30d'] ?? 0) > 0)
+                                        <flux:badge size="xs" color="zinc" variant="outline">
+                                            {{ __(':count older than 30d', ['count' => number_format($housekeeping_stats['activity_logs']['older_than_30d'] ?? 0)]) }}
+                                        </flux:badge>
+                                    @endif
+                                </div>
+                                <flux:text size="xs" class="text-zinc-500">
+                                    {{ __('Historical user action and shipment event audit logs.') }}
+                                </flux:text>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons at bottom with demarcation line -->
+                        <div class="pt-3 border-t border-zinc-200/80 dark:border-zinc-800 flex flex-wrap items-center gap-2">
+                            <flux:button wire:click="promptHousekeeping('activity_logs', 30)"
+                                size="xs" variant="subtle">
+                                {{ __('> 30 Days') }}
+                            </flux:button>
+                            <flux:button wire:click="promptHousekeeping('activity_logs', 90)"
+                                size="xs" variant="subtle">
+                                {{ __('> 90 Days') }}
+                            </flux:button>
+                            <flux:button wire:click="promptHousekeeping('activity_logs', null)"
+                                size="xs" variant="ghost" color="red">
+                                {{ __('Purge All') }}
+                            </flux:button>
+                        </div>
+                    </div>
+                </flux:card>
+            </div>
+
             <!-- Data Backups -->
             <div class="space-y-4">
                 <div class="flex items-center justify-between">
@@ -691,8 +1202,7 @@ new #[Title('System Configuration')] class extends Component {
                                                     tooltip="{{ __('Restore') }}" />
                                             </flux:modal.trigger>
 
-                                            <flux:button wire:click="deleteBackup('{{ $backup['name'] }}')"
-                                                wire:confirm="{{ __('Are you sure you want to delete this backup?') }}"
+                                            <flux:button wire:click="confirmDeleteBackup('{{ $backup['name'] }}')"
                                                 size="xs" variant="ghost" icon="trash" color="red"
                                                 tooltip="{{ __('Delete') }}" />
 
@@ -757,6 +1267,144 @@ new #[Title('System Configuration')] class extends Component {
                     </flux:text>
                 </div>
             </div>
+
+            <!-- Flux Confirmation Modals -->
+            <!-- 1. Housekeeping Confirmation Delete Modal -->
+            <flux:modal wire:model="showHousekeepingModal" class="max-w-lg">
+                <div class="space-y-5">
+                    <div class="flex items-start gap-3.5">
+                        <div @class([
+                            'p-2.5 rounded-xl border shrink-0',
+                            'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900/60 text-red-600 dark:text-red-400' => $housekeepingIsDangerous,
+                            'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/60 text-amber-600 dark:text-amber-400' => !$housekeepingIsDangerous,
+                        ])>
+                            <flux:icon.trash class="size-6" />
+                        </div>
+                        <div class="flex-1">
+                            <flux:heading size="lg" class="font-bold">{{ $housekeepingModalTitle }}</flux:heading>
+                            <flux:subheading class="mt-1 text-zinc-500 dark:text-zinc-400">
+                                {{ $housekeepingModalDescription }}
+                            </flux:subheading>
+                        </div>
+                    </div>
+
+                    @if(!empty($housekeepingModalDetails))
+                        <div class="rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/70 p-4 space-y-2 text-xs">
+                            <div class="text-[11px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-2">
+                                {{ __('Details of items to be deleted') }}
+                            </div>
+                            @foreach($housekeepingModalDetails as $detail)
+                                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 py-1.5 border-b border-zinc-200/60 dark:border-zinc-800/80 last:border-0">
+                                    <span class="font-medium text-zinc-500 dark:text-zinc-400">{{ $detail['label'] }}</span>
+                                    <span class="font-semibold text-zinc-900 dark:text-zinc-100 sm:text-right">{{ $detail['value'] }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    @if($housekeepingIsDangerous)
+                        <div class="p-3 rounded-lg bg-red-50/80 dark:bg-red-950/30 border border-red-200 dark:border-red-900/60 flex items-center gap-2.5 text-xs text-red-700 dark:text-red-300">
+                            <flux:icon.exclamation-triangle class="size-4 shrink-0 text-red-600 dark:text-red-400" />
+                            <span>{{ __('Warning: This operation permanently removes data and cannot be undone.') }}</span>
+                        </div>
+                    @endif
+
+                    <div class="flex items-center justify-end gap-2.5 pt-2">
+                        <flux:modal.close>
+                            <flux:button variant="ghost" type="button">{{ __('Cancel') }}</flux:button>
+                        </flux:modal.close>
+                        <flux:button variant="danger" wire:click="executeHousekeepingDelete" wire:loading.attr="disabled">
+                            {{ __('Confirm Delete') }}
+                        </flux:button>
+                    </div>
+                </div>
+            </flux:modal>
+
+            <!-- 2. Backup Archive Delete Modal -->
+            <flux:modal wire:model="showBackupDeleteModal" class="max-w-md">
+                <div class="space-y-5">
+                    <div class="flex items-start gap-3.5">
+                        <div class="p-2.5 rounded-xl border shrink-0 bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900/60 text-red-600 dark:text-red-400">
+                            <flux:icon.trash class="size-6" />
+                        </div>
+                        <div class="flex-1">
+                            <flux:heading size="lg" class="font-bold">{{ __('Delete Backup Archive?') }}</flux:heading>
+                            <flux:subheading class="mt-1 text-zinc-500 dark:text-zinc-400">
+                                {{ __('Are you sure you want to permanently delete this database backup? This file cannot be recovered.') }}
+                            </flux:subheading>
+                        </div>
+                    </div>
+
+                    @if($backupPendingDeleteName !== '')
+                        <div class="rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/70 p-3.5 space-y-2 text-xs">
+                            <div class="text-[11px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1">
+                                {{ __('Backup file details') }}
+                            </div>
+                            <div class="flex items-center justify-between py-1 border-b border-zinc-200/60 dark:border-zinc-800/80">
+                                <span class="text-zinc-500 dark:text-zinc-400">{{ __('Filename') }}</span>
+                                <span class="font-mono font-semibold text-zinc-900 dark:text-zinc-100 text-xs">{{ $backupPendingDeleteName }}</span>
+                            </div>
+                            <div class="flex items-center justify-between py-1">
+                                <span class="text-zinc-500 dark:text-zinc-400">{{ __('Location') }}</span>
+                                <span class="font-mono text-zinc-600 dark:text-zinc-300 text-xs">storage/app/backups/</span>
+                            </div>
+                        </div>
+                    @endif
+
+                    <div class="flex items-center justify-end gap-2.5 pt-2">
+                        <flux:modal.close>
+                            <flux:button variant="ghost" type="button">{{ __('Cancel') }}</flux:button>
+                        </flux:modal.close>
+                        <flux:button variant="danger" wire:click="executeDeleteBackup" wire:loading.attr="disabled">
+                            {{ __('Delete Backup') }}
+                        </flux:button>
+                    </div>
+                </div>
+            </flux:modal>
+
+            <!-- 3. Truncate Logs Modal -->
+            <flux:modal wire:model="showClearLogsModal" class="max-w-md">
+                <div class="space-y-5">
+                    <div class="flex items-start gap-3.5">
+                        <div class="p-2.5 rounded-lg border shrink-0 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/60 text-amber-600 dark:text-amber-400">
+                            <flux:icon.document-text class="size-6" />
+                        </div>
+                        <div class="flex-1">
+                            <flux:heading size="lg" class="font-bold">{{ __('Truncate System Logs?') }}</flux:heading>
+                            <flux:subheading class="mt-1 text-zinc-500 dark:text-zinc-400">
+                                {{ __('This will permanently empty all system log files to free up disk storage.') }}
+                            </flux:subheading>
+                        </div>
+                    </div>
+
+                    <div class="rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/70 p-3.5 space-y-2 text-xs">
+                        <div class="text-[11px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1">
+                            {{ __('Log files to truncate') }}
+                        </div>
+                        <div class="flex items-center justify-between py-1 border-b border-zinc-200/60 dark:border-zinc-800/80">
+                            <span class="text-zinc-500 dark:text-zinc-400 font-mono">laravel.log</span>
+                            <span class="text-zinc-600 dark:text-zinc-300">Framework & App Exceptions</span>
+                        </div>
+                        <div class="flex items-center justify-between py-1 border-b border-zinc-200/60 dark:border-zinc-800/80">
+                            <span class="text-zinc-500 dark:text-zinc-400 font-mono">whatsapp.log</span>
+                            <span class="text-zinc-600 dark:text-zinc-300">WhatsApp Webhook Events</span>
+                        </div>
+                        <div class="flex items-center justify-between py-1">
+                            <span class="text-zinc-500 dark:text-zinc-400 font-mono">queue.log</span>
+                            <span class="text-zinc-600 dark:text-zinc-300">Queue Worker Processing</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-2.5 pt-2">
+                        <flux:modal.close>
+                            <flux:button variant="ghost" type="button">{{ __('Cancel') }}</flux:button>
+                        </flux:modal.close>
+                        <flux:button variant="danger" wire:click="executeClearLogs" wire:loading.attr="disabled">
+                            {{ __('Truncate Logs') }}
+                        </flux:button>
+                    </div>
+                </div>
+            </flux:modal>
         </div>
     </x-pages::settings.layout>
 </section>

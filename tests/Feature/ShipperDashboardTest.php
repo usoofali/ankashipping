@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\ShipmentStatus;
+use App\Enums\ShippingMode;
 use App\Models\Shipment;
 use App\Models\Shipper;
 use App\Models\User;
@@ -61,4 +62,54 @@ test('shipper dashboard stats include telex requested count and card', function 
     expect($stats['telex_requested'])->toBe(1);
 
     $component->assertSee('Telex Requested');
+});
+
+test('shipper dashboard cards have correct filter links for invoice states and shipping modes', function (): void {
+    $user = User::factory()->create();
+    $user->assignRole('shipper');
+    Shipper::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user);
+
+    $component = Volt::test('pages::dashboard.shipper');
+
+    $component->assertSee(route('shipments.index', ['filterInvoiceState' => 'due']));
+    $component->assertSee(route('shipments.index', ['filterInvoiceState' => 'paid']));
+    $component->assertSee(route('shipments.index', ['filterShippingMode' => ShippingMode::Roro->value]));
+    $component->assertSee(route('shipments.index', ['filterShippingMode' => ShippingMode::Container->value]));
+    $component->assertSee(route('shipments.index', ['filterBookedWithoutTitle' => true]));
+});
+
+test('shipper dashboard stats include booked without title count and card', function (): void {
+    $user = User::factory()->create();
+    $user->assignRole('shipper');
+    $shipper = Shipper::factory()->create(['user_id' => $user->id]);
+
+    $otherShipper = Shipper::factory()->create();
+
+    Shipment::factory()->count(2)->create([
+        'shipper_id' => $shipper->id,
+        'booked_without_title' => true,
+    ]);
+
+    Shipment::factory()->create([
+        'shipper_id' => $shipper->id,
+        'booked_without_title' => false,
+    ]);
+
+    Shipment::factory()->create([
+        'shipper_id' => $otherShipper->id,
+        'booked_without_title' => true,
+    ]);
+
+    $this->actingAs($user);
+
+    $component = Volt::test('pages::dashboard.shipper');
+    $stats = $component->instance()->stats();
+
+    expect($stats['booked_without_title'])->toBe(2);
+
+    $component->assertSee('Booked Without Title');
+    $component->assertSee('No Title');
+    $component->assertSee(route('shipments.index', ['filterBookedWithoutTitle' => true]));
 });

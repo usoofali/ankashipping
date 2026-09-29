@@ -151,8 +151,8 @@ new #[Title('Wallets Management')] class extends Component {
                         <flux:table.row :key="$wallet->id">
                             <flux:table.cell>
                                 <div class="font-medium text-zinc-900 dark:text-zinc-100">
-                                    {{ $wallet->shipper->company_name ?? 'Shipper #' . $wallet->shipper_id }}</div>
-                                <div class="text-xs text-zinc-500">{{ $wallet->shipper->email ?? '' }}</div>
+                                    {{ $wallet->shipper->display_name }}</div>
+                                <div class="text-xs text-zinc-500">{{ $wallet->shipper->user?->email ?? $wallet->shipper->phone ?? '' }}</div>
                             </flux:table.cell>
                             <flux:table.cell
                                 class="font-bold {{ $wallet->balance > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-500 dark:text-zinc-400' }}">

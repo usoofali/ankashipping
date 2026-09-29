@@ -689,11 +689,7 @@ new #[Title('Submit Prealert')] class extends Component {
                                             option-label="name" :async-data="route('api.shippers.search')" searchable
                                             required />
                                     @else
-                                        <flux:input :label="__('Shipper')" :value="sprintf(
-                                                                '%s(%s)',
-                                                                Auth::user()?->name ?? '',
-                                                                Auth::user()?->shipper?->company_name ?? '-'
-                                                            )" disabled />
+                                        <flux:input :label="__('Shipper')" :value="trim((Auth::user()?->name ?? '') . (Auth::user()?->shipper?->company_name ? ' (' . Auth::user()?->shipper?->company_name . ')' : ''))" disabled />
                                         <input type="hidden" wire:model="shipper_id">
                                     @endif
 

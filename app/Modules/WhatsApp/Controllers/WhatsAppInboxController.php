@@ -14,8 +14,10 @@ use App\Models\ShipmentTracking;
 use App\Models\Shipper;
 use App\Models\Staff;
 use App\Models\User;
+use App\Models\Vehicle;
 use App\Modules\WhatsApp\Models\WhatsAppConversation;
 use App\Modules\WhatsApp\Models\WhatsAppMessage;
+use App\Modules\WhatsApp\Services\WhatsAppDocumentService;
 use App\Modules\WhatsApp\Services\WhatsAppService;
 use App\Notifications\StampedDockReceiptNotification;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -166,6 +168,13 @@ class WhatsAppInboxController extends Controller
                     'status' => 'escalated',
                 ]);
             }
+        }
+
+        // Handle #dock send directive (e.g. #dock send ANK0001 or #docksend VIN)
+        if (preg_match('/^#dock[\s\-_]*send(?:\s+(.*))?$/is', trim($text), $matches)) {
+            $ref = strtoupper(trim($matches[1] ?? ''));
+
+            return $this->handleSendDockReceiptDirective($request, $conversation, $ref);
         }
 
         // Handle approve/reject for escalated driver flows
@@ -420,6 +429,85 @@ class WhatsAppInboxController extends Controller
             'sender_type' => 'bot',
             'message_text' => '❌ Agent '.$agent->name.' rejected the Stamped Dock Receipt'.($reason ? " (Reason: $reason)" : '').'.',
             'status' => 'sent',
+        ]);
+    }
+
+    protected function handleSendDockReceiptDirective(Request $request, WhatsAppConversation $conversation, string $ref): JsonResponse
+    {
+        if ($ref === '') {
+            return response()->json([
+                'success' => false,
+                'message' => __('Please provide a shipment reference or VIN. Example: #dock send ANK0001'),
+            ], 422);
+        }
+
+        $shipment = Shipment::query()
+            ->where('reference_no', $ref)
+            ->orWhere('booking_number', $ref)
+            ->first();
+
+        if (! $shipment) {
+            $vehicle = Vehicle::findByVin($ref);
+            if ($vehicle && $vehicle->shipment_id) {
+                $shipment = $vehicle->shipment;
+            }
+        }
+
+        if (! $shipment) {
+            return response()->json([
+                'success' => false,
+                'message' => __('Could not find shipment or vehicle with reference/VIN: :ref', ['ref' => $ref]),
+            ], 422);
+        }
+
+        $docService = app(WhatsAppDocumentService::class);
+        $payload = $docService->getDockReceiptPayload($shipment);
+
+        $waService = app(WhatsAppService::class);
+        $response = $waService->sendDocument(
+            $conversation->phone_number,
+            $payload['url'],
+            $payload['name']
+        );
+
+        $message = WhatsAppMessage::create([
+            'conversation_id' => $conversation->id,
+            'category_id' => $conversation->category_id,
+            'sender_type' => 'agent',
+            'message_type' => 'document',
+            'message_text' => "Dock Receipt — {$shipment->reference_no}",
+            'media_url' => $payload['url'],
+            'whatsapp_message_id' => $response['messages'][0]['id'] ?? null,
+            'related_entity_type' => Shipment::class,
+            'related_entity_id' => $shipment->id,
+            'status' => 'sent',
+        ]);
+
+        ActivityLog::create([
+            'shipment_id' => $shipment->id,
+            'user_id' => $request->user()->id,
+            'action' => 'whatsapp.send_dock_receipt',
+            'properties' => [
+                'recipient_phone' => $conversation->phone_number,
+                'reference_no' => $shipment->reference_no,
+            ],
+        ]);
+
+        $conversation->update(['last_message_at' => now()]);
+
+        return response()->json([
+            'success' => true,
+            'action' => 'dock_sent',
+            'message' => __('Dock receipt for :ref sent successfully.', ['ref' => $shipment->reference_no]),
+            'data' => [
+                'id' => $message->id,
+                'sender_type' => $message->sender_type,
+                'message_text' => $message->message_text,
+                'message_type' => $message->message_type,
+                'media_url' => $message->media_url,
+                'status' => $message->status,
+                'created_at' => $message->created_at->toIso8601String(),
+            ],
         ]);
     }
 }

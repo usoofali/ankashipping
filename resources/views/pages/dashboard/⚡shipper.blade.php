@@ -70,6 +70,7 @@ new #[Title('My Dashboard')] class extends Component {
             'topup_requests' => WalletTopUp::where('shipper_id', $shipperId)->count(),
             'total_roro' => Shipment::where('shipper_id', $shipperId)->where('shipping_mode', ShippingMode::Roro)->count(),
             'total_container' => Shipment::where('shipper_id', $shipperId)->where('shipping_mode', ShippingMode::Container)->count(),
+            'booked_without_title' => Shipment::where('shipper_id', $shipperId)->where('booked_without_title', true)->count(),
         ];
     }
 
@@ -333,7 +334,21 @@ new #[Title('My Dashboard')] class extends Component {
             </div>
         </flux:card>
 
-        <flux:card as="a" href="{{ route('shipments.index') }}" wire:navigate
+        <flux:card as="a" href="{{ route('shipments.index', ['filterBookedWithoutTitle' => true]) }}" wire:navigate
+            class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between">
+                <flux:icon.document-minus class="size-8 text-rose-500" />
+                <flux:badge color="rose" size="sm" variant="subtle">{{ __('No Title') }}</flux:badge>
+            </div>
+            <div>
+                <flux:heading level="3" size="xl" class="font-bold text-rose-600 dark:text-rose-400">
+                    {{ number_format($this->stats['booked_without_title'] ?? 0) }}
+                </flux:heading>
+                <flux:subheading>{{ __('Booked Without Title') }}</flux:subheading>
+            </div>
+        </flux:card>
+
+        <flux:card as="a" href="{{ route('shipments.index', ['filterShippingMode' => ShippingMode::Roro->value]) }}" wire:navigate
             class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
             <div class="flex items-center justify-between">
                 <flux:icon.truck class="size-8 text-slate-500" />
@@ -346,7 +361,7 @@ new #[Title('My Dashboard')] class extends Component {
             </div>
         </flux:card>
 
-        <flux:card as="a" href="{{ route('shipments.index') }}" wire:navigate
+        <flux:card as="a" href="{{ route('shipments.index', ['filterShippingMode' => ShippingMode::Container->value]) }}" wire:navigate
             class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
             <div class="flex items-center justify-between">
                 <flux:icon.container class="size-8 text-blue-600" />
@@ -359,7 +374,7 @@ new #[Title('My Dashboard')] class extends Component {
             </div>
         </flux:card>
 
-        <flux:card as="a" href="{{ route('shipments.index') }}" wire:navigate
+        <flux:card as="a" href="{{ route('shipments.index', ['filterInvoiceState' => 'paid']) }}" wire:navigate
             class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
             <div class="flex items-center justify-between">
                 <flux:icon.banknotes class="size-8 text-teal-500" />
@@ -372,7 +387,7 @@ new #[Title('My Dashboard')] class extends Component {
             </div>
         </flux:card>
 
-        <flux:card as="a" href="{{ route('shipments.index') }}" wire:navigate
+        <flux:card as="a" href="{{ route('shipments.index', ['filterInvoiceState' => 'due']) }}" wire:navigate
             class="flex flex-col gap-2 p-4 hover:shadow-md transition-shadow">
             <div class="flex items-center justify-between">
                 <flux:icon.exclamation-circle class="size-8 text-orange-500" />

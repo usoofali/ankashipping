@@ -53,7 +53,7 @@ new #[Title('Wallet Statement')] class extends Component {
     <x-crud.page-shell>
         <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4 print:hidden">
             <div>
-                <x-crud.page-header :heading="__('Statement of Account')" :subheading="__('Ledger history for ' . ($this->wallet->shipper->company_name ?? 'Shipper #' . $this->wallet->shipper_id))"
+                <x-crud.page-header :heading="__('Statement of Account')" :subheading="__('Ledger history for :name', ['name' => $this->wallet->shipper->display_name])"
                     icon="document-text" class="!mb-0" />
                 <a href="{{ route('financials.wallets.index') }}"
                     class="text-sm font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center gap-1 mt-2"
@@ -74,8 +74,8 @@ new #[Title('Wallet Statement')] class extends Component {
             <p class="text-zinc-600">Generated on {{ now()->format('M d, Y H:i') }}</p>
             <div class="mt-4 p-4 border border-zinc-300 rounded">
                 <p><strong>Shipper:</strong>
-                    {{ $this->wallet->shipper->company_name ?? 'Shipper #' . $this->wallet->shipper_id }}</p>
-                <p><strong>Email:</strong> {{ $this->wallet->shipper->email ?? 'N/A' }}</p>
+                    {{ $this->wallet->shipper->display_name }}</p>
+                <p><strong>Email:</strong> {{ $this->wallet->shipper->user?->email ?? $this->wallet->shipper->phone ?? 'N/A' }}</p>
                 <p><strong>Current Balance:</strong> ${{ number_format($this->wallet->balance, 2) }}</p>
             </div>
         </div>

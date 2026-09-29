@@ -328,7 +328,7 @@ new #[Title('Edit Shipment')] class extends Component {
                             <flux:avatar :name="$shipment->shipper->user->name" size="lg"
                                 class="bg-indigo-100! text-indigo-700!" />
                             <div>
-                                <flux:heading size="lg">{{ $shipment->shipper->company_name }}</flux:heading>
+                                <flux:heading size="lg">{{ $shipment->shipper->display_name }}</flux:heading>
                                 <div class="flex flex-wrap gap-x-4 gap-y-1 mt-1">
                                     <div class="flex items-center gap-2 text-zinc-500">
                                         <flux:icon.user class="size-3.5" />

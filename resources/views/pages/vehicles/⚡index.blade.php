@@ -103,7 +103,7 @@ new #[Title('Vehicles')] class extends Component {
         $shipperId = auth()->user()->shipper?->id;
 
         return Vehicle::query()
-            ->with(['shipment.shipper', 'prealert.shipper'])
+            ->with(['shipment.shipper.user', 'prealert.shipper.user'])
             // Visibility scoping
             ->when($isShipper, function ($q) use ($shipperId) {
                 $q->where(function ($sq) use ($shipperId) {
@@ -277,7 +277,7 @@ new #[Title('Vehicles')] class extends Component {
                                 <flux:table.cell>
                                     <div class="flex flex-col">
                                         <span class="font-medium text-zinc-900 dark:text-white">
-                                            {{ $vehicle->shipment?->shipper?->company_name ?? $vehicle->prealert?->shipper?->company_name ?? '—' }}
+                                            {{ $vehicle->shipment?->shipper?->display_name ?? $vehicle->prealert?->shipper?->display_name ?? '—' }}
                                         </span>
                                         <span class="text-xs text-zinc-500">
                                             {{ $vehicle->shipment?->shipper?->phone ?? $vehicle->prealert?->shipper?->phone ?? '' }}

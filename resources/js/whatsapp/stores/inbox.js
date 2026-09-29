@@ -119,6 +119,8 @@ export const useInboxStore = defineStore('inbox', {
                 await this.fetchConversations();
             } catch (e) {
                 console.error('Failed to send message', e);
+                const errorMsg = e.response?.data?.message || 'Failed to send message.';
+                alert(errorMsg);
             } finally {
                 this.sending = false;
             }

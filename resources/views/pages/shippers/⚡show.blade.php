@@ -118,7 +118,7 @@ new #[Title('Shipper')] class extends Component {
         ]);
 
         if ($isTowing === false) {
-            $driver = Driver::where('company', $this->shipper->company_name)
+            $driver = Driver::where('company', $this->shipper->display_name)
                 ->where('email', $this->shipper->user->email)
                 ->first();
 
@@ -126,7 +126,7 @@ new #[Title('Shipper')] class extends Component {
                 $driver = Driver::create([
                     'phone' => $this->shipper->phone . '01',
                     'email' => $this->shipper->user->email,
-                    'company' => $this->shipper->company_name,
+                    'company' => $this->shipper->display_name,
                 ]);
             }
 
@@ -314,7 +314,7 @@ new #[Title('Shipper')] class extends Component {
 @endphp
 
 <x-crud.page-shell>
-    <x-crud.page-header :heading="$shipper->company_name" :subheading="__('Shipper overview and activity')">
+    <x-crud.page-header :heading="$shipper->display_name" :subheading="__('Shipper overview and activity')">
         <x-slot name="actions">
             <div class="flex flex-wrap items-center gap-2">
                 @can('shippers.manage_towing')
