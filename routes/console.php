@@ -33,3 +33,6 @@ Schedule::command('housekeeping:prune --days=60')->weeklyOn(0, '02:00');
 
 // Process incoming carrier release emails (Telex Releases & Sea Waybills) every 5 minutes
 Schedule::command('carrier:process-releases')->everyFiveMinutes()->withoutOverlapping(10);
+
+// Process title document and overdue invoice reminders hourly
+Schedule::command('reminders:process')->hourly()->withoutOverlapping(10);

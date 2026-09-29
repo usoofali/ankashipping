@@ -65,66 +65,120 @@ final class ProcessCarrierReleaseEmailsCommand extends Command
         $fulfilledCount = 0;
         $skippedCount = 0;
 
-        foreach ($folders as $folder) {
-            $this->line("Scanning folder: <info>{$folder}</info>...");
-            if (! $mailboxService->selectFolder($folder)) {
-                $this->warn("Could not select folder '{$folder}', skipping.");
+        try {
+            foreach ($folders as $folder) {
+                $this->line("Scanning folder: <info>{$folder}</info>...");
+                if (! $mailboxService->selectFolder($folder)) {
+                    $this->warn("Could not select folder '{$folder}', skipping.");
+                    Log::warning("ProcessCarrierReleaseEmailsCommand: Could not select IMAP folder '{$folder}', skipping.");
 
-                continue;
-            }
-
-            $uids = $unseenOnly
-                ? $mailboxService->getUnseenUids($limit)
-                : $mailboxService->getCandidateReleaseUids($limit, $days);
-
-            if (empty($uids)) {
-                $this->line("  No matching release emails found in {$folder}.");
-
-                continue;
-            }
-
-            $this->line(sprintf('  Found %d message(s) to check in %s. Scanning for carrier releases...', count($uids), $folder));
-
-            foreach ($uids as $uid) {
-                $rawEmail = $mailboxService->fetchMessageByUid($uid);
-                if (! $rawEmail) {
                     continue;
                 }
 
-                $releaseData = $parserService->parseRawEmail($rawEmail);
-                if (! $releaseData) {
-                    // Not a carrier release email (e.g. general notification, billing, personal inquiry)
-                    // Left unread per design
+                try {
+                    $uids = $unseenOnly
+                        ? $mailboxService->getUnseenUids($limit)
+                        : $mailboxService->getCandidateReleaseUids($limit, $days);
+                } catch (\Throwable $e) {
+                    $this->error("Error retrieving UIDs in folder '{$folder}': {$e->getMessage()}");
+                    Log::error("ProcessCarrierReleaseEmailsCommand: Error retrieving UIDs in folder '{$folder}': {$e->getMessage()}", [
+                        'exception' => $e,
+                    ]);
+
                     continue;
                 }
 
-                $outcome = $fulfillmentService->processRelease($releaseData, $dryRun);
+                if (empty($uids)) {
+                    $this->line("  No matching release emails found in {$folder}.");
 
-                if ($outcome['mark_as_seen'] && ! $dryRun) {
-                    $mailboxService->markAsSeen($uid);
+                    continue;
                 }
 
-                if ($outcome['status'] === 'fulfilled') {
-                    $fulfilledCount++;
-                } else {
-                    $skippedCount++;
-                }
+                $this->line(sprintf('  Found %d message(s) to check in %s. Scanning for carrier releases...', count($uids), $folder));
+                Log::info(sprintf('ProcessCarrierReleaseEmailsCommand: Found %d message(s) to check in %s.', count($uids), $folder));
 
-                $results[] = [
-                    'Folder' => $folder,
-                    'UID' => $uid,
-                    'Carrier' => $releaseData->carrier,
-                    'Type' => $releaseData->releaseType,
-                    'VIN' => $releaseData->vin,
-                    'BL No' => $releaseData->blNumber ?? '—',
-                    'Shipment' => $outcome['shipment']?->reference_no ?? '—',
-                    'Status' => $outcome['status'],
-                    'Message' => $outcome['message'],
-                ];
+                foreach ($uids as $uid) {
+                    try {
+                        $rawEmail = $mailboxService->fetchMessageByUid($uid);
+                    } catch (\Throwable $e) {
+                        Log::error("ProcessCarrierReleaseEmailsCommand: Exception fetching message UID {$uid} in {$folder}: {$e->getMessage()}", [
+                            'exception' => $e,
+                        ]);
+
+                        continue;
+                    }
+
+                    if (! $rawEmail) {
+                        Log::warning("ProcessCarrierReleaseEmailsCommand: Empty email body returned for UID {$uid} in {$folder}.");
+
+                        continue;
+                    }
+
+                    try {
+                        $releaseData = $parserService->parseRawEmail($rawEmail);
+                    } catch (\Throwable $e) {
+                        Log::error("ProcessCarrierReleaseEmailsCommand: Exception parsing raw email UID {$uid} in {$folder}: {$e->getMessage()}", [
+                            'exception' => $e,
+                        ]);
+
+                        continue;
+                    }
+
+                    if (! $releaseData) {
+                        // Not a carrier release email (e.g. general notification, billing, personal inquiry)
+                        // Left unread per design
+                        continue;
+                    }
+
+                    try {
+                        $outcome = $fulfillmentService->processRelease($releaseData, $dryRun);
+                    } catch (\Throwable $e) {
+                        Log::error("ProcessCarrierReleaseEmailsCommand: Exception fulfilling release for UID {$uid} (VIN: {$releaseData->vin}): {$e->getMessage()}", [
+                            'exception' => $e,
+                        ]);
+
+                        continue;
+                    }
+
+                    if ($outcome['status'] === 'error') {
+                        Log::error("ProcessCarrierReleaseEmailsCommand: Error fulfilling release for UID {$uid} (VIN: {$releaseData->vin}): {$outcome['message']}");
+                    }
+
+                    if ($outcome['mark_as_seen'] && ! $dryRun) {
+                        try {
+                            $mailboxService->markAsSeen($uid);
+                        } catch (\Throwable $e) {
+                            Log::warning("ProcessCarrierReleaseEmailsCommand: Failed to mark UID {$uid} as seen: {$e->getMessage()}");
+                        }
+                    }
+
+                    if ($outcome['status'] === 'fulfilled') {
+                        $fulfilledCount++;
+                    } else {
+                        $skippedCount++;
+                    }
+
+                    $results[] = [
+                        'Folder' => $folder,
+                        'UID' => $uid,
+                        'Carrier' => $releaseData->carrier,
+                        'Type' => $releaseData->releaseType,
+                        'VIN' => $releaseData->vin,
+                        'BL No' => $releaseData->blNumber ?? '—',
+                        'Shipment' => $outcome['shipment']?->reference_no ?? '—',
+                        'Status' => $outcome['status'],
+                        'Message' => $outcome['message'],
+                    ];
+                }
             }
+        } catch (\Throwable $e) {
+            $this->error("ProcessCarrierReleaseEmailsCommand failed unexpectedly: {$e->getMessage()}");
+            Log::error("ProcessCarrierReleaseEmailsCommand: Unexpected failure during release scan: {$e->getMessage()}", [
+                'exception' => $e,
+            ]);
+        } finally {
+            $mailboxService->disconnect();
         }
-
-        $mailboxService->disconnect();
 
         if (! empty($results)) {
             $this->table(
