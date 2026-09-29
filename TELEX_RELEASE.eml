@@ -1,0 +1,177 @@
+Delivered-To: usoofali@gmail.com
+Received: by 2002:a05:6358:108a:b0:2b6:c7c0:cf51 with SMTP id j10csp4032868rwi;
+        Mon, 28 Sep 2026 15:47:06 -0700 (PDT)
+X-Received: by 2002:a05:6a20:4306:b0:3de:4f5c:a9ad with SMTP id adf61e73a8af0-3de4f5cbe8bmr8236953637.1.1790635626404;
+        Mon, 28 Sep 2026 15:47:06 -0700 (PDT)
+ARC-Seal: i=2; a=rsa-sha256; t=1790635626; cv=pass;
+        d=google.com; s=arc-20260327;
+        b=kPR2WOnuhEfv+Ux89nv1ZG60P0ebZLfgMhEhWF5CnDpF4A57MjgQdN0fWx9SdF2bFU
+         SXdxJqwRV3dzGy72rFzS1ZEuyglK/8WQNGy8px2a4+/3E2RTcrKqJLmlhbqZE1LTcNKk
+         un9dXsqu80GM9zPZXcNOEalw+UeknjIN7C41ZFxeoQ3S7aMZb47+CgHGCfh6J0mJu+V6
+         WgnvG1ejpYXcOPnTXo8I4Mg5NMCMFLlKzypsJD/5DXR/nBviTxAUfzMJsMSf0r2dU412
+         pxVVpmN8wwYMvnwleSdzKzINS05ii10ZfU9oGCGh+NXt/TYJ2F5dCqTarLExFGdZJCMx
+         3Osw==
+ARC-Message-Signature: i=2; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20260327;
+        h=user-agent:importance:mime-version:subject:references:in-reply-to
+         :message-id:to:from:date:dkim-signature;
+        bh=0oiwPdqHNUedxTcGd6I7s39c2qdGa0+rC5YGfHq1nWo=;
+        fh=RmMILQNtscgBwdvubUfIS62wwUdlYFdz14yqyxrBaas=;
+        b=oGBQEuY9Qaaf8K8JK/BIP9ZQWbR/X47IBn7bp6474WyjcwTvBYSqpOYTnsp8Ui5Xmo
+         q73/wioIp61SmdmNAcUvLMXxm/MQMIT+CEq4ufMl1DkLdcw4eD3pMGAcwuIovtPN5n92
+         OqpneVE2pRwhY2CbJ8+0DxXUovBQMaknX7bOxCHHcynp6ntRk1bD1+Hq67er/kmIQPCD
+         FA0/AzRQrStMnge8jrsk1TmR0foM+7pbApKOEaJlh0c4XztFDtmMa751IheUF6/eiSQH
+         I0xM+TFzbXsZh3gvjjUUlRuD5dSU4+U8uUSkstx88svFslCqUUqpl/Q2E+bcQI4/FKMW
+         uF6Q==;
+        dara=google.com
+ARC-Authentication-Results: i=2; mx.google.com;
+       dkim=pass header.i=@ankshipping.com header.s=zmail header.b=QpUJgR5V;
+       arc=pass (i=1 spf=pass spfdomain=ankshipping.com dkim=pass dkdomain=ankshipping.com dmarc=pass fromdomain=ankshipping.com>);
+       spf=pass (google.com: domain of operations@ankshipping.com designates 165.173.180.17 as permitted sender) smtp.mailfrom=operations@ankshipping.com;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=ankshipping.com
+Return-Path: <operations@ankshipping.com>
+Received: from sender6-op-o17.zoho.com (sender6-op-o17.zoho.com. [165.173.180.17])
+        by mx.google.com with ESMTPS id d2e1a72fcca58-88303a12e3bsi7616349b3a.96.2026.09.28.15.47.06
+        for <usoofali@gmail.com>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Mon, 28 Sep 2026 15:47:06 -0700 (PDT)
+Received-SPF: pass (google.com: domain of operations@ankshipping.com designates 165.173.180.17 as permitted sender) client-ip=165.173.180.17;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@ankshipping.com header.s=zmail header.b=QpUJgR5V;
+       arc=pass (i=1 spf=pass spfdomain=ankshipping.com dkim=pass dkdomain=ankshipping.com dmarc=pass fromdomain=ankshipping.com>);
+       spf=pass (google.com: domain of operations@ankshipping.com designates 165.173.180.17 as permitted sender) smtp.mailfrom=operations@ankshipping.com;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=ankshipping.com
+ARC-Seal: i=1; a=rsa-sha256; t=1790635625; cv=none; 
+	d=zohomail.com; s=zohoarc; 
+	b=lEdH/ORyDmz3NPe/dCiXXzejBzavxVOwsmNuTJwZ36T0s0pg0BFXjzXugQhutLNpVb3FjG+SdJU9mSqo5v6a1fKwotqoPzh8flFhlxvcWbNMHB9kJjBMZnbOqvv6n9rQhyVCKU4uKe2cMbs1CnS6CBzlJHAoBlyPt4OuazoQm3w=
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=zohomail.com; s=zohoarc; 
+	t=1790635625; h=Content-Type:Date:Date:From:From:In-Reply-To:MIME-Version:Message-ID:Subject:Subject:To:To:Message-Id:Reply-To:Cc; 
+	bh=0oiwPdqHNUedxTcGd6I7s39c2qdGa0+rC5YGfHq1nWo=; 
+	b=LBepmlAg4ni9zNDVnHRme3qIn8LRoKmiYXoV9Hup6oe/H/aLeQgdRaBT6oepM5p4OS1p44zY7btlPvbz4/FMonUNH5+t8zfd8JEFWbKEcDykSslTh5V2X6obaGW5+wdvDpthd9zobMl/lKv3HReLGafUch9zKFoujpRsdEQ3CBU=
+ARC-Authentication-Results: i=1; mx.zohomail.com;
+	dkim=pass  header.i=ankshipping.com;
+	spf=pass  smtp.mailfrom=operations@ankshipping.com;
+	dmarc=pass header.from=<operations@ankshipping.com>
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed; t=1790635625;
+	s=zmail; d=ankshipping.com; i=operations@ankshipping.com;
+	h=Date:Date:From:From:To:To:Message-Id:Message-Id:In-Reply-To:Subject:Subject:MIME-Version:Content-Type:Reply-To:Cc;
+	bh=0oiwPdqHNUedxTcGd6I7s39c2qdGa0+rC5YGfHq1nWo=;
+	b=QpUJgR5V409+pVd5P0RpM6ueOgUbF/7XUdpIKUZn3RnJQHyEMlXijh68ablZ1QDf
+	IqCEgB88qSpKEjT8kboKFUwAscJE/DE4bVUph0A8DBgSA+hUrnHuJ2kf5AMgIdqVRxZ
+	nvYqAknfQBAnHm7VTSiVufEWudSoS9a6AcZPrzVQ=
+Received: from mail.zoho.com by mx.zohomail.com
+	with SMTP id 1790635623250948.9453466526753; Mon, 28 Sep 2026 15:47:03 -0700 (PDT)
+Date: Mon, 28 Sep 2026 18:47:03 -0400
+From: Anka Shipping <operations@ankshipping.com>
+To: <usoofali@gmail.com>
+Message-Id: <1a0ea33434f.35ab5af9477846.2742590802296168894@ankshipping.com>
+In-Reply-To: <eda4a2a8.EAAACWdoz8gAAAAAAAAAA9ANWRcAAYCsByoAAAAAAA7BzABqusuZ@mailjet.com>
+References: <eda4a2a8.EAAACWdoz8gAAAAAAAAAA9ANWRcAAYCsByoAAAAAAA7BzABqusuZ@mailjet.com>
+Subject: =?UTF-8?Q?Fwd:=C2=A0***_TELEX_RELEASE_***_US00888436_-_26GW02_-_Jackso?=
+ =?UTF-8?Q?nville_(USJAX)_TO_Lagos_(NGLOS)_Port_-_1HGCV1F41KA162202?=
+MIME-Version: 1.0
+Content-Type: multipart/alternative; 
+	boundary="----=_Part_1339737_926010160.1790635623247"
+Importance: Normal
+User-Agent: Zoho Mail
+X-Mailer: Zoho Mail
+
+------=_Part_1339737_926010160.1790635623247
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: 7bit
+
+============ Forwarded Message ============
+From : Customer.Service@sallaumlines.us
+To : customer.service@sallaumlines.us,operations@ankshipping.com,accounts@ankshipping.com
+Date : Mon, 28 Sep 2026 16:18:33 -0400
+Subject : *** TELEX RELEASE *** US00888436 - 26GW02 - Jacksonville (USJAX) TO Lagos (NGLOS) Port - 1HGCV1F41KA162202
+============ Forwarded Message ============
+
+THIS IS AN AUTOMATED MESSAGE. KINDLY DO NOT REPLY DIRECTLY TO THIS EMAIL
+
+************************    SALLAUM LINES   ****************************
+
+
+
+                                                 *** TELEX RELEASE ***
+
+
+
+Vessel: Glovis Crown
+
+Voyage: 26GW02             
+
+POL: Jacksonville (USJAX)                    
+
+POD: Lagos (NGLOS)            
+
+BL No: US00888436  
+
+Timestamp: 2026-09-28
+
+Item(s):
+
+- Vin: 1HGCV1F41KA162202
+
+- Make/Model: Honda Accord
+
+- Year: 2019
+
+
+
+Agent: ANKA SHIPPING & LOGISTICS LLC 
+
+Consignee: Ahab General Enterprises 
+
+
+
+Please release this shipment to receiver without presentation of the Original Bills of lading, but against proper identification only.
+
+All local charges are for the receiver's account.
+
+ID: 4385269
+------=_Part_1339737_926010160.1790635623247
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"><html><head>=
+<meta content=3D"text/html;charset=3DUTF-8" http-equiv=3D"Content-Type"></h=
+ead><body ><div dir=3D'auto' style=3D'font-size:10pt;font-family:Verdana,Ar=
+ial,Helvetica,sans-serif;'><div id=3D"message" dir=3D"auto"><div><br id=3D"=
+br3"><br id=3D"br3"><br id=3D"br3"></div></div><div id=3D"signature" dir=3D=
+"auto"></div><div id=3D"content" dir=3D"auto"><br><div class=3D"zmail_extra=
+_hr" style=3D"border-top-width: 1px; border-top-style: solid; border-top-co=
+lor: rgb(204, 204, 204); height: 0px; margin-top: 10px; margin-bottom: 10px=
+; line-height: 0px;"></div><br>=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D Forward=
+ed Message =3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D<br>From : Customer.Service@=
+sallaumlines.us<br>To : customer.service@sallaumlines.us,operations@ankship=
+ping.com,accounts@ankshipping.com<br>Date : Mon, 28 Sep 2026 16:18:33 -0400=
+<br>Subject : *** TELEX RELEASE *** US00888436 - 26GW02 - Jacksonville (USJ=
+AX) TO Lagos (NGLOS) Port - 1HGCV1F41KA162202<br>=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D Forwarded Message =3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D<br><br>=
+<blockquote style=3D"border: 0px; padding: 0px; margin: 0px;"><div>THIS IS =
+AN AUTOMATED MESSAGE. KINDLY DO NOT REPLY DIRECTLY TO THIS EMAIL
+<br>************************    SALLAUM LINES   ***************************=
+*
+<br>
+<br>                                                 *** TELEX RELEASE ***
+<br>
+<br>Vessel: Glovis Crown
+<br>Voyage: 26GW02            =20
+<br>POL: Jacksonville (USJAX)                   =20
+<br>POD: Lagos (NGLOS)           =20
+<br>BL No: US00888436 =20
+<br>Timestamp: 2026-09-28
+<br>Item(s):
+<br>- Vin: 1HGCV1F41KA162202
+<br>- Make/Model: Honda Accord
+<br>- Year: 2019
+<br>
+<br>Agent: ANKA SHIPPING &amp; LOGISTICS LLC=20
+<br>Consignee: Ahab General Enterprises=20
+<br>
+<br>Please release this shipment to receiver without presentation of the Or=
+iginal Bills of lading, but against proper identification only.
+<br>All local charges are for the receiver's account.
+<br>ID: 4385269</div></blockquote></div></div><br></body></html>
+------=_Part_1339737_926010160.1790635623247--
+

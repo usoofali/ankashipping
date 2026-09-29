@@ -1,0 +1,166 @@
+Delivered-To: usoofali@gmail.com
+Received: by 2002:a05:6358:108a:b0:2b6:c7c0:cf51 with SMTP id j10csp4086215rwi;
+        Mon, 28 Sep 2026 16:56:48 -0700 (PDT)
+X-Received: by 2002:a05:6a20:a11e:b0:3bf:a638:4384 with SMTP id adf61e73a8af0-3de22b82f9emr15200283637.2.1790639808797;
+        Mon, 28 Sep 2026 16:56:48 -0700 (PDT)
+ARC-Seal: i=2; a=rsa-sha256; t=1790639808; cv=pass;
+        d=google.com; s=arc-20260327;
+        b=fzsROiRjXcHr2nLA3ofqf40vvdGyuqD3cf2o4wcsIn+Yxx2wIY3v9kCal6fcLs6zHD
+         geruX2N2g/fARXhsugxnyxR6Nn0s1M3j2dNZ3xPMnwfEv8vQ2bsOPh8qMV+m223EM7Dm
+         c1Q098gGo/lfuMZTp30+9YCswVTAqPV2dTGhM0SOt3CO9TMuxoJHxcrKiXssOYrBlnmp
+         ggLB1kPdkCd6ya9FYonNfpx//hh5kBOi/xtE/qWoowaMc3T/irntvKuqVErcuWW6GNfC
+         PgnKXMGKkkODt288l5grM97u3COAzaMOw87Y45VllJ6i3VTFMh2Fj9+424FzDCDtpUyy
+         9UKg==
+ARC-Message-Signature: i=2; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20260327;
+        h=user-agent:importance:mime-version:subject:references:in-reply-to
+         :message-id:to:from:date:dkim-signature;
+        bh=TK5qYeNUKaks9F9FoQIiavULv/hpdCsONMNEzOROvkw=;
+        fh=RmMILQNtscgBwdvubUfIS62wwUdlYFdz14yqyxrBaas=;
+        b=MJFjYiwaWd6r3mJg4QsrHDVaNA5FtpRSGXt3aG9mes2sZmF+gRZhY5J3L4hivEbxTX
+         t0+ZxZj7r5dWIiDQBqq+v9Yl8Zt2rA2DehZ9F2eQ4SPTSRaly4Wo8oBcgTVWamXYy2XQ
+         ufiZrqLPoxresbPqDSSctr72iqN/NWaWiq7i4ey++qj9X87NU6lbE1OMzlxZD4J2AlKN
+         CaUajBXAqzmNwuJaO0gcmzjSQIl8itNkX/wQcBolqzuYLSqgzmTKskB0G84beYAKwdAh
+         +5B6KzSD4h7SP9aKJU8S26nZNBYIA0ROJKj4enh5KInrDmMM33hT0w/epfKRKikrePG4
+         28cw==;
+        dara=google.com
+ARC-Authentication-Results: i=2; mx.google.com;
+       dkim=pass header.i=@ankshipping.com header.s=zmail header.b=nsy7hIfp;
+       arc=pass (i=1 spf=pass spfdomain=ankshipping.com dkim=pass dkdomain=ankshipping.com dmarc=pass fromdomain=ankshipping.com>);
+       spf=pass (google.com: domain of accounts@ankshipping.com designates 165.173.180.18 as permitted sender) smtp.mailfrom=accounts@ankshipping.com;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=ankshipping.com
+Return-Path: <accounts@ankshipping.com>
+Received: from sender6-op-o18.zoho.com (sender6-op-o18.zoho.com. [165.173.180.18])
+        by mx.google.com with ESMTPS id d2e1a72fcca58-882fb3dd651si8862455b3a.52.2026.09.28.16.56.48
+        for <usoofali@gmail.com>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Mon, 28 Sep 2026 16:56:48 -0700 (PDT)
+Received-SPF: pass (google.com: domain of accounts@ankshipping.com designates 165.173.180.18 as permitted sender) client-ip=165.173.180.18;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@ankshipping.com header.s=zmail header.b=nsy7hIfp;
+       arc=pass (i=1 spf=pass spfdomain=ankshipping.com dkim=pass dkdomain=ankshipping.com dmarc=pass fromdomain=ankshipping.com>);
+       spf=pass (google.com: domain of accounts@ankshipping.com designates 165.173.180.18 as permitted sender) smtp.mailfrom=accounts@ankshipping.com;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=ankshipping.com
+ARC-Seal: i=1; a=rsa-sha256; t=1790639806; cv=none; 
+	d=zohomail.com; s=zohoarc; 
+	b=PPx/l3zsGiEaDYCITJMNPNHpmJL/7UDo97MfH0FmuL6TJvtjnO5JQlgA/2B4YkJPL/9b8M95LNm7i7YQT6jgaoe0wF+0L0XrMkDMaKwY3L9/RtQ7P0U81/TIEmG0bvaowqqMFljtywBuB5x+ZKHVJQD0+zTVzWbBZhj/TELJfhA=
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=zohomail.com; s=zohoarc; 
+	t=1790639806; h=Content-Type:Date:Date:From:From:In-Reply-To:MIME-Version:Message-ID:Subject:Subject:To:To:Message-Id:Reply-To:Cc; 
+	bh=TK5qYeNUKaks9F9FoQIiavULv/hpdCsONMNEzOROvkw=; 
+	b=i7F3hTsrSNaaVLMlvpFl5Ph/Lvtw8/k1I7himFb9WXXi/anBcyyghB1pETsbBSpFB9p5nvj7ygc8cNr6KA+NuzspXkrgYxEslKJ2GTvgmxS8gFgcdbtPqznRPP1uOvWj8Hl+JUI377P4XBjxVDQULwr4ESZ+TdObz2ts1nCeejE=
+ARC-Authentication-Results: i=1; mx.zohomail.com;
+	dkim=pass  header.i=ankshipping.com;
+	spf=pass  smtp.mailfrom=accounts@ankshipping.com;
+	dmarc=pass header.from=<accounts@ankshipping.com>
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed; t=1790639806;
+	s=zmail; d=ankshipping.com; i=accounts@ankshipping.com;
+	h=Date:Date:From:From:To:To:Message-Id:Message-Id:In-Reply-To:Subject:Subject:MIME-Version:Content-Type:Reply-To:Cc;
+	bh=TK5qYeNUKaks9F9FoQIiavULv/hpdCsONMNEzOROvkw=;
+	b=nsy7hIfpWBMrnVh3/s+YFRZU8zGs6vJByzBtCuxWak+eK7ZFxAdO46IeTZMss/2u
+	/x6EobV/yCGwmnr+pG7Dv1dauqXl1ZBJwg2Q8P5VhooQINRfFC5IlvJm9X7a6BR5aIZ
+	Rv9C9gfZd/YVgz9T6AkRmzC5eSXmJyiAhilbtzyI=
+Received: from mail.zoho.com by mx.zohomail.com
+	with SMTP id 1790639806169725.199185480335; Mon, 28 Sep 2026 16:56:46 -0700 (PDT)
+Date: Mon, 28 Sep 2026 19:56:46 -0400
+From: Anka Shipping <accounts@ankshipping.com>
+To: <usoofali@gmail.com>
+Message-Id: <1a0ea7316d6.27c60cbb475491.4202103695565963427@ankshipping.com>
+In-Reply-To: <00000421F.1F5AD534.donotreply@aclcargo.com>
+References: <00000421F.1F5AD534.donotreply@aclcargo.com>
+Subject: =?UTF-8?Q?Fwd:=C2=A0***_SEAWAY_BILL_***_-_S3-30149305_-_GDK0726_-_1?=
+ =?UTF-8?Q?HGCR2F78GA225923_-_JACKSONVILLE_PORT_TO_LAGOS_-_TIN_C?=
+MIME-Version: 1.0
+Content-Type: multipart/alternative; 
+	boundary="----=_Part_1335131_531639292.1790639806166"
+Importance: Normal
+User-Agent: Zoho Mail
+X-Mailer: Zoho Mail
+
+------=_Part_1335131_531639292.1790639806166
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: 7bit
+
+============ Forwarded Message ============
+From : donotreply@aclcargo.com
+To : accounts@ankshipping.com,ankshipping84@gmail.com
+Date : Fri, 25 Sep 2026 11:30:15 -0400
+Subject : *** SEAWAY BILL *** - S3-30149305 - GDK0726 - 1HGCR2F78GA225923 - JACKSONVILLE PORT TO LAGOS - TIN C
+============ Forwarded Message ============
+
+THIS IS AN AUTOMATED MESSAGE. PLEASE DO NOT REPLY DIRECTLY TO THIS EMAIL
+ Date: 09/25/2026 15:30:09
+
+*** SEAWAY BILL ***
+
+
+Vessel/Voyage:                GRANDE DAKAR/GDK0726
+
+Port of Load:                 JACKSONVILLE PORT
+
+Port of Discharge:            LAGOS - TIN CAN ISLAND
+
+BL/Shipment No:               S3-30149305
+
+VIN/Container:                1HGCR2F78GA225923
+
+Commodity:                    HONDA ACCORD
+
+Consignee:                    IMMYKCONSULT LTD
+                              96 SHEHU MUSA YARADUA STREET BATAGARAWA
+                              KATSINA , NIGERIA
+
+
+Clearing Agent:               
+
+Pin Number:                   NEUR53CL
+
+
+The Seaway Bill email & proper identification is to be taken directly to the Release desk.
+**Not the customer care desk that PAD (originals) are printed**
+
+Please provide the releasing dest agent the PIN associated.
+If the PIN is accurate, the Delivery Order will be printed & cargo will be released.
+If the PIN is inaccurate, please contact the Shipper as cargo will not be released.(Notification Rule ID: 17278931734)(19217130783)
+------=_Part_1335131_531639292.1790639806166
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"><html><head>=
+<meta content=3D"text/html;charset=3DUTF-8" http-equiv=3D"Content-Type"></h=
+ead><body ><div dir=3D'auto' style=3D'font-size:10pt;font-family:Verdana,Ar=
+ial,Helvetica,sans-serif;'><div id=3D"message" dir=3D"auto"><div><br id=3D"=
+br3"><br id=3D"br3"><br id=3D"br3"></div></div><div id=3D"signature" dir=3D=
+"auto"></div><div id=3D"content" dir=3D"auto"><br><div class=3D"zmail_extra=
+_hr" style=3D"border-top-width: 1px; border-top-style: solid; border-top-co=
+lor: rgb(204, 204, 204); height: 0px; margin-top: 10px; margin-bottom: 10px=
+; line-height: 0px;"></div><br>=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D Forward=
+ed Message =3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D<br>From : donotreply@aclcar=
+go.com<br>To : accounts@ankshipping.com,ankshipping84@gmail.com<br>Date : F=
+ri, 25 Sep 2026 11:30:15 -0400<br>Subject : *** SEAWAY BILL *** - S3-301493=
+05 - GDK0726 - 1HGCR2F78GA225923 - JACKSONVILLE PORT TO LAGOS - TIN C<br>=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D Forwarded Message =3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D<br><br><blockquote style=3D"border: 0px; padding: 0px; m=
+argin: 0px;"><div><pre>THIS IS AN AUTOMATED MESSAGE. PLEASE DO NOT REPLY DI=
+RECTLY TO THIS EMAIL
+<pre> Date: 09/25/2026 15:30:09<br><br><strong><font size=3D"4">*** SEAWAY =
+BILL ***</font></strong></pre><br><br><pre><b>Vessel/Voyage:               =
+ </b>GRANDE DAKAR/GDK0726</pre><br><pre><b>Port of Load:                 </=
+b>JACKSONVILLE PORT</pre><br><pre><b>Port of Discharge:            </b>LAGO=
+S - TIN CAN ISLAND</pre><br><pre><b>BL/Shipment No:               </b>S3-30=
+149305</pre><br><pre><b>VIN/Container:                </b>1HGCR2F78GA225923=
+</pre><br><pre><b>Commodity:                    </b>HONDA ACCORD</pre><br><=
+pre><b>Consignee:                    </b>IMMYKCONSULT LTD<br>              =
+                96 SHEHU MUSA YARADUA STREET BATAGARAWA<br>                =
+              KATSINA , NIGERIA<br></pre><br><pre><b>Clearing Agent:       =
+        </b></pre><br><pre><b>Pin Number:                   </b>NEUR53CL</p=
+re><br><br>The Seaway Bill email &amp; proper identification is to be taken=
+ directly to the Release desk.
+**Not the customer care desk that PAD (originals) are printed**
+
+Please provide the releasing dest agent the PIN associated.
+If the PIN is accurate, the Delivery Order will be printed &amp; cargo will=
+ be released.
+If the PIN is inaccurate, please contact the Shipper as cargo will not be r=
+eleased.(Notification Rule ID: 17278931734)(19217130783)</pre>
+</div></blockquote></div></div><br></body></html>
+------=_Part_1335131_531639292.1790639806166--
+
