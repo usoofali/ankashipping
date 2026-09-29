@@ -16,8 +16,8 @@
                 @endphp
                 <div class="text-right">
                     @if($effectiveInvoiceStatus)
-                        <flux:badge color="amber" variant="subtle" size="sm" icon="document-text">
-                            {{ $effectiveInvoiceStatus->name }}
+                        <flux:badge :color="$effectiveInvoiceStatus->color()" variant="subtle" size="sm" icon="document-text">
+                            {{ $effectiveInvoiceStatus->label() }}
                         </flux:badge>
                     @else
                         <flux:text size="xs" class="text-zinc-500">

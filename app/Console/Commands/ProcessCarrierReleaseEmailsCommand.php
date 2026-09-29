@@ -14,7 +14,10 @@ final class ProcessCarrierReleaseEmailsCommand extends Command
     protected $signature = 'carrier:process-releases
                             {--file= : Path to a local .eml file to process directly}
                             {--dry-run : Parse and test match without altering database or marking emails as read}
-                            {--limit=20 : Maximum number of unread emails to check per run}';
+                            {--limit=50 : Maximum number of emails to check per run}
+                            {--days=7 : Number of days back to scan for carrier releases}
+                            {--folder= : Specific mailbox folder to scan (default: INBOX and Notification)}
+                            {--unseen-only : Only check strictly unseen messages}';
 
     protected $description = 'Fetch and process carrier release emails (Sallaum Telex Releases, Grimaldi/ACL Sea Waybills) from accounts@ankshipping.com';
 
@@ -37,7 +40,18 @@ final class ProcessCarrierReleaseEmailsCommand extends Command
 
         // Mode 2: Connect to Zoho IMAP mailbox
         $limit = (int) $this->option('limit');
-        $this->info("Connecting to accounts@ankshipping.com mailbox via IMAP (limit: {$limit})...");
+        $days = (int) $this->option('days');
+        $unseenOnly = (bool) $this->option('unseen-only');
+        $folderOption = $this->option('folder');
+
+        $folders = $folderOption ? [(string) $folderOption] : $mailboxService->getCandidateFolders();
+
+        $this->info(sprintf(
+            'Connecting to accounts@ankshipping.com mailbox via IMAP (folders: %s, limit: %d, scan days: %d)...',
+            implode(', ', $folders),
+            $limit,
+            $days
+        ));
 
         if (! $mailboxService->connect()) {
             $this->error('Failed to connect or authenticate to IMAP server. Check credentials in .env.');
@@ -45,66 +59,78 @@ final class ProcessCarrierReleaseEmailsCommand extends Command
             return self::FAILURE;
         }
 
-        $uids = $mailboxService->getUnseenUids($limit);
-        if (empty($uids)) {
-            $this->info('No unread emails found in INBOX.');
-            $mailboxService->disconnect();
-
-            return self::SUCCESS;
-        }
-
-        $this->info(sprintf('Found %d unread message(s). Checking for carrier releases...', count($uids)));
-
         $results = [];
         $fulfilledCount = 0;
         $skippedCount = 0;
 
-        foreach ($uids as $uid) {
-            $rawEmail = $mailboxService->fetchMessageByUid($uid);
-            if (! $rawEmail) {
+        foreach ($folders as $folder) {
+            $this->line("Scanning folder: <info>{$folder}</info>...");
+            if (! $mailboxService->selectFolder($folder)) {
+                $this->warn("Could not select folder '{$folder}', skipping.");
+
                 continue;
             }
 
-            $releaseData = $parserService->parseRawEmail($rawEmail);
-            if (! $releaseData) {
-                // Not a carrier release email (e.g. general notification, billing, personal inquiry)
-                // Left unread per design
+            $uids = $unseenOnly
+                ? $mailboxService->getUnseenUids($limit)
+                : $mailboxService->getCandidateReleaseUids($limit, $days);
+
+            if (empty($uids)) {
+                $this->line("  No matching release emails found in {$folder}.");
+
                 continue;
             }
 
-            $outcome = $fulfillmentService->processRelease($releaseData, $dryRun);
+            $this->line(sprintf('  Found %d message(s) to check in %s. Scanning for carrier releases...', count($uids), $folder));
 
-            if ($outcome['mark_as_seen'] && ! $dryRun) {
-                $mailboxService->markAsSeen($uid);
+            foreach ($uids as $uid) {
+                $rawEmail = $mailboxService->fetchMessageByUid($uid);
+                if (! $rawEmail) {
+                    continue;
+                }
+
+                $releaseData = $parserService->parseRawEmail($rawEmail);
+                if (! $releaseData) {
+                    // Not a carrier release email (e.g. general notification, billing, personal inquiry)
+                    // Left unread per design
+                    continue;
+                }
+
+                $outcome = $fulfillmentService->processRelease($releaseData, $dryRun);
+
+                if ($outcome['mark_as_seen'] && ! $dryRun) {
+                    $mailboxService->markAsSeen($uid);
+                }
+
+                if ($outcome['status'] === 'fulfilled') {
+                    $fulfilledCount++;
+                } else {
+                    $skippedCount++;
+                }
+
+                $results[] = [
+                    'Folder' => $folder,
+                    'UID' => $uid,
+                    'Carrier' => $releaseData->carrier,
+                    'Type' => $releaseData->releaseType,
+                    'VIN' => $releaseData->vin,
+                    'BL No' => $releaseData->blNumber ?? '—',
+                    'Shipment' => $outcome['shipment']?->reference_no ?? '—',
+                    'Status' => $outcome['status'],
+                    'Message' => $outcome['message'],
+                ];
             }
-
-            if ($outcome['status'] === 'fulfilled') {
-                $fulfilledCount++;
-            } else {
-                $skippedCount++;
-            }
-
-            $results[] = [
-                'UID' => $uid,
-                'Carrier' => $releaseData->carrier,
-                'Type' => $releaseData->releaseType,
-                'VIN' => $releaseData->vin,
-                'BL No' => $releaseData->blNumber ?? '—',
-                'Shipment' => $outcome['shipment']?->reference_no ?? '—',
-                'Status' => $outcome['status'],
-                'Message' => $outcome['message'],
-            ];
         }
 
         $mailboxService->disconnect();
 
         if (! empty($results)) {
             $this->table(
-                ['UID', 'Carrier', 'Type', 'VIN', 'BL No', 'Shipment', 'Outcome', 'Details'],
+                ['Folder', 'UID', 'Carrier', 'Type', 'VIN', 'BL No', 'Shipment', 'Outcome', 'Details'],
                 $results
             );
         } else {
-            $this->info('No carrier release emails detected among unread messages.');
+            $this->info('No carrier release emails detected.');
         }
 
         $this->info(sprintf(

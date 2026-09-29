@@ -32,4 +32,20 @@ enum ShipmentStatus: string
             self::Cancelled => __('Cancelled'),
         };
     }
+
+    public function color(): string
+    {
+        return match ($this) {
+            self::Open => 'zinc',
+            self::Pending => 'amber',
+            self::Dispatched => 'sky',
+            self::Booking => 'indigo',
+            self::Inland => 'blue',
+            self::Delivered => 'teal',
+            self::Loaded => 'cyan',
+            self::TelexRequested => 'purple',
+            self::Completed => 'emerald',
+            self::Cancelled => 'rose',
+        };
+    }
 }

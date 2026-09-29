@@ -16,6 +16,8 @@ class ImapMailboxService
 
     protected int $tagCounter = 1;
 
+    protected ?string $selectedFolder = null;
+
     public function __construct(
         protected ?string $host = null,
         protected ?int $port = null,
@@ -34,12 +36,40 @@ class ImapMailboxService
     }
 
     /**
+     * Check if socket connection is alive.
+     */
+    public function isConnected(): bool
+    {
+        return $this->stream !== null && ! feof($this->stream);
+    }
+
+    /**
+     * Candidate folders where carrier release emails arrive in Zoho Mail.
+     * Sallaum Lines emails arrive in INBOX.
+     * Atlas / ACL Cargo automated emails arrive in Notification.
+     *
+     * @return list<string>
+     */
+    public function getCandidateFolders(): array
+    {
+        return ['INBOX', 'Notification'];
+    }
+
+    /**
+     * Get currently selected mailbox folder.
+     */
+    public function getSelectedFolder(): ?string
+    {
+        return $this->selectedFolder;
+    }
+
+    /**
      * Connect and authenticate to the IMAP server.
      */
-    public function connect(): bool
+    public function connect(string $folder = 'INBOX'): bool
     {
-        if ($this->stream !== null) {
-            return true;
+        if ($this->isConnected()) {
+            return $this->selectFolder($folder);
         }
 
         if (empty($this->username) || empty($this->password)) {
@@ -83,17 +113,33 @@ class ImapMailboxService
             return false;
         }
 
-        // Select INBOX
+        return $this->selectFolder($folder);
+    }
+
+    /**
+     * Select a specific mailbox folder (e.g. INBOX, Notification).
+     */
+    public function selectFolder(string $folder = 'INBOX'): bool
+    {
+        if (! $this->isConnected()) {
+            return false;
+        }
+
+        if ($this->selectedFolder === $folder) {
+            return true;
+        }
+
         $tag = $this->nextTag();
-        $this->sendCommand("{$tag} SELECT INBOX");
+        $this->sendCommand("{$tag} SELECT \"{$folder}\"");
         $selectResponse = $this->readUntilTagged($tag);
 
         if (! str_contains($selectResponse, "{$tag} OK")) {
-            Log::error('ImapMailboxService: Failed to select INBOX: '.trim($selectResponse));
-            $this->disconnect();
+            Log::error("ImapMailboxService: Failed to select {$folder}: ".trim($selectResponse));
 
             return false;
         }
+
+        $this->selectedFolder = $folder;
 
         return true;
     }
@@ -105,12 +151,25 @@ class ImapMailboxService
      */
     public function getUnseenUids(int $limit = 50): array
     {
-        if (! $this->connect()) {
+        $uids = $this->searchUids('UNSEEN');
+        sort($uids);
+
+        return array_slice($uids, 0, $limit);
+    }
+
+    /**
+     * Search UIDs by arbitrary IMAP criteria.
+     *
+     * @return list<int>
+     */
+    public function searchUids(string $criteria): array
+    {
+        if (! $this->isConnected() && ! $this->connect($this->selectedFolder ?? 'INBOX')) {
             return [];
         }
 
         $tag = $this->nextTag();
-        $this->sendCommand("{$tag} UID SEARCH UNSEEN");
+        $this->sendCommand("{$tag} UID SEARCH {$criteria}");
         $searchResponse = $this->readUntilTagged($tag);
 
         $uids = [];
@@ -129,9 +188,32 @@ class ImapMailboxService
             }
         }
 
-        sort($uids);
+        return $uids;
+    }
 
-        return array_slice($uids, 0, $limit);
+    /**
+     * Get candidate release UIDs: combines UNSEEN messages with recent carrier release emails.
+     * Ensures releases opened in webmail can still be fulfilled if the shipment is awaiting telex release.
+     *
+     * @return list<int>
+     */
+    public function getCandidateReleaseUids(int $limit = 50, int $days = 7): array
+    {
+        if (! $this->isConnected() && ! $this->connect($this->selectedFolder ?? 'INBOX')) {
+            return [];
+        }
+
+        $sinceDate = now()->subDays($days)->format('d-M-Y');
+
+        $unseen = $this->searchUids('UNSEEN');
+        $telex = $this->searchUids("SINCE {$sinceDate} SUBJECT \"TELEX RELEASE\"");
+        $seaway = $this->searchUids("SINCE {$sinceDate} SUBJECT \"SEAWAY BILL\"");
+        $atlas = $this->searchUids("SINCE {$sinceDate} FROM \"donotreply@aclcargo.com\"");
+
+        $merged = array_unique(array_merge($unseen, $telex, $seaway, $atlas));
+        rsort($merged); // Process newest first
+
+        return array_slice($merged, 0, $limit);
     }
 
     /**
@@ -139,7 +221,7 @@ class ImapMailboxService
      */
     public function fetchMessageByUid(int $uid): ?string
     {
-        if (! $this->connect()) {
+        if (! $this->isConnected() && ! $this->connect($this->selectedFolder ?? 'INBOX')) {
             return null;
         }
 
@@ -184,7 +266,7 @@ class ImapMailboxService
      */
     public function markAsSeen(int $uid): bool
     {
-        if (! $this->connect()) {
+        if (! $this->isConnected() && ! $this->connect($this->selectedFolder ?? 'INBOX')) {
             return false;
         }
 
@@ -209,6 +291,7 @@ class ImapMailboxService
                 // Ignore disconnect errors
             } finally {
                 $this->stream = null;
+                $this->selectedFolder = null;
             }
         }
     }

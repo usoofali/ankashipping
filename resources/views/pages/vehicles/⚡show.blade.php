@@ -249,7 +249,7 @@ new #[Title('Vehicle Details')] class extends Component {
                         </div>
                         <div class="flex justify-between items-center">
                             <flux:text class="text-xs font-semibold uppercase text-zinc-500">{{ __('Status') }}</flux:text>
-                            <flux:badge color="indigo" size="xs" variant="subtle">
+                            <flux:badge :color="$vehicle->shipment->shipmentStatusColor()" size="xs" variant="subtle">
                                 {{ $vehicle->shipment->shipmentStatusDisplay() }}
                             </flux:badge>
                         </div>

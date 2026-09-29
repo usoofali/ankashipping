@@ -183,6 +183,11 @@ final class Shipment extends Model
         return $this->shipment_status->name;
     }
 
+    public function shipmentStatusColor(): string
+    {
+        return $this->shipment_status?->color() ?? 'zinc';
+    }
+
     public function isLocked(): bool
     {
         return in_array($this->shipment_status, [

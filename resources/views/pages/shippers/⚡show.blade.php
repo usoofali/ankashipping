@@ -623,14 +623,18 @@ new #[Title('Shipper')] class extends Component {
                             </flux:badge>
                         </flux:table.cell>
                         <flux:table.cell>
-                            <flux:badge size="sm" color="zinc" variant="subtle">
+                            <flux:badge size="sm" :color="$shipment->shipmentStatusColor()" variant="subtle">
                                 {{ $shipment->shipmentStatusDisplay() }}
                             </flux:badge>
                         </flux:table.cell>
                         <flux:table.cell>
-                            <flux:badge size="sm" color="amber" variant="subtle">
-                                {{ $shipment->invoice_status?->name ?? '—' }}
-                            </flux:badge>
+                            @if($shipment->invoice_status)
+                                <flux:badge size="sm" :color="$shipment->invoice_status->color()" variant="subtle">
+                                    {{ $shipment->invoice_status->label() }}
+                                </flux:badge>
+                            @else
+                                <span class="text-zinc-400">—</span>
+                            @endif
                         </flux:table.cell>
                     </flux:table.row>
                 @endforeach

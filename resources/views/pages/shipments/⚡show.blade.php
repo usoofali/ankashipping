@@ -2166,7 +2166,7 @@ new #[Title('Shipment Details')] class extends Component {
                     <x-crud.page-header :heading="__('SHIPMENT #') . $shipment->reference_no" :subheading="__('View full shipment, tracking, and financial details.')" />
                     <div class="mt-2 flex flex-wrap gap-2">
                         @if($shipment->shipment_status)
-                            <flux:badge color="indigo" variant="subtle" size="sm"
+                            <flux:badge :color="$shipment->shipmentStatusColor()" variant="subtle" size="sm"
                                 :icon="$shipment->isContainer() ? 'container' : 'car-front'">
                                 {{ $shipment->shipmentStatusDisplay() }}
                             </flux:badge>
@@ -2177,8 +2177,8 @@ new #[Title('Shipment Details')] class extends Component {
                             </flux:badge>
                         @endif
                         @if($shipment->invoice_status)
-                            <flux:badge color="amber" variant="subtle" size="sm" icon="document-text">
-                                {{ $shipment->invoice_status->name }}
+                            <flux:badge :color="$shipment->invoice_status->color()" variant="subtle" size="sm" icon="document-text">
+                                {{ $shipment->invoice_status->label() }}
                             </flux:badge>
                         @endif
                         @if($shipment->payment_status)

@@ -374,7 +374,7 @@ new #[Title('Shipments')] class extends Component {
                         </flux:table.cell>
                         <flux:table.cell>
                             <div class="flex items-center gap-1.5 flex-wrap">
-                                <flux:badge size="sm" color="zinc" variant="subtle">
+                                <flux:badge size="sm" :color="$shipment->shipmentStatusColor()" variant="subtle">
                                     {{ $shipment->shipmentStatusDisplay() }}
                                 </flux:badge>
                                 @if($shipment->booked_without_title)
@@ -403,9 +403,13 @@ new #[Title('Shipments')] class extends Component {
                             </div>
                         </flux:table.cell>
                         <flux:table.cell>
-                            <flux:badge size="sm" color="amber" variant="subtle">
-                                {{ $shipment->invoice_status?->name ?? '—' }}
-                            </flux:badge>
+                            @if($shipment->invoice_status)
+                                <flux:badge size="sm" :color="$shipment->invoice_status->color()" variant="subtle">
+                                    {{ $shipment->invoice_status->label() }}
+                                </flux:badge>
+                            @else
+                                <span class="text-zinc-400">—</span>
+                            @endif
                         </flux:table.cell>
                     </flux:table.row>
                 @endforeach

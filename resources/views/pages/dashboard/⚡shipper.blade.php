@@ -219,9 +219,7 @@ new #[Title('My Dashboard')] class extends Component {
                                         class="font-bold text-sm text-indigo-600 dark:text-indigo-400 group-hover:underline truncate">
                                         {{ $shipment->reference_no }}
                                     </span>
-                                    <flux:badge size="sm"
-                                        :color="$shipment->shipment_status === ShipmentStatus::Completed ? 'emerald' : ($shipment->shipment_status === ShipmentStatus::Cancelled ? 'rose' : 'zinc')"
-                                        variant="subtle">
+                                    <flux:badge size="sm" :color="$shipment->shipmentStatusColor()" variant="subtle">
                                         {{ $shipment->shipmentStatusDisplay() }}
                                     </flux:badge>
                                 </div>
@@ -536,9 +534,7 @@ new #[Title('My Dashboard')] class extends Component {
                                             @endif
                                         </flux:table.cell>
                                         <flux:table.cell>
-                                            <flux:badge size="sm"
-                                                :color="$shipment->shipment_status === ShipmentStatus::Completed ? 'emerald' : ($shipment->shipment_status === ShipmentStatus::Cancelled ? 'rose' : 'zinc')"
-                                                variant="subtle">
+                                            <flux:badge size="sm" :color="$shipment->shipmentStatusColor()" variant="subtle">
                                                 {{ $shipment->shipmentStatusDisplay() }}
                                             </flux:badge>
                                         </flux:table.cell>

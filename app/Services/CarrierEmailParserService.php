@@ -19,7 +19,8 @@ final class CarrierEmailParserService
         $decodedSubject = $this->decodeMimeHeader($subject);
 
         $contentType = $this->extractHeader($headers, 'Content-Type');
-        $plainBody = $this->extractTextBody($body, $contentType);
+        $contentTransferEncoding = $this->extractHeader($headers, 'Content-Transfer-Encoding');
+        $plainBody = $this->extractTextBody($body, $contentType, $contentTransferEncoding);
 
         $carrier = $this->detectCarrier($decodedSubject, $plainBody);
 
@@ -132,7 +133,8 @@ final class CarrierEmailParserService
                 ."All local charges are for the receiver's account.";
         }
 
-        // Clean up excessive empty lines
+        // Clean up excessive empty lines and quoted-printable artifacts
+        $releaseText = $this->cleanQuotedPrintable($releaseText);
         $releaseText = preg_replace("/\n{3,}/", "\n\n", $releaseText) ?? $releaseText;
 
         return new CarrierReleaseData(
@@ -215,9 +217,9 @@ final class CarrierEmailParserService
 
         // 7. Extract Verbatim Release Text Block
         $releaseText = '';
-        if (preg_match('/^\s*(\*\*\*\s*SEAWAY BILL\s*\*\*\*[\s\S]+?(?:cargo will not be released.*?\n|Rule ID:.*?\n|\(\d+\)\s*\n|\bPIN\b.*?\n))/mi', $body, $matches)) {
+        if (preg_match('/(?:^|\n)\s*(\*\*\*\s*SEAWAY BILL\s*\*\*\*(?!\s*-\s*[A-Z0-9])[\s\S]+?(?:Notification Rule ID:[^\r\n]*|cargo will not be released[^\r\n]*))/i', $body, $matches)) {
             $releaseText = trim($matches[1]);
-        } elseif (preg_match('/(\*\*\*\s*SEAWAY BILL\s*\*\*\*[\s\S]+?(?:cargo will not be released.*?\n|Rule ID:.*?\n|\(\d+\)\s*\n|\bPIN\b.*?\n))/i', $body, $matches)) {
+        } elseif (preg_match('/(\*\*\*\s*SEAWAY BILL\s*\*\*\*[\s\S]+?(?:Notification Rule ID:[^\r\n]*|cargo will not be released[^\r\n]*))/i', $body, $matches)) {
             $releaseText = trim($matches[1]);
         } else {
             $releaseText = "*** SEAWAY BILL ***\n\n"
@@ -228,9 +230,14 @@ final class CarrierEmailParserService
                 ."VIN/Container: {$vin}\n"
                 .($pinNumber ? "Pin Number: {$pinNumber}\n\n" : "\n")
                 ."The Seaway Bill email & proper identification is to be taken directly to the Release desk.\n"
-                .'Please provide the releasing dest agent the PIN associated.';
+                ."**Not the customer care desk that PAD (originals) are printed**\n\n"
+                ."Please provide the releasing dest agent the PIN associated.\n"
+                ."If the PIN is accurate, the Delivery Order will be printed & cargo will be released.\n"
+                .'If the PIN is inaccurate, please contact the Shipper as cargo will not be released.';
         }
 
+        // Clean up excessive empty lines and quoted-printable artifacts
+        $releaseText = $this->cleanQuotedPrintable($releaseText);
         $releaseText = preg_replace("/\n{3,}/", "\n\n", $releaseText) ?? $releaseText;
 
         return new CarrierReleaseData(
@@ -300,7 +307,7 @@ final class CarrierEmailParserService
     /**
      * Extract plain text content from MIME body.
      */
-    protected function extractTextBody(string $body, string $contentType): string
+    protected function extractTextBody(string $body, string $contentType, string $contentTransferEncoding = ''): string
     {
         // Check for multipart boundary
         if (preg_match('/boundary=["\']?([^"\';\r\n]+)["\']?/i', $contentType, $matches)) {
@@ -317,7 +324,9 @@ final class CarrierEmailParserService
                 $partEncoding = $this->extractHeader($partHeaders, 'Content-Transfer-Encoding');
 
                 if (str_contains(strtolower($partContentType), 'text/plain')) {
-                    return $this->decodeTransferEncoding($partBody, $partEncoding);
+                    $decoded = $this->decodeTransferEncoding($partBody, $partEncoding);
+
+                    return $this->cleanQuotedPrintable($decoded);
                 }
             }
 
@@ -329,14 +338,41 @@ final class CarrierEmailParserService
 
                 if (str_contains(strtolower($partContentType), 'text/html')) {
                     $html = $this->decodeTransferEncoding($partBody, $partEncoding);
+                    $text = $this->htmlToPlainText($html);
 
-                    return strip_tags(str_replace(['<br>', '<br/>', '<br />', '</p>', '</div>'], "\n", $html));
+                    return $this->cleanQuotedPrintable($text);
                 }
             }
         }
 
         // Not multipart or no boundary found
-        return $body;
+        if ($contentTransferEncoding !== '') {
+            $body = $this->decodeTransferEncoding($body, $contentTransferEncoding);
+        }
+
+        // Convert HTML to clean plain text if content is HTML
+        if (str_contains(strtolower($contentType), 'text/html') || str_contains($body, '<pre') || str_contains($body, '<html')) {
+            $body = $this->htmlToPlainText($body);
+        }
+
+        return $this->cleanQuotedPrintable($body);
+    }
+
+    /**
+     * Convert HTML content to clean, readable plain text preserving line breaks.
+     */
+    public function htmlToPlainText(string $html): string
+    {
+        // Replace break and block tags with newlines
+        $text = preg_replace('/<(?:br|br\s*\/|\/p|\/div|\/tr|\/pre|pre)>/i', "\n", $html) ?? $html;
+
+        // Strip remaining HTML tags
+        $text = strip_tags($text);
+
+        // Decode HTML entities (e.g. &nbsp;, &amp;)
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        return $text;
     }
 
     /**
@@ -349,5 +385,27 @@ final class CarrierEmailParserService
             'quoted-printable' => quoted_printable_decode($body),
             default => $body,
         };
+    }
+
+    /**
+     * Sanitize and strip any lingering quoted-printable artifacts.
+     */
+    public function cleanQuotedPrintable(string $text): string
+    {
+        // Decode quoted-printable hex artifacts if present (e.g. =20, =3D, or soft line breaks =\r?\n)
+        if (str_contains($text, '=20') || str_contains($text, "=\n") || str_contains($text, "=\r\n") || str_contains($text, '=3D')) {
+            $text = quoted_printable_decode($text);
+        }
+
+        // Strip any residual '=20' that might have been preserved
+        $text = str_replace('=20', ' ', $text);
+
+        // Strip trailing whitespace from each line
+        $text = preg_replace('/[ \t]+$/m', '', $text) ?? $text;
+
+        // Normalize line endings to \n
+        $text = str_replace("\r\n", "\n", $text);
+
+        return trim($text);
     }
 }
