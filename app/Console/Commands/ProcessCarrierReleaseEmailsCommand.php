@@ -8,6 +8,7 @@ use App\Services\CarrierEmailParserService;
 use App\Services\CarrierReleaseFulfillmentService;
 use App\Services\ImapMailboxService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 
 final class ProcessCarrierReleaseEmailsCommand extends Command
 {
@@ -54,7 +55,8 @@ final class ProcessCarrierReleaseEmailsCommand extends Command
         ));
 
         if (! $mailboxService->connect()) {
-            $this->error('Failed to connect or authenticate to IMAP server. Check credentials in .env.');
+            $this->error('Failed to connect or authenticate to IMAP server. Check credentials in .env or config.');
+            Log::error('ProcessCarrierReleaseEmailsCommand: Failed to connect or authenticate to IMAP server. Check accounts mailbox credentials.');
 
             return self::FAILURE;
         }
@@ -138,6 +140,8 @@ final class ProcessCarrierReleaseEmailsCommand extends Command
             $fulfilledCount,
             $skippedCount
         ));
+
+        Log::info(sprintf('ProcessCarrierReleaseEmailsCommand: Run completed. %d fulfilled, %d skipped.', $fulfilledCount, $skippedCount));
 
         return self::SUCCESS;
     }

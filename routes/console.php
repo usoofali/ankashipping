@@ -31,5 +31,5 @@ Schedule::command('whatsapp:clean-orphaned-receipts --hours=2')->hourly();
 // Weekly database housekeeping: prune ephemeral records older than 60 days every Sunday at 02:00 AM
 Schedule::command('housekeeping:prune --days=60')->weeklyOn(0, '02:00');
 
-// Process incoming carrier release emails (Telex Releases & Sea Waybills) hourly
-Schedule::command('carrier:process-releases')->hourly()->withoutOverlapping();
+// Process incoming carrier release emails (Telex Releases & Sea Waybills) every 5 minutes
+Schedule::command('carrier:process-releases')->everyFiveMinutes()->withoutOverlapping(10);

@@ -398,4 +398,23 @@ return [
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | IMAP Mailbox Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for inbound IMAP mailbox polling (e.g. carrier release
+    | emails arriving in accounts@ankshipping.com from Sallaum / Grimaldi).
+    |
+    */
+
+    'imap' => [
+        'accounts' => [
+            'host' => env('MAIL_ACCOUNTS_HOST', 'imap.zoho.com'),
+            'port' => (int) env('MAIL_ACCOUNTS_PORT', 993),
+            'username' => env('MAIL_ACCOUNTS_USERNAME', 'accounts@ankshipping.com'),
+            'password' => env('MAIL_ACCOUNTS_PASSWORD', ''),
+        ],
+    ],
+
 ];

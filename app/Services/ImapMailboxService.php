@@ -24,10 +24,10 @@ class ImapMailboxService
         protected ?string $username = null,
         protected ?string $password = null,
     ) {
-        $this->host = $host ?? (string) env('MAIL_ACCOUNTS_HOST', 'imap.zoho.com');
-        $this->port = $port ?? (int) env('MAIL_ACCOUNTS_PORT', 993);
-        $this->username = $username ?? (string) env('MAIL_ACCOUNTS_USERNAME', 'accounts@ankshipping.com');
-        $this->password = $password ?? (string) env('MAIL_ACCOUNTS_PASSWORD', '');
+        $this->host = $host ?? (string) (config('mail.imap.accounts.host') ?: env('MAIL_ACCOUNTS_HOST', 'imap.zoho.com'));
+        $this->port = $port ?? (int) (config('mail.imap.accounts.port') ?: env('MAIL_ACCOUNTS_PORT', 993));
+        $this->username = $username ?? (string) (config('mail.imap.accounts.username') ?: config('mail.mailers.zoho_accounts.username') ?: config('mail.mailers.accounts.username') ?: env('MAIL_ACCOUNTS_USERNAME', 'accounts@ankshipping.com'));
+        $this->password = $password ?? (string) (config('mail.imap.accounts.password') ?: config('mail.mailers.zoho_accounts.password') ?: config('mail.mailers.accounts.password') ?: env('MAIL_ACCOUNTS_PASSWORD', ''));
     }
 
     public function __destruct()
@@ -82,7 +82,17 @@ class ImapMailboxService
         $errno = 0;
         $errstr = '';
 
-        $stream = @stream_socket_client($address, $errno, $errstr, 15);
+        $context = stream_context_create([
+            'ssl' => [
+                'verify_peer' => false,
+                'verify_peer_name' => false,
+                'allow_self_signed' => true,
+                'SNI_enabled' => true,
+                'peer_name' => $this->host,
+            ],
+        ]);
+
+        $stream = @stream_socket_client($address, $errno, $errstr, 15, STREAM_CLIENT_CONNECT, $context);
         if (! $stream) {
             Log::error("ImapMailboxService: Connection to {$address} failed: {$errstr} ({$errno})");
 
