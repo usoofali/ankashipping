@@ -117,6 +117,8 @@ new #[Title('Shippers')] class extends Component {
 
         $validator = Validator::make(
             [
+                'ownerName' => $this->ownerName,
+                'ownerEmail' => $this->ownerEmail,
                 'company_name' => $this->company_name,
                 'phone' => $this->phone,
                 'address' => $this->address,
@@ -126,6 +128,8 @@ new #[Title('Shippers')] class extends Component {
                 'discount_amount' => $this->discount_amount,
             ],
             [
+                'ownerName' => ['required', 'string', 'max:255'],
+                'ownerEmail' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . ($shipper->user_id ?? 0)],
                 'company_name' => ['nullable', 'string', 'max:255'],
                 'phone' => ['required', 'string', 'max:50', 'unique:shippers,phone,' . $this->shipperEditingId],
                 'address' => ['required', 'string', 'max:500'],
@@ -140,15 +144,24 @@ new #[Title('Shippers')] class extends Component {
         });
         $validated = $validator->validate();
 
-        $shipper->update([
-            'company_name' => $validated['company_name'],
-            'phone' => $validated['phone'],
-            'address' => $validated['address'],
-            'country_id' => $validated['country_id'],
-            'state_id' => $validated['state_id'],
-            'city_id' => $validated['city_id'],
-            'discount_amount' => $validated['discount_amount'],
-        ]);
+        DB::transaction(function () use ($shipper, $validated): void {
+            if ($shipper->user) {
+                $shipper->user->update([
+                    'name' => $validated['ownerName'],
+                    'email' => $validated['ownerEmail'],
+                ]);
+            }
+
+            $shipper->update([
+                'company_name' => $validated['company_name'],
+                'phone' => $validated['phone'],
+                'address' => $validated['address'],
+                'country_id' => $validated['country_id'],
+                'state_id' => $validated['state_id'],
+                'city_id' => $validated['city_id'],
+                'discount_amount' => $validated['discount_amount'],
+            ]);
+        });
 
         $this->showEditModal = false;
         $this->resetEditForm();
@@ -812,28 +825,24 @@ new #[Title('Shippers')] class extends Component {
                             </flux:heading>
                         </div>
 
-                        <flux:card class="bg-zinc-50/50 dark:bg-zinc-900/50 border-zinc-100 dark:border-zinc-800">
+                        <flux:card class="border-zinc-100 dark:border-zinc-800">
                             <div class="grid gap-6 sm:grid-cols-2">
-                                <div class="space-y-1">
-                                    <flux:text size="xs" weight="medium" class="uppercase tracking-widest text-zinc-400">
-                                        {{ __('Primary Contact') }}
-                                    </flux:text>
-                                    <flux:text class="font-semibold text-zinc-900 dark:text-zinc-100">
-                                        {{ $ownerName ?: '—' }}
-                                    </flux:text>
-                                </div>
-                                <div class="space-y-1">
-                                    <flux:text size="xs" weight="medium" class="uppercase tracking-widest text-zinc-400">
-                                        {{ __('Email Address') }}
-                                    </flux:text>
-                                    <flux:text class="break-all font-semibold text-zinc-900 dark:text-zinc-100">
-                                        {{ $ownerEmail ?: '—' }}
-                                    </flux:text>
-                                </div>
+                                <flux:input
+                                    wire:model="ownerName"
+                                    :label="__('Primary Contact Name')"
+                                    icon="user"
+                                    required
+                                    placeholder="{{ __('Full Name') }}"
+                                />
+                                <flux:input
+                                    wire:model="ownerEmail"
+                                    :label="__('Email Address')"
+                                    type="email"
+                                    icon="envelope"
+                                    required
+                                    placeholder="{{ __('email@example.com') }}"
+                                />
                             </div>
-                            <flux:text size="xs" class="mt-4 italic text-zinc-400">
-                                {{ __('Note: Account details are managed by administrators.') }}
-                            </flux:text>
                         </flux:card>
                     </div>
 

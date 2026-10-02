@@ -36,3 +36,6 @@ Schedule::command('carrier:process-releases')->everyFiveMinutes()->withoutOverla
 
 // Process title document and overdue invoice reminders hourly
 Schedule::command('reminders:process')->hourly()->withoutOverlapping(10);
+
+// Synchronize and aggregate inland route rates daily at 03:00 AM
+Schedule::command('inland:sync-rates')->dailyAt('03:00')->withoutOverlapping(15);

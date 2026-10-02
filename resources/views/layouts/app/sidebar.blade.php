@@ -50,6 +50,10 @@
                             {{ __('Vehicles') }}
                         </flux:sidebar.item>
                     @endcan
+                    <flux:sidebar.item icon="calculator" icon-class="text-amber-500" :href="route('inland-rates.index')"
+                        :current="request()->routeIs('inland-rates.*')" wire:navigate>
+                        {{ __('Inland Rates') }}
+                    </flux:sidebar.item>
                 </flux:sidebar.group>
             @endcanany
 

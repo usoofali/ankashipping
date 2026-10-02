@@ -1,7 +1,10 @@
 <?php
 
+use App\Models\City;
+use App\Models\Country;
 use App\Models\Shipper;
 use App\Models\Staff;
+use App\Models\State;
 use App\Models\User;
 use Livewire\Volt\Volt;
 use Spatie\Permission\Models\Role;
@@ -161,4 +164,43 @@ test('phone number must start with a plus sign', function () {
         ->call('updateProfileInformation');
 
     $response->assertHasErrors(['phone']);
+});
+
+test('shipper user can update company name, address, and location details', function () {
+    Role::firstOrCreate(['name' => 'shipper', 'guard_name' => 'web']);
+
+    $country = Country::factory()->create();
+    $state = State::factory()->create(['country_id' => $country->id]);
+    $city = City::factory()->create(['state_id' => $state->id]);
+
+    $user = User::factory()->create();
+    $user->assignRole('shipper');
+    $shipper = Shipper::factory()->create([
+        'user_id' => $user->id,
+        'phone' => '+12025550143',
+        'company_name' => 'Old Company',
+        'address' => '123 Old St',
+    ]);
+
+    $this->actingAs($user);
+
+    $response = Volt::test('pages::settings.profile')
+        ->set('name', 'Updated Shipper')
+        ->set('email', 'updatedshipper@example.com')
+        ->set('phone', '+12025550199')
+        ->set('company_name', 'Global Logistics Inc')
+        ->set('address', '789 Harbor Blvd')
+        ->set('country_id', $country->id)
+        ->set('state_id', $state->id)
+        ->set('city_id', $city->id)
+        ->call('updateProfileInformation');
+
+    $response->assertHasNoErrors();
+
+    $shipper->refresh();
+    expect($shipper->company_name)->toBe('Global Logistics Inc')
+        ->and($shipper->address)->toBe('789 Harbor Blvd')
+        ->and($shipper->country_id)->toBe($country->id)
+        ->and($shipper->state_id)->toBe($state->id)
+        ->and($shipper->city_id)->toBe($city->id);
 });

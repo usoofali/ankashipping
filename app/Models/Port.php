@@ -53,4 +53,9 @@ final class Port extends Model
     {
         return $this->hasMany(Shipment::class, 'destination_port_id');
     }
+
+    public function inlandRouteRates(): HasMany
+    {
+        return $this->hasMany(InlandRouteRate::class, 'origin_port_id');
+    }
 }

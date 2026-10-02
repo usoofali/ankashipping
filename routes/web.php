@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Modules\WhatsApp\Controllers\WhatsAppInboxController;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
+use Livewire\Mechanisms\HandleRequests\EndpointResolver;
 
 Route::get('/', function () {
     try {
@@ -128,6 +129,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         ->name('vehicles.show');
     Route::livewire('/staff', 'pages::staff.index')->name('staff.index');
     Route::livewire('/workshops', 'pages::workshops.index')->name('workshops.index');
+    Route::livewire('/inland-rates', 'pages::inland-rates.index')->name('inland-rates.index');
 
     // WhatsApp
     Route::view('/whatsapp', 'pages.whatsapp.index')
@@ -172,5 +174,14 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         ->middleware('permission:wallets.view')
         ->name('financials.wallets.show');
 });
+
+// Livewire POST endpoints fallback when accessed via GET/HEAD (prevents 405 on reload/redirect/direct visit)
+Route::match(['get', 'head'], EndpointResolver::updatePath(), function () {
+    return redirect()->to(auth()->check() ? route('dashboard') : route('login'));
+})->name('livewire.update.fallback');
+
+Route::match(['get', 'head'], EndpointResolver::uploadPath(), function () {
+    return redirect()->to(auth()->check() ? route('dashboard') : route('login'));
+})->name('livewire.upload.fallback');
 
 require __DIR__.'/settings.php';

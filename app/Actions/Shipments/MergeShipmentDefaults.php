@@ -17,7 +17,7 @@ final class MergeShipmentDefaults
     /**
      * Keys always taken only from user input, never from defaults (caller supplies them).
      */
-    private const array PASSTHROUGH_KEYS = [
+    private const PASSTHROUGH_KEYS = [
         'reference_no',
         'gatepass_pin',
         'shipper_id',
@@ -29,7 +29,7 @@ final class MergeShipmentDefaults
      * Keys filled from input when explicitly set, otherwise from the resolved defaults row
      * ({@see merge()} second argument, or {@see DefaultShipmentSetting::current()} when omitted).
      */
-    private const array DEFAULTABLE_KEYS = [
+    private const DEFAULTABLE_KEYS = [
         'carrier_id',
         'origin_port_id',
         'logistics_service',

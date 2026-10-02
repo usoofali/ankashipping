@@ -10,6 +10,7 @@ use App\Models\Carrier;
 use App\Models\Consignee;
 use App\Models\Port;
 use App\Models\Shipment;
+use App\Models\Shipper;
 use App\Models\Vehicle;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
@@ -55,6 +56,12 @@ new #[Title('Edit Shipment')] class extends Component {
     public array $vehicles = [];
 
     public ?int $vehicleIdToRemove = null;
+
+    public bool $showConsigneeModal = false;
+
+    public string $newConsigneeName = '';
+
+    public string $newConsigneeAddress = '';
 
     public function mount(Shipment $shipment): void
     {
@@ -131,6 +138,61 @@ new #[Title('Edit Shipment')] class extends Component {
         }
     }
 
+    public function updatedShipperId(?int $value): void
+    {
+        unset($this->consignees);
+        unset($this->selectedShipper);
+
+        if ($value) {
+            $consigneeBelongsToNewShipper = $this->consignee_id
+                && Consignee::where('id', $this->consignee_id)->where('shipper_id', $value)->exists();
+
+            if (! $consigneeBelongsToNewShipper) {
+                // Auto-assign the new shipper's default consignee, or the first available consignee
+                $defaultConsignee = Consignee::where('shipper_id', $value)->where('is_default', true)->first()
+                    ?? Consignee::where('shipper_id', $value)->first();
+
+                $this->consignee_id = $defaultConsignee?->id;
+            }
+
+            if ($this->notify_party_id && ! Consignee::where('id', $this->notify_party_id)->where('shipper_id', $value)->exists()) {
+                $this->notify_party_id = null;
+            }
+        } else {
+            $this->consignee_id = null;
+            $this->notify_party_id = null;
+        }
+    }
+
+    public function createConsignee(): void
+    {
+        $this->validate([
+            'newConsigneeName' => ['required', 'string', 'max:255'],
+            'newConsigneeAddress' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        if (! $this->shipper_id) {
+            $this->notification()->error(__('Please select a shipper first.'));
+
+            return;
+        }
+
+        $consignee = Consignee::create([
+            'shipper_id' => $this->shipper_id,
+            'name' => $this->newConsigneeName,
+            'address' => $this->newConsigneeAddress,
+            'is_default' => false,
+        ]);
+
+        unset($this->consignees);
+
+        $this->consignee_id = $consignee->id;
+        $this->showConsigneeModal = false;
+        $this->reset(['newConsigneeName', 'newConsigneeAddress']);
+
+        $this->notification()->success(__('Consignee created successfully.'));
+    }
+
     public function save(): void
     {
         $this->authorize('shipments.update');
@@ -159,12 +221,37 @@ new #[Title('Edit Shipment')] class extends Component {
             return;
         }
 
+        $originalShipperId = (int) $this->shipment->getOriginal('shipper_id');
+        $newShipperId = (int) $this->shipper_id;
+        $isShipperReassigned = $originalShipperId !== $newShipperId;
+        $oldShipper = $isShipperReassigned ? Shipper::with('user')->find($originalShipperId) : null;
+        $newShipper = $isShipperReassigned ? Shipper::with('user')->find($newShipperId) : null;
+
         $updateData = collect($validated)->except('vehicles')->merge([
             'sealed_at' => $this->sealed_at,
             'notify_party_id' => $this->notify_party_id,
         ])->toArray();
 
         $this->shipment->update($updateData);
+
+        if ($isShipperReassigned) {
+            ActivityLog::create([
+                'shipment_id' => $this->shipment->id,
+                'user_id' => Auth::id(),
+                'action' => 'shipper_reassigned',
+                'properties' => [
+                    'message' => __('Shipper reassigned from :old to :new', [
+                        'old' => $oldShipper?->display_name ?? ('#' . $originalShipperId),
+                        'new' => $newShipper?->display_name ?? ('#' . $newShipperId),
+                    ]),
+                    'source' => 'shipment_edit',
+                    'old_shipper_id' => $originalShipperId,
+                    'old_shipper_name' => $oldShipper?->display_name,
+                    'new_shipper_id' => $newShipperId,
+                    'new_shipper_name' => $newShipper?->display_name,
+                ],
+            ]);
+        }
 
         if ($this->shipment->invoice) {
             $this->shipment->invoice->update([
@@ -205,6 +292,26 @@ new #[Title('Edit Shipment')] class extends Component {
 
         $this->notification()->success(__('Shipment updated successfully.'));
         $this->redirect(route('shipments.show', $this->shipment), navigate: true);
+    }
+
+    #[Computed]
+    public function availableShippers()
+    {
+        return Shipper::query()
+            ->with('user')
+            ->get()
+            ->sortBy(fn (Shipper $shipper) => strtolower($shipper->display_name))
+            ->values();
+    }
+
+    #[Computed]
+    public function selectedShipper(): ?Shipper
+    {
+        if (! $this->shipper_id) {
+            return null;
+        }
+
+        return Shipper::with('user')->find($this->shipper_id);
     }
 
     #[Computed]
@@ -320,41 +427,52 @@ new #[Title('Edit Shipment')] class extends Component {
                 </div>
             </x-crud.panel>
 
-            {{-- Shipper Profile Card --}}
-            @if($shipment->shipper)
-                <x-crud.panel class="lg:col-span-2 p-6 flex flex-col justify-center">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-4">
-                            <flux:avatar :name="$shipment->shipper->user->name" size="lg"
-                                class="bg-indigo-100! text-indigo-700!" />
-                            <div>
-                                <flux:heading size="lg">{{ $shipment->shipper->display_name }}</flux:heading>
-                                <div class="flex flex-wrap gap-x-4 gap-y-1 mt-1">
-                                    <div class="flex items-center gap-2 text-zinc-500">
-                                        <flux:icon.user class="size-3.5" />
-                                        <flux:text size="sm">{{ $shipment->shipper->user->name }}</flux:text>
-                                    </div>
-                                    <div class="flex items-center gap-2 text-zinc-500">
-                                        <flux:icon.envelope class="size-3.5" />
-                                        <flux:text size="sm">{{ $shipment->shipper->user->email }}</flux:text>
-                                    </div>
-                                    @if($shipment->shipper->phone)
-                                        <div class="flex items-center gap-2 text-zinc-500">
-                                            <flux:icon.phone class="size-3.5" />
-                                            <flux:text size="sm">{{ $shipment->shipper->phone }}</flux:text>
-                                        </div>
+            {{-- Shipper Selection & Profile Card --}}
+            <x-crud.panel class="lg:col-span-2 p-6 flex flex-col justify-between gap-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <flux:heading size="lg">{{ __('Shipper Ownership') }}</flux:heading>
+                        <flux:subheading>{{ __('Assign or reassign the shipment owner account.') }}</flux:subheading>
+                    </div>
+                    @if($this->selectedShipper)
+                        <flux:badge color="indigo" variant="subtle" size="sm" icon="shield-check">
+                            {{ __('Verified Shipper') }}
+                        </flux:badge>
+                    @endif
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                    <flux:select wire:model.live="shipper_id" :label="__('Assigned Shipper')" searchable placeholder="{{ __('Select Shipper...') }}">
+                        @foreach($this->availableShippers as $availableShipper)
+                            <flux:select.option :value="$availableShipper->id">
+                                {{ $availableShipper->display_name }} ({{ $availableShipper->user?->name ?? '—' }})
+                            </flux:select.option>
+                        @endforeach
+                    </flux:select>
+
+                    @if($this->selectedShipper)
+                        <div class="flex items-center gap-3 p-3 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60">
+                            <flux:avatar :name="$this->selectedShipper->user?->name ?? $this->selectedShipper->display_name" size="md"
+                                class="bg-indigo-100! text-indigo-700! shrink-0" />
+                            <div class="min-w-0">
+                                <div class="font-medium text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                                    {{ $this->selectedShipper->display_name }}
+                                </div>
+                                <div class="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                                    <span class="truncate">{{ $this->selectedShipper->user?->email ?? '—' }}</span>
+                                    @if($this->selectedShipper->phone)
+                                        <span>&bull; {{ $this->selectedShipper->phone }}</span>
                                     @endif
                                 </div>
                             </div>
                         </div>
-                        <div class="hidden md:block">
-                            <flux:badge color="indigo" variant="subtle" size="sm" icon="shield-check">
-                                {{ __('Verified Shipper') }}
-                            </flux:badge>
-                        </div>
-                    </div>
-                </x-crud.panel>
-            @endif
+                    @else
+                        <flux:callout variant="warning" icon="exclamation-triangle" class="text-xs">
+                            {{ __('Please select a shipper to link consignees.') }}
+                        </flux:callout>
+                    @endif
+                </div>
+            </x-crud.panel>
         </div>
 
         {{-- Vehicles List --}}
@@ -505,7 +623,12 @@ new #[Title('Edit Shipment')] class extends Component {
                                 <flux:label class="mb-2">{{ __('Consignee') }}</flux:label>
                                 <div class="flex items-start gap-2">
                                     <div class="flex-1">
-                                        <flux:select wire:model="consignee_id" :placeholder="__('Select consignee')">
+                                        <flux:select
+                                            wire:model.live="consignee_id"
+                                            wire:key="consignee-select-{{ $this->shipper_id ?? 'none' }}"
+                                            :placeholder="__('Select consignee')"
+                                        >
+                                            <flux:select.option value="">{{ __('Select consignee...') }}</flux:select.option>
                                             @foreach($this->consignees as $consignee)
                                                 <flux:select.option :value="$consignee->id">
                                                     {{ $consignee->name }}
@@ -519,13 +642,22 @@ new #[Title('Edit Shipment')] class extends Component {
                                             @endforeach
                                         </flux:select>
                                     </div>
+                                    @if($shipper_id)
+                                        <flux:button type="button" wire:click="$set('showConsigneeModal', true)"
+                                            icon="plus" class="shrink-0">
+                                            {{ __('New') }}
+                                        </flux:button>
+                                    @endif
                                 </div>
                                 <flux:error name="consignee_id" />
                             </flux:field>
 
-                            <flux:select wire:model="notify_party_id"
+                            <flux:select
+                                wire:model="notify_party_id"
+                                wire:key="notify-party-select-{{ $this->shipper_id ?? 'none' }}"
                                 :label="__('Notify Party / Intermediate Consignee (Optional)')"
-                                :placeholder="__('Same as Consignee')">
+                                :placeholder="__('Same as Consignee')"
+                            >
                                 <flux:select.option value="">{{ __('Same as Consignee') }}</flux:select.option>
                                 @foreach($this->consignees as $consignee)
                                     <flux:select.option :value="$consignee->id">
@@ -678,6 +810,26 @@ new #[Title('Edit Shipment')] class extends Component {
 
                     <flux:button type="submit" variant="danger">{{ __('Remove Vehicle') }}</flux:button>
                 </div>
+            </div>
+        </form>
+    </flux:modal>
+
+    {{-- Add Consignee Modal --}}
+    <flux:modal wire:model.self="showConsigneeModal" class="max-w-md">
+        <form wire:submit="createConsignee" class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('Add Consignee') }}</flux:heading>
+                <flux:subheading>{{ __('Create a new consignee for the selected shipper.') }}</flux:subheading>
+            </div>
+
+            <div class="space-y-4">
+                <flux:input wire:model="newConsigneeName" :label="__('Full Name')" required />
+                <flux:textarea wire:model="newConsigneeAddress" :label="__('Address (Optional)')" rows="3" />
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <flux:button variant="ghost" wire:click="$set('showConsigneeModal', false)">{{ __('Cancel') }}</flux:button>
+                <flux:button variant="primary" type="submit">{{ __('Add Consignee') }}</flux:button>
             </div>
         </form>
     </flux:modal>
