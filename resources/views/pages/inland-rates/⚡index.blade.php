@@ -301,52 +301,52 @@ new #[Title('Inland Rates & Trends')]
 
         {{-- Overview Metrics Cards (Visible to Managers & Staff only) --}}
         @if($this->isStaff)
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <x-crud.panel class="p-5 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
-                    <flux:text size="xs" class="uppercase tracking-wider font-semibold text-zinc-500 dark:text-zinc-400">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+                <x-crud.panel class="p-4 sm:p-5 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs min-w-0 overflow-hidden">
+                    <flux:text size="xs" class="uppercase tracking-wider font-semibold text-zinc-500 dark:text-zinc-400 truncate">
                         {{ __('Monitored Routes') }}
                     </flux:text>
-                    <div class="flex items-baseline gap-2 mt-2">
-                        <flux:heading size="xl" class="font-bold text-zinc-900 dark:text-zinc-100">
+                    <div class="flex flex-wrap items-baseline gap-2 mt-2">
+                        <flux:heading size="xl" class="font-bold text-zinc-900 dark:text-zinc-100 truncate">
                             {{ number_format($this->summaryStats['totalRoutes']) }}
                         </flux:heading>
-                        <flux:text size="xs" class="text-zinc-500">{{ __('active routes') }}</flux:text>
+                        <flux:text size="xs" class="text-zinc-500 shrink-0">{{ __('active routes') }}</flux:text>
                     </div>
                 </x-crud.panel>
 
-                <x-crud.panel class="p-5 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
-                    <flux:text size="xs" class="uppercase tracking-wider font-semibold text-zinc-500 dark:text-zinc-400">
+                <x-crud.panel class="p-4 sm:p-5 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs min-w-0 overflow-hidden">
+                    <flux:text size="xs" class="uppercase tracking-wider font-semibold text-zinc-500 dark:text-zinc-400 truncate">
                         {{ __('Network Average') }}
                     </flux:text>
-                    <div class="flex items-baseline gap-2 mt-2">
-                        <flux:heading size="xl" class="font-bold text-emerald-600 dark:text-emerald-400">
+                    <div class="flex flex-wrap items-baseline gap-2 mt-2">
+                        <flux:heading size="xl" class="font-bold text-emerald-600 dark:text-emerald-400 truncate">
                             ${{ number_format($this->summaryStats['avgNetworkRate'], 2) }}
                         </flux:heading>
-                        <flux:text size="xs" class="text-zinc-500">{{ __('per vehicle tow') }}</flux:text>
+                        <flux:text size="xs" class="text-zinc-500 shrink-0">{{ __('per vehicle tow') }}</flux:text>
                     </div>
                 </x-crud.panel>
 
-                <x-crud.panel class="p-5 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
-                    <flux:text size="xs" class="uppercase tracking-wider font-semibold text-zinc-500 dark:text-zinc-400">
+                <x-crud.panel class="p-4 sm:p-5 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs min-w-0 overflow-hidden">
+                    <flux:text size="xs" class="uppercase tracking-wider font-semibold text-zinc-500 dark:text-zinc-400 truncate">
                         {{ __('Network Price Range') }}
                     </flux:text>
-                    <div class="flex items-baseline gap-1 mt-2">
-                        <flux:heading size="lg" class="font-bold text-zinc-900 dark:text-zinc-100">
+                    <div class="flex items-baseline gap-1 mt-2 min-w-0">
+                        <flux:heading size="lg" class="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 truncate">
                             ${{ number_format($this->summaryStats['minNetworkRate'], 0) }} -
                             ${{ number_format($this->summaryStats['maxNetworkRate'], 0) }}
                         </flux:heading>
                     </div>
                 </x-crud.panel>
 
-                <x-crud.panel class="p-5 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
-                    <flux:text size="xs" class="uppercase tracking-wider font-semibold text-zinc-500 dark:text-zinc-400">
+                <x-crud.panel class="p-4 sm:p-5 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs min-w-0 overflow-hidden">
+                    <flux:text size="xs" class="uppercase tracking-wider font-semibold text-zinc-500 dark:text-zinc-400 truncate">
                         {{ __('Historical Invoices') }}
                     </flux:text>
-                    <div class="flex items-baseline gap-2 mt-2">
-                        <flux:heading size="xl" class="font-bold text-zinc-900 dark:text-zinc-100">
+                    <div class="flex flex-wrap items-baseline gap-2 mt-2">
+                        <flux:heading size="xl" class="font-bold text-zinc-900 dark:text-zinc-100 truncate">
                             {{ number_format($this->summaryStats['totalShipments']) }}
                         </flux:heading>
-                        <flux:text size="xs" class="text-zinc-500">{{ __('invoices analyzed') }}</flux:text>
+                        <flux:text size="xs" class="text-zinc-500 shrink-0">{{ __('invoices analyzed') }}</flux:text>
                     </div>
                 </x-crud.panel>
             </div>
@@ -355,15 +355,16 @@ new #[Title('Inland Rates & Trends')]
         {{-- Interactive Rate Estimator & Line Chart Card --}}
         <div class="mb-8">
             <x-crud.panel
-                class="p-6 rounded-2xl border border-amber-200/70 dark:border-amber-900/40 bg-linear-to-br from-amber-50/40 via-white to-amber-50/20 dark:from-zinc-900 dark:via-zinc-900 dark:to-amber-950/20 shadow-sm">
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-5">
-                    <div class="flex items-center gap-2">
-                        <flux:icon.calculator class="size-5 text-amber-600 dark:text-amber-400" />
-                        <flux:heading size="lg" class="font-semibold">
-                            {{ __('Instant Rate Estimator & Trend Comparison') }}</flux:heading>
+                class="p-4 sm:p-6 rounded-2xl border border-amber-200/70 dark:border-amber-900/40 bg-linear-to-br from-amber-50/40 via-white to-amber-50/20 dark:from-zinc-900 dark:via-zinc-900 dark:to-amber-950/20 shadow-sm overflow-hidden">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <flux:icon.calculator class="size-5 text-amber-600 dark:text-amber-400 shrink-0" />
+                        <flux:heading size="lg" class="font-semibold text-base sm:text-lg truncate">
+                            {{ __('Instant Rate Estimator & Trend Comparison') }}
+                        </flux:heading>
                     </div>
                     @if($estimatorLocation !== '' || $estimatorPortId)
-                        <flux:button variant="ghost" size="xs" icon="x-mark" wire:click="clearEstimator">
+                        <flux:button variant="ghost" size="xs" icon="x-mark" wire:click="clearEstimator" class="self-start sm:self-auto shrink-0">
                             {{ __('Clear Estimator') }}
                         </flux:button>
                     @endif
@@ -398,79 +399,79 @@ new #[Title('Inland Rates & Trends')]
                 {{-- Estimator Result Output & Line Chart --}}
                 @if($this->estimatedRate)
                     <div
-                        class="rounded-xl border border-amber-200 dark:border-amber-800/60 bg-white/80 dark:bg-zinc-800/80 p-5 backdrop-blur-xs transition-all">
+                        class="rounded-xl border border-amber-200 dark:border-amber-800/60 bg-white/80 dark:bg-zinc-800/80 p-3.5 sm:p-5 backdrop-blur-xs transition-all overflow-hidden">
                         <div
-                            class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-zinc-200 dark:border-zinc-700">
-                            <div>
+                            class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-4 border-b border-zinc-200 dark:border-zinc-700">
+                            <div class="min-w-0">
                                 <div
-                                    class="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 text-xs font-medium uppercase tracking-wider">
+                                    class="flex flex-wrap items-center gap-1.5 sm:gap-2 text-zinc-500 dark:text-zinc-400 text-xs font-medium uppercase tracking-wider">
                                     <span>{{ __('Verified Route Benchmark') }}</span>
                                     <span>&bull;</span>
                                     <span>{{ $this->estimatedRate->shipment_count }}
                                         {{ __('past shipments on record') }}</span>
                                 </div>
-                                <div class="text-lg font-bold text-zinc-900 dark:text-zinc-100 mt-1">
+                                <div class="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 mt-1 break-words">
                                     {{ $this->estimatedRate->formatted_location }} &rarr;
                                     {{ $this->estimatedRate->originPort?->name }}
                                 </div>
                             </div>
 
-                            <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-3 shrink-0 self-start sm:self-auto">
                                 @php
                                     $trend = $this->estimatedRate->trend_percentage;
                                 @endphp
                                 @if($trend > 0)
-                                    <flux:badge color="rose" variant="subtle" size="md" icon="arrow-trending-up">
+                                    <flux:badge color="rose" variant="subtle" size="sm" class="sm:size-md" icon="arrow-trending-up">
                                         +{{ $trend }}% {{ __('vs historical avg') }}
                                     </flux:badge>
                                 @elseif($trend < 0)
-                                    <flux:badge color="emerald" variant="subtle" size="md" icon="arrow-trending-down">
+                                    <flux:badge color="emerald" variant="subtle" size="sm" class="sm:size-md" icon="arrow-trending-down">
                                         {{ $trend }}% {{ __('vs historical avg') }}
                                     </flux:badge>
                                 @else
-                                    <flux:badge color="zinc" variant="subtle" size="md" icon="minus">
+                                    <flux:badge color="zinc" variant="subtle" size="sm" class="sm:size-md" icon="minus">
                                         {{ __('Stable with historical avg') }}
                                     </flux:badge>
                                 @endif
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
-                            <div>
-                                <flux:text size="xs" class="text-zinc-500 font-medium uppercase">{{ __('Current Rate') }}
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 pt-4">
+                            <div class="min-w-0">
+                                <flux:text size="xs" class="text-zinc-500 font-medium uppercase truncate">{{ __('Current Rate') }}
                                 </flux:text>
-                                <div class="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">
+                                <div class="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 mt-1 truncate">
                                     ${{ number_format((float) $this->estimatedRate->latest_rate, 2) }}
                                 </div>
-                                <flux:text size="xs" class="text-zinc-400">{{ __('Latest invoice') }}</flux:text>
+                                <flux:text size="xs" class="text-zinc-400 truncate">{{ __('Latest invoice') }}</flux:text>
                             </div>
 
-                            <div>
-                                <flux:text size="xs" class="text-zinc-500 font-medium uppercase">{{ __('Route Average') }}
+                            <div class="min-w-0">
+                                <flux:text size="xs" class="text-zinc-500 font-medium uppercase truncate">{{ __('Route Average') }}
                                 </flux:text>
-                                <div class="text-2xl font-black text-zinc-800 dark:text-zinc-200 mt-1">
+                                <div class="text-xl sm:text-2xl font-black text-zinc-800 dark:text-zinc-200 mt-1 truncate">
                                     ${{ number_format((float) $this->estimatedRate->average_rate, 2) }}
                                 </div>
-                                <flux:text size="xs" class="text-zinc-400">{{ __('Historical mean') }}</flux:text>
+                                <flux:text size="xs" class="text-zinc-400 truncate">{{ __('Historical mean') }}</flux:text>
                             </div>
 
-                            <div>
-                                <flux:text size="xs" class="text-zinc-500 font-medium uppercase">{{ __('Historic Range') }}
+                            <div class="min-w-0">
+                                <flux:text size="xs" class="text-zinc-500 font-medium uppercase truncate">{{ __('Historic Range') }}
                                 </flux:text>
-                                <div class="text-lg font-bold text-zinc-700 dark:text-zinc-300 mt-1">
+                                <div class="text-base sm:text-lg font-bold text-zinc-700 dark:text-zinc-300 mt-1 truncate">
                                     ${{ number_format((float) $this->estimatedRate->min_rate, 0) }} &ndash;
                                     ${{ number_format((float) $this->estimatedRate->max_rate, 0) }}
                                 </div>
-                                <flux:text size="xs" class="text-zinc-400">{{ __('Observed min to max') }}</flux:text>
+                                <flux:text size="xs" class="text-zinc-400 truncate">{{ __('Observed min to max') }}</flux:text>
                             </div>
 
-                            <div>
-                                <flux:text size="xs" class="text-zinc-500 font-medium uppercase">{{ __('Last Shipped') }}
+                            <div class="min-w-0">
+                                <flux:text size="xs" class="text-zinc-500 font-medium uppercase truncate">{{ __('Last Shipped') }}
                                 </flux:text>
-                                <div class="text-base font-semibold text-zinc-700 dark:text-zinc-300 mt-1">
+                                <div class="text-sm sm:text-base font-semibold text-zinc-700 dark:text-zinc-300 mt-1 truncate">
                                     {{ $this->estimatedRate->last_shipped_at ? $this->estimatedRate->last_shipped_at->format('M d, Y') : '—' }}
                                 </div>
-                                <flux:text size="xs" class="text-zinc-400">{{ __('Last invoice date') }}</flux:text>
+                                <flux:text size="xs" class="text-zinc-400 truncate">{{ __('Last invoice date') }}</flux:text>
                             </div>
                         </div>
 
@@ -479,17 +480,17 @@ new #[Title('Inland Rates & Trends')]
                             <div class="mt-6 pt-5 border-t border-zinc-200 dark:border-zinc-700/80">
                                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                                     <div class="flex items-center gap-2">
-                                        <flux:icon.chart-bar class="size-4 text-amber-600 dark:text-amber-400" />
+                                        <flux:icon.chart-bar class="size-4 text-amber-600 dark:text-amber-400 shrink-0" />
                                         <flux:heading size="sm" weight="semibold">{{ __('Price Movement History & Trend') }}
                                         </flux:heading>
                                     </div>
-                                    <div class="flex items-center gap-4 text-xs text-zinc-500">
-                                        <div class="flex items-center gap-1.5">
-                                            <span class="inline-block size-2.5 rounded-full bg-amber-500"></span>
+                                    <div class="flex flex-wrap items-center gap-3 sm:gap-4 text-xs text-zinc-500">
+                                        <div class="flex items-center gap-1.5 shrink-0">
+                                            <span class="inline-block size-2 rounded-full bg-amber-500"></span>
                                             <span>{{ __('Towing Fee ($)') }}</span>
                                         </div>
-                                        <div class="flex items-center gap-1.5">
-                                            <span class="inline-block w-3.5 border-b-2 border-dashed border-zinc-400"></span>
+                                        <div class="flex items-center gap-1.5 shrink-0">
+                                            <span class="inline-block w-3 border-b-2 border-dashed border-zinc-400"></span>
                                             <span>{{ __('Route Avg') }}
                                                 (${{ number_format($this->chartData['avg'], 2) }})</span>
                                         </div>
@@ -498,8 +499,8 @@ new #[Title('Inland Rates & Trends')]
 
                                 @if($this->chartData['count'] > 1)
                                     <div
-                                        class="relative w-full rounded-xl bg-zinc-50/80 dark:bg-zinc-900/60 p-4 border border-zinc-200/70 dark:border-zinc-800">
-                                        <svg viewBox="0 0 540 150" class="w-full h-44 overflow-visible" preserveAspectRatio="none">
+                                        class="relative w-full rounded-xl bg-zinc-50/80 dark:bg-zinc-900/60 p-3 sm:p-4 border border-zinc-200/70 dark:border-zinc-800 overflow-hidden">
+                                        <svg viewBox="0 0 540 150" class="w-full h-36 sm:h-44 overflow-hidden" preserveAspectRatio="none">
                                             <defs>
                                                 <linearGradient id="inlandAreaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
                                                     <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.30" />
@@ -539,26 +540,28 @@ new #[Title('Inland Rates & Trends')]
                                         </svg>
 
                                         <div
-                                            class="flex items-center justify-between text-[11px] text-zinc-500 font-medium px-2 mt-2">
-                                            <span>{{ $this->chartData['startDate'] }}</span>
+                                            class="flex flex-wrap items-center justify-between gap-1 text-[11px] text-zinc-500 font-medium px-1 sm:px-2 mt-2">
+                                            <span class="truncate">{{ $this->chartData['startDate'] }}</span>
                                             <span
-                                                class="text-amber-600 dark:text-amber-400 font-semibold">{{ $this->chartData['count'] }}
-                                                {{ __('recorded price points') }}</span>
-                                            <span>{{ $this->chartData['endDate'] }}</span>
+                                                class="text-amber-600 dark:text-amber-400 font-semibold shrink-0">
+                                                <span class="sm:hidden">{{ $this->chartData['count'] }} {{ __('pts') }}</span>
+                                                <span class="hidden sm:inline">{{ $this->chartData['count'] }} {{ __('recorded price points') }}</span>
+                                            </span>
+                                            <span class="truncate">{{ $this->chartData['endDate'] }}</span>
                                         </div>
                                     </div>
                                 @else
                                     <div
-                                        class="rounded-lg bg-zinc-50 dark:bg-zinc-900/60 p-4 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-                                        <div class="flex items-center gap-3">
-                                            <div class="size-3 rounded-full bg-amber-500"></div>
-                                            <div class="text-xs text-zinc-700 dark:text-zinc-300">
+                                        class="rounded-lg bg-zinc-50 dark:bg-zinc-900/60 p-3 sm:p-4 border border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 overflow-hidden">
+                                        <div class="flex items-center gap-2.5 min-w-0">
+                                            <div class="size-2.5 rounded-full bg-amber-500 shrink-0"></div>
+                                            <div class="text-xs text-zinc-700 dark:text-zinc-300 truncate">
                                                 <span class="font-semibold">${{ number_format($this->chartData['min'], 2) }}</span>
                                                 <span class="text-zinc-500">({{ __('Recorded on') }}
                                                     {{ $this->chartData['startDate'] }})</span>
                                             </div>
                                         </div>
-                                        <flux:badge size="xs" color="zinc" variant="subtle">
+                                        <flux:badge size="xs" color="zinc" variant="subtle" class="self-start sm:self-auto shrink-0">
                                             {{ __('Initial benchmark established') }}
                                         </flux:badge>
                                     </div>
@@ -568,7 +571,7 @@ new #[Title('Inland Rates & Trends')]
                     </div>
                 @elseif($estimatorLocation !== '' && $estimatorPortId)
                     <div
-                        class="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/40 p-5 text-center">
+                        class="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/40 p-4 sm:p-5 text-center">
                         <flux:icon.exclamation-circle class="size-6 text-zinc-400 mx-auto mb-2" />
                         <div class="font-medium text-sm text-zinc-800 dark:text-zinc-200">
                             {{ __('No historical direct shipments found for this specific route.') }}
@@ -587,14 +590,14 @@ new #[Title('Inland Rates & Trends')]
         </div>
 
         {{-- Filters & Search --}}
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-            <div class="flex-1 max-w-md">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4">
+            <div class="flex-1 w-full max-w-md">
                 <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass"
-                    placeholder="{{ __('Search by pickup location or port...') }}" clearable />
+                    placeholder="{{ __('Search by pickup location or port...') }}" clearable class="w-full" />
             </div>
 
-            <div class="flex items-center gap-3">
-                <flux:select wire:model.live="filterPortId" placeholder="{{ __('Filter by Port...') }}" class="w-48">
+            <div class="flex items-center gap-3 w-full sm:w-auto">
+                <flux:select wire:model.live="filterPortId" placeholder="{{ __('Filter by Port...') }}" class="w-full sm:w-48">
                     <flux:select.option value="">{{ __('All Ports') }}</flux:select.option>
                     @foreach($this->availablePorts as $port)
                         <flux:select.option :value="$port->id">{{ $port->name }}</flux:select.option>
@@ -604,21 +607,21 @@ new #[Title('Inland Rates & Trends')]
         </div>
 
         {{-- Route Rates Table --}}
-        <x-crud.panel class="p-6">
+        <x-crud.panel class="p-3 sm:p-6 overflow-hidden">
             <flux:table :paginate="$this->rates">
                 <flux:table.columns sticky class="bg-white dark:bg-zinc-900">
                     <flux:table.column icon="map-pin">{{ __('Location') }}</flux:table.column>
-                        <flux:table.column icon="globe-alt">{{ __('Export Port') }}</flux:table.column>
-                        <flux:table.column align="end" icon="banknotes">
-                            {{ $this->isStaff ? __('Latest Rate') : __('Current Rate') }}
-                        </flux:table.column>
-                        <flux:table.column align="end">{{ __('Average Rate') }}</flux:table.column>
-                        <flux:table.column align="end">{{ __('Observed Range') }}</flux:table.column>
-                        @if($this->isStaff)
-                            <flux:table.column align="center">{{ __('Shipments') }}</flux:table.column>
-                        @endif
-                        <flux:table.column align="center">{{ __('Trend') }}</flux:table.column>
-                        <flux:table.column align="end">{{ __('Action') }}</flux:table.column>
+                    <flux:table.column icon="globe-alt">{{ __('Export Port') }}</flux:table.column>
+                    <flux:table.column align="end" icon="banknotes">
+                        {{ $this->isStaff ? __('Latest Rate') : __('Current Rate') }}
+                    </flux:table.column>
+                    <flux:table.column align="end">{{ __('Average Rate') }}</flux:table.column>
+                    <flux:table.column align="end">{{ __('Observed Range') }}</flux:table.column>
+                    @if($this->isStaff)
+                        <flux:table.column align="center">{{ __('Shipments') }}</flux:table.column>
+                    @endif
+                    <flux:table.column align="center">{{ __('Trend') }}</flux:table.column>
+                    <flux:table.column align="end">{{ __('Action') }}</flux:table.column>
                 </flux:table.columns>
 
                 <flux:table.rows>
